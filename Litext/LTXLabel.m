@@ -16,7 +16,10 @@
     NSArray<LTXHighlightRegion *> *_highlightRegions;
     LTXHighlightRegion *_activeHighlightRegion;
     CGSize _lastContainerSize;
-    BOOL _layoutIsDirty;
+    struct {
+        BOOL layoutIsDirty : 1;
+        BOOL needsUpdateHighlightRegions : 1;
+    } _flags;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -41,6 +44,7 @@
 
 - (void)setAttributedText:(NSAttributedString *)attributedText {
     _textLayout = [LTXTextLayout textLayoutWithAttributedString:attributedText];
+    [self _invalidateTextLayout];
 }
 
 - (NSAttributedString *)attributedText {
@@ -62,16 +66,19 @@
     
     // Only update layout when the view's bounds changed.
     CGSize containerSize = self.bounds.size;
-    if (!CGSizeEqualToSize(_lastContainerSize, containerSize)) {
-        if (containerSize.width != _lastContainerSize.width) {
+    if (_flags.layoutIsDirty ||
+        !CGSizeEqualToSize(_lastContainerSize, containerSize)) {
+        if (_flags.layoutIsDirty ||
+            containerSize.width != _lastContainerSize.width) {
             // This is the magic that makes Auto Layout works with this view.
             // See `intrinsicContentSize` method for more details.
             [self invalidateIntrinsicContentSize];
         }
         
         _lastContainerSize = containerSize;
-        _layoutIsDirty = YES;
         _textLayout.containerSize = containerSize;
+        _flags.needsUpdateHighlightRegions = YES;
+        _flags.layoutIsDirty = NO;
         
         // Must display once after the layout changed, that will also update
         // the text layout and highlight regions.
@@ -79,10 +86,15 @@
     }
 }
 
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    [super traitCollectionDidChange:previousTraitCollection];
+    [self _invalidateTextLayout];
+}
+
 - (void)drawRect:(CGRect)rect {
     CGContextRef context = UIGraphicsGetCurrentContext();
      
-    if (_layoutIsDirty) {
+    if (_flags.needsUpdateHighlightRegions) {
         // We need to update highlight regions within `drawRect:` because an
         // `CGContextRef` is required for getting the image bounds of glyph
         // runs. This process will make our view's layout dirty, but that will
@@ -94,7 +106,7 @@
         // Also update attachment views when highlight regions changed.
         [self _updateAttachmentViews];
         
-        _layoutIsDirty = NO;
+        _flags.needsUpdateHighlightRegions = NO;
     }
     
     [_textLayout drawInContext:context];
@@ -124,6 +136,11 @@
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     [self _removeActiveHighlightRegion];
+}
+
+- (void)_invalidateTextLayout {
+    _flags.layoutIsDirty = YES;
+    [self setNeedsLayout];
 }
 
 - (LTXHighlightRegion *)_highlightRegionAtPoint:(CGPoint)point {

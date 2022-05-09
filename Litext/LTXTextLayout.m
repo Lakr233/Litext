@@ -117,6 +117,10 @@ static _Nullable CTLineRef _createTruncatedLine(CTLineRef lastLine, NSAttributed
     [self _generateLayout];
 }
 
+- (void)invalidateLayout {
+    [self _generateLayout];
+}
+
 - (CGSize)suggestContainerSizeWithSize:(CGSize)size {
     return CTFramesetterSuggestFrameSizeWithConstraints(_framesetter, kZeroRange, NULL, size, NULL);
 }

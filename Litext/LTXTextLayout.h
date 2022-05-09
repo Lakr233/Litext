@@ -25,6 +25,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithAttributedString:(NSAttributedString *)attributedString NS_DESIGNATED_INITIALIZER;
 
+- (void)invalidateLayout;
+
 /// Determines and returns the container size needed for this layout.
 ///
 /// @param size The constraint size. A value of `CGFLOAT_MAX` for either dimension
