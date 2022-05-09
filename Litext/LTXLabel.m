@@ -7,7 +7,7 @@
 
 #import "LTXLabel.h"
 #import "LTXTextLayout.h"
-#import "LTXHighlightRegion.h"
+#import "LTXHighlightRegion+Private.h"
 #import "LTXAttachment.h"
 
 @implementation LTXLabel {
@@ -51,6 +51,8 @@
     return _textLayout.attributedString;
 }
 
+#pragma mark - Layout & Auto Layout Supports
+
 - (CGSize)intrinsicContentSize {
     CGSize constraintSize = { CGFLOAT_MAX, CGFLOAT_MAX };
     if (_lastContainerSize.width > 0) {
@@ -91,6 +93,8 @@
     [self _invalidateTextLayout];
 }
 
+#pragma mark - Rendering
+
 - (void)drawRect:(CGRect)rect {
     CGContextRef context = UIGraphicsGetCurrentContext();
      
@@ -112,6 +116,8 @@
     [_textLayout drawInContext:context];
 }
 
+#pragma mark - Interaction Handling
+
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
     if (!CGRectContainsPoint(self.bounds, point)) {
         return NO;
@@ -131,6 +137,22 @@
 }
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    __auto_type activeHighlightRegion = _activeHighlightRegion;
+    if (!activeHighlightRegion) {
+        return;
+    }
+    
+    // FIXME: this will only support one touch point.
+    UITouch *firstTouch = [touches allObjects].firstObject;
+    CGPoint touchLocation = [firstTouch locationInView:self];
+    
+    if ([self _isHighlightRegion:activeHighlightRegion containsPoint:touchLocation]) {
+        __auto_type tapHandler = self.tapHandler;
+        if (tapHandler) {
+            tapHandler(activeHighlightRegion);
+        }
+    }
+    
     [self _removeActiveHighlightRegion];
 }
 
@@ -138,21 +160,45 @@
     [self _removeActiveHighlightRegion];
 }
 
+#pragma mark - Debugging & Reflection
+
+- (NSString *)description {
+    NSMutableString *description = [NSMutableString string];
+    [description appendFormat:@"<%@: %p;", NSStringFromClass([self class]), self];
+    [description appendFormat:@" frame = %@;", NSStringFromCGRect(self.frame)];
+    [description appendFormat:@" userInteractionEnabled = %@;", self.userInteractionEnabled ? @"YES" : @"NO"];
+    [description appendFormat:@" attributedText = %@;", self.attributedText];
+    [description appendFormat:@" layer = %@>", self.layer];
+    return [description copy];
+}
+
+#pragma mark - Text Layout
+
 - (void)_invalidateTextLayout {
     _flags.layoutIsDirty = YES;
     [self setNeedsLayout];
 }
 
+#pragma mark - Highlight Region
+
 - (LTXHighlightRegion *)_highlightRegionAtPoint:(CGPoint)point {
     for (LTXHighlightRegion *highlightRegion in _highlightRegions) {
-        for (NSValue *boxedRect in highlightRegion.rects) {
-            CGRect convertedRect = [self _convertRectFromTextLayout:boxedRect.CGRectValue forInteraction:YES];
-            if (CGRectContainsPoint(convertedRect, point)) {
-                return highlightRegion;
-            }
+        if ([self _isHighlightRegion:highlightRegion containsPoint:point]) {
+            return highlightRegion;
         }
     }
     return nil;
+}
+
+- (BOOL)_isHighlightRegion:(LTXHighlightRegion *)highlightRegion containsPoint:(CGPoint)point {
+    for (NSValue *boxedRect in highlightRegion.rects) {
+        CGRect convertedRect = [self _convertRectFromTextLayout:boxedRect.CGRectValue
+                                                 forInteraction:YES];
+        if (CGRectContainsPoint(convertedRect, point)) {
+            return YES;
+        }
+    }
+    return NO;
 }
 
 - (CGRect)_convertRectFromTextLayout:(CGRect)rect forInteraction:(BOOL)interaction {
@@ -161,41 +207,6 @@
         rect = CGRectInset(rect, -4, -4);
     }
     return rect;
-}
-
-- (void)_updateAttachmentViews {
-    // The set holds views that are no longer reusable by the new layout. Reusable
-    // views are updated in-place without being removed from its superview, which
-    // can improve the updating performance.
-    NSMutableSet<UIView *> *viewsToRemove = [_attachmentViews mutableCopy];
-    
-    for (LTXHighlightRegion *highlightRegion in _highlightRegions) {
-        LTXAttachment *attachment = highlightRegion.attributes[LTXAttachmentAttributeName];
-        if (!attachment) {
-            continue;
-        }
-        
-        UIView *view = attachment.view;
-        if (view.superview == self) {
-            // The view is reused, remove it from the garbage set.
-            [viewsToRemove removeObject:view];
-        } else {
-            [self addSubview:view];
-            [_attachmentViews addObject:view];
-        }
-        
-        CGRect convertedRect =
-        [self _convertRectFromTextLayout:highlightRegion.rects.firstObject.CGRectValue
-                          forInteraction:NO];
-        view.frame = convertedRect;
-    }
-    
-    // Evict the garbage views.
-    __auto_type attachmentViews = _attachmentViews;
-    [viewsToRemove enumerateObjectsUsingBlock:^(UIView *obj, BOOL *stop) {
-        [obj removeFromSuperview];
-        [attachmentViews removeObject:obj];
-    }];
 }
 
 - (void)_addActiveHighlightRegion:(LTXHighlightRegion *)highlightRegion {
@@ -247,6 +258,43 @@
     activeHighlightRegion.associatedObject = nil;
     
     _activeHighlightRegion = nil;
+}
+
+#pragma mark - Attachment
+
+- (void)_updateAttachmentViews {
+    // The set holds views that are no longer reusable by the new layout. Reusable
+    // views are updated in-place without being removed from its superview, which
+    // can improve the updating performance.
+    NSMutableSet<UIView *> *viewsToRemove = [_attachmentViews mutableCopy];
+    
+    for (LTXHighlightRegion *highlightRegion in _highlightRegions) {
+        LTXAttachment *attachment = highlightRegion.attributes[LTXAttachmentAttributeName];
+        if (!attachment) {
+            continue;
+        }
+        
+        UIView *view = attachment.view;
+        if (view.superview == self) {
+            // The view is reused, remove it from the garbage set.
+            [viewsToRemove removeObject:view];
+        } else {
+            [self addSubview:view];
+            [_attachmentViews addObject:view];
+        }
+        
+        CGRect convertedRect =
+        [self _convertRectFromTextLayout:highlightRegion.rects.firstObject.CGRectValue
+                          forInteraction:NO];
+        view.frame = convertedRect;
+    }
+    
+    // Evict the garbage views.
+    __auto_type attachmentViews = _attachmentViews;
+    [viewsToRemove enumerateObjectsUsingBlock:^(UIView *obj, BOOL *stop) {
+        [obj removeFromSuperview];
+        [attachmentViews removeObject:obj];
+    }];
 }
 
 @end

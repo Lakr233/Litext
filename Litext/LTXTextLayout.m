@@ -16,7 +16,7 @@
 #endif
 
 #import "LTXTextLayout.h"
-#import "LTXHighlightRegion.h"
+#import "LTXHighlightRegion+Private.h"
 #import "LTXAttachment.h"
 
 static const CFRange kZeroRange = { 0, 0 };

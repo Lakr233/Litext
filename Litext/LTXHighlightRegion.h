@@ -16,14 +16,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly, copy) NSDictionary *attributes;
 @property (nonatomic, readonly, assign) NSRange stringRange;
 
-@property (nonatomic, nullable, strong) id associatedObject;
-
 + (instancetype)new NS_UNAVAILABLE;
-
 - (instancetype)init NS_UNAVAILABLE;
-- (instancetype)initWithAttributes:(NSDictionary *)attributes stringRange:(NSRange)stringRange NS_DESIGNATED_INITIALIZER;
-
-- (void)addRect:(CGRect)rect;
 
 @end
 

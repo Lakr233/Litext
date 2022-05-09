@@ -6,6 +6,7 @@
 //
 
 #import "LTXHighlightRegion.h"
+#import "LTXHighlightRegion+Private.h"
 
 @implementation LTXHighlightRegion {
     NSMutableArray<NSValue *> *_rects;
@@ -27,6 +28,15 @@
 
 - (void)addRect:(CGRect)rect {
     [_rects addObject:@(rect)];
+}
+
+- (NSString *)description {
+    NSMutableString *description = [NSMutableString string];
+    [description appendFormat:@"<%@: %p;", NSStringFromClass([self class]), self];
+    [description appendFormat:@" attributes = %@;", self.attributes];
+    [description appendFormat:@" rects = %@;", self.rects];
+    [description appendFormat:@" stringRange = %@>", NSStringFromRange(self.stringRange)];
+    return [description copy];
 }
 
 @end

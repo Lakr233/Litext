@@ -15,4 +15,5 @@ FOUNDATION_EXPORT double LitextVersionNumber;
 FOUNDATION_EXPORT const unsigned char LitextVersionString[];
 
 #import <Litext/LTXLabel.h>
+#import <Litext/LTXHighlightRegion.h>
 #import <Litext/LTXAttachment.h>

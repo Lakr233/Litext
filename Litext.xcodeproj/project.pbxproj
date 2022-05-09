@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FA07C6382827BF01002482F9 /* LTXHighlightRegion.h in Headers */ = {isa = PBXBuildFile; fileRef = FA07C6362827BF01002482F9 /* LTXHighlightRegion.h */; };
+		FA07C6382827BF01002482F9 /* LTXHighlightRegion.h in Headers */ = {isa = PBXBuildFile; fileRef = FA07C6362827BF01002482F9 /* LTXHighlightRegion.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FA07C6392827BF01002482F9 /* LTXHighlightRegion.m in Sources */ = {isa = PBXBuildFile; fileRef = FA07C6372827BF01002482F9 /* LTXHighlightRegion.m */; };
 		FA435AF92827A6CD00ECC497 /* LTXTextLayout.h in Headers */ = {isa = PBXBuildFile; fileRef = FA435AF72827A6CD00ECC497 /* LTXTextLayout.h */; };
 		FA435AFA2827A6CD00ECC497 /* LTXTextLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = FA435AF82827A6CD00ECC497 /* LTXTextLayout.m */; };
@@ -23,6 +23,7 @@
 		FA4691D02827A62100DD72AB /* Litext.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = FA4691A72827A5E100DD72AB /* Litext.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		FA4691D62827A64F00DD72AB /* LTXLabel.h in Headers */ = {isa = PBXBuildFile; fileRef = FA4691D42827A64F00DD72AB /* LTXLabel.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FA4691D72827A64F00DD72AB /* LTXLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = FA4691D52827A64F00DD72AB /* LTXLabel.m */; };
+		FA4BDEF028298B2600691790 /* LTXHighlightRegion+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = FA4BDEEF28298B2600691790 /* LTXHighlightRegion+Private.h */; };
 		FAF431A42828336E00B2986D /* LTXAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = FAF431A22828336E00B2986D /* LTXAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FAF431A52828336E00B2986D /* LTXAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = FAF431A32828336E00B2986D /* LTXAttachment.m */; };
 /* End PBXBuildFile section */
@@ -72,6 +73,7 @@
 		FA4691C92827A60D00DD72AB /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		FA4691D42827A64F00DD72AB /* LTXLabel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LTXLabel.h; sourceTree = "<group>"; };
 		FA4691D52827A64F00DD72AB /* LTXLabel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LTXLabel.m; sourceTree = "<group>"; };
+		FA4BDEEF28298B2600691790 /* LTXHighlightRegion+Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "LTXHighlightRegion+Private.h"; sourceTree = "<group>"; };
 		FAF431A22828336E00B2986D /* LTXAttachment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LTXAttachment.h; sourceTree = "<group>"; };
 		FAF431A32828336E00B2986D /* LTXAttachment.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LTXAttachment.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -123,6 +125,7 @@
 				FA435AF72827A6CD00ECC497 /* LTXTextLayout.h */,
 				FA435AF82827A6CD00ECC497 /* LTXTextLayout.m */,
 				FA07C6362827BF01002482F9 /* LTXHighlightRegion.h */,
+				FA4BDEEF28298B2600691790 /* LTXHighlightRegion+Private.h */,
 				FA07C6372827BF01002482F9 /* LTXHighlightRegion.m */,
 				FAF431A22828336E00B2986D /* LTXAttachment.h */,
 				FAF431A32828336E00B2986D /* LTXAttachment.m */,
@@ -164,6 +167,7 @@
 			files = (
 				FA4691D62827A64F00DD72AB /* LTXLabel.h in Headers */,
 				FA435AF92827A6CD00ECC497 /* LTXTextLayout.h in Headers */,
+				FA4BDEF028298B2600691790 /* LTXHighlightRegion+Private.h in Headers */,
 				FA07C6382827BF01002482F9 /* LTXHighlightRegion.h in Headers */,
 				FA4691AB2827A5E100DD72AB /* Litext.h in Headers */,
 				FAF431A42828336E00B2986D /* LTXAttachment.h in Headers */,
