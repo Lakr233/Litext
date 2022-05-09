@@ -100,18 +100,21 @@
     [_textLayout drawInContext:context];
 }
 
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
+    if (!CGRectContainsPoint(self.bounds, point)) {
+        return NO;
+    }
+    
+    return [self _highlightRegionAtPoint:point] != nil;
+}
+
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     UITouch *firstTouch = [touches allObjects].firstObject;
     CGPoint touchLocation = [firstTouch locationInView:self];
     
-    for (LTXHighlightRegion *highlightRegion in _highlightRegions) {
-        for (NSValue *boxedRect in highlightRegion.rects) {
-            CGRect convertedRect = [self _convertRectFromTextLayout:boxedRect.CGRectValue forInteraction:YES];
-            if (CGRectContainsPoint(convertedRect, touchLocation)) {
-                [self _addActiveHighlightRegion:highlightRegion];
-                return;
-            }
-        }
+    __auto_type hitHighlightRegion = [self _highlightRegionAtPoint:touchLocation];
+    if (hitHighlightRegion) {
+        [self _addActiveHighlightRegion:hitHighlightRegion];
     }
 }
 
@@ -121,6 +124,18 @@
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     [self _removeActiveHighlightRegion];
+}
+
+- (LTXHighlightRegion *)_highlightRegionAtPoint:(CGPoint)point {
+    for (LTXHighlightRegion *highlightRegion in _highlightRegions) {
+        for (NSValue *boxedRect in highlightRegion.rects) {
+            CGRect convertedRect = [self _convertRectFromTextLayout:boxedRect.CGRectValue forInteraction:YES];
+            if (CGRectContainsPoint(convertedRect, point)) {
+                return highlightRegion;
+            }
+        }
+    }
+    return nil;
 }
 
 - (CGRect)_convertRectFromTextLayout:(CGRect)rect forInteraction:(BOOL)interaction {
