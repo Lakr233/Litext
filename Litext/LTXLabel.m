@@ -51,13 +51,20 @@
     return _textLayout.attributedString;
 }
 
+- (void)setPreferredMaxLayoutWidth:(CGFloat)preferredMaxLayoutWidth {
+    _preferredMaxLayoutWidth = preferredMaxLayoutWidth;
+    [self _invalidateTextLayout];
+}
+
 #pragma mark - Layout & Auto Layout Supports
 
 - (CGSize)intrinsicContentSize {
     CGSize constraintSize = { CGFLOAT_MAX, CGFLOAT_MAX };
-    if (_lastContainerSize.width > 0) {
-        // We have a preferred layout width here.
-        // TODO: add an option to control this behavior.
+    CGFloat preferredMaxLayoutWidth = _preferredMaxLayoutWidth;
+    if (preferredMaxLayoutWidth > 0) {
+        constraintSize.width = preferredMaxLayoutWidth;
+    } else if (_lastContainerSize.width > 0) {
+        // We have an inferred layout width here.
         constraintSize.width = _lastContainerSize.width;
     }
     return [_textLayout suggestContainerSizeWithSize:constraintSize];
@@ -177,6 +184,7 @@
 - (void)_invalidateTextLayout {
     _flags.layoutIsDirty = YES;
     [self setNeedsLayout];
+    [self invalidateIntrinsicContentSize];
 }
 
 #pragma mark - Highlight Region
