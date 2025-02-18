@@ -13,3 +13,5 @@ xcuserdata/
 *.xccheckout
 *.xcuserstate
 *.xcscmblueprint
+*.build/
+*.swiftpm/
