@@ -144,7 +144,9 @@ static _Nullable CTLineRef _createTruncatedLine(CTLineRef lastLine, NSAttributed
                 CGContextSaveGState(context);
                 action.action(context, line, lineOrigin);
                 CGContextRestoreGState(context);
-                [_lineDrawingActions addObject:action];
+                if (action.performOncePerAttribute) {
+                    [_lineDrawingActions addObject:action];
+                }
             }
         }];
     }];
