@@ -1,6 +1,6 @@
 //
 //  Created by Cyandev on 2022/5/9.
-//  Copyright (c) 2024 Helixform. All rights reserved.
+//  Copyright (c) 2025 Helixform. All rights reserved.
 //
 
 #import "LTXPlatformTypes.h"

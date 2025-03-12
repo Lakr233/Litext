@@ -1,6 +1,6 @@
 //
 //  Created by ktiays on 2024/5/8.
-//  Copyright (c) 2024 Helixform. All rights reserved.
+//  Copyright (c) 2025 Helixform. All rights reserved.
 //
 
 #import <CoreText/CoreText.h>
