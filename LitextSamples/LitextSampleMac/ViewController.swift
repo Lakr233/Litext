@@ -1,6 +1,6 @@
 //
 //  Created by ktiays on 2025/2/18.
-//  Copyright (c) 2025 ktiays. All rights reserved.
+//  Copyright (c) 2025 Helixform. All rights reserved.
 //
 
 import AppKit

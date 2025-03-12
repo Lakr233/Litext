@@ -1,6 +1,6 @@
 //
 //  Created by ktiays on 2024/9/29.
-//  Copyright (c) 2024 ktiays. All rights reserved.
+//  Copyright (c) 2025 Helixform. All rights reserved.
 //
 
 #import <TargetConditionals.h>
