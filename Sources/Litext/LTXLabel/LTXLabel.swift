@@ -79,6 +79,10 @@ public class LTXLabel: LTXPlatformView {
         commonInit()
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     private func commonInit() {
         registerNotificationCenterForSelectionDeduplicate()
 
