@@ -2,24 +2,26 @@
 
 # Litext
 
-A tiny rich-text supporting library for iOS.
+A lightweight rich-text library for UIKit and AppKit platforms.
+
+**Note: This fork is reimplemented in Swift. While we've maintained API compatibility with the original, 100% compatibility is not guaranteed.**
 
 ## Features
 
-- High performance text layout and rendering.
-- Attachments embedding with native view supports.
-- Clickable links supports.
-- Custom draw callbacks.
-- Auto layout integration (experimental).
+- ⚡️ High performance text layout and rendering
+- 📎 Native view embedding via attachments
+- 🔗 Clickable links support
+- 🎨 Custom drawing callbacks
+- 📐 Auto layout integration (experimental)
 
 ![Screenshot](./Artworks/screenshot.png)
 
 ## Supported Platforms
 
-- macOS (11.0+)
-- iOS (13.0+)
+- macOS 11.0+
+- iOS 13.0+
 
-## Getting Started
+## Installation
 
 Add Litext as a dependency in your `Package.swift` file:
 
@@ -29,7 +31,9 @@ dependencies: [
 ]
 ```
 
-### Basic Usage
+## Usage
+
+### Basic Setup
 
 ```swift
 import Litext
@@ -37,7 +41,7 @@ import Litext
 let label = LTXLabel()
 view.addSubview(label)
 
-// Create attributed string with styling.
+// Create and style attributed string
 let attributedString = NSMutableAttributedString(
     string: "Hello, Litext!",
     attributes: [
@@ -46,11 +50,11 @@ let attributedString = NSMutableAttributedString(
     ]
 )
 
-// Set the attributed text to display.
+// Set the attributed text
 label.attributedText = attributedString
 ```
 
-### Handling Link Actions
+### Link Handling
 
 ```swift
 let linkString = NSAttributedString(
@@ -63,7 +67,7 @@ let linkString = NSAttributedString(
 )
 attributedString.append(linkString)
 
-// Handle link taps.
+// Handle link taps
 label.tapHandler = { highlightRegion in
     if let url = highlightRegion.attributes[.link] as? URL {
         NSWorkspace.shared.open(url)
@@ -71,19 +75,16 @@ label.tapHandler = { highlightRegion in
 }
 ```
 
-### Adding Native Views
+### Embedding Native Views
 
 ```swift
-// Create and configure attachment.
+// Create and configure attachment
 let attachment = LTXAttachment()
 let switchView = NSSwitch()
 attachment.view = switchView
 attachment.size = switchView.intrinsicContentSize
 
-// Add attachment to text.
-//
-// `kCTRunDelegateAttributeName` must be included to ensure the
-// attachment is rendered correctly.
+// Add attachment to text
 attributedString.append(
     NSAttributedString(
         string: LTXReplacementText,
@@ -97,4 +98,4 @@ attributedString.append(
 
 ## License
 
-Licensed under MIT License, see [LICENSE](./LICENSE) for more information.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.

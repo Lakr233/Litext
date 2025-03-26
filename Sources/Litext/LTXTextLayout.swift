@@ -104,12 +104,13 @@ public class LTXTextLayout: NSObject {
 
         context.saveGState()
 
+        context.setAllowsAntialiasing(true)
+        context.setShouldSmoothFonts(true)
+
         context.translateBy(x: 0, y: containerSize.height)
         context.scaleBy(x: 1, y: -1)
 
-        if let ctFrame {
-            CTFrameDraw(ctFrame, context)
-        }
+        if let ctFrame { CTFrameDraw(ctFrame, context) }
 
         enumerateLines { line, _, lineOrigin in
             let glyphRuns = CTLineGetGlyphRuns(line) as NSArray

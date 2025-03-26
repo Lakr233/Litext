@@ -38,6 +38,16 @@ public class LTXLabel: LTXPlatformView {
         }
     }
 
+    #if canImport(UIKit)
+
+    #elseif canImport(AppKit)
+        public var backgroundColor: PlatformColor = .clear {
+            didSet {
+                layer?.backgroundColor = backgroundColor.cgColor
+            }
+        }
+    #endif
+
     public var tapHandler: LTXLabelTapHandler?
 
     public private(set) var isTouchSequenceActive: Bool = false
@@ -76,6 +86,7 @@ public class LTXLabel: LTXPlatformView {
             backgroundColor = .clear
         #elseif canImport(AppKit)
             wantsLayer = true
+            layer?.backgroundColor = .clear
         #else
             #error("unsupported platform")
         #endif
@@ -85,7 +96,7 @@ public class LTXLabel: LTXPlatformView {
     // MARK: - Platform Specific
 
     #if canImport(UIKit)
-        // pass
+    // pass
     #elseif canImport(AppKit)
         override public var isFlipped: Bool {
             true
@@ -163,16 +174,9 @@ public class LTXLabel: LTXPlatformView {
             guard let context = UIGraphicsGetCurrentContext() else { return }
 
             if flags.needsUpdateHighlightRegions {
-                // 我们需要在 drawRect: 中更新高亮区域，因为需要
-                // CGContextRef 来获取字形运行的图像边界。此过程将使我们视图的
-                // 布局变脏，但不会再次触发此过程，这由 layoutSubviews
-                // 实现保证。
                 textLayout?.updateHighlightRegions(with: context)
                 highlightRegions = textLayout?.highlightRegions ?? []
-
-                // 同时在高亮区域更改时更新附件视图
                 updateAttachmentViews()
-
                 flags.needsUpdateHighlightRegions = false
             }
 
@@ -185,16 +189,9 @@ public class LTXLabel: LTXPlatformView {
             guard let context = NSGraphicsContext.current?.cgContext else { return }
 
             if flags.needsUpdateHighlightRegions {
-                // 我们需要在 drawRect: 中更新高亮区域，因为需要
-                // CGContextRef 来获取字形运行的图像边界。此过程将使我们视图的
-                // 布局变脏，但不会再次触发此过程，这由 layout
-                // 实现保证。
                 textLayout?.updateHighlightRegions(with: context)
                 highlightRegions = textLayout?.highlightRegions ?? []
-
-                // 同时在高亮区域更改时更新附件视图
                 updateAttachmentViews()
-
                 flags.needsUpdateHighlightRegions = false
             }
 
@@ -207,12 +204,14 @@ public class LTXLabel: LTXPlatformView {
     // MARK: - Interaction Handling
 
     #if canImport(UIKit)
-        override public func point(inside point: CGPoint, with _: UIEvent?) -> Bool {
+        override public func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             if !bounds.contains(point) {
                 return false
             }
-
-            return highlightRegionAtPoint(point) != nil
+            if highlightRegionAtPoint(point) == nil {
+                return super.point(inside: point, with: event)
+            }
+            return true
         }
 
         override public func touchesBegan(_ touches: Set<UITouch>, with _: UIEvent?) {
@@ -234,7 +233,7 @@ public class LTXLabel: LTXPlatformView {
             let currentLocation = firstTouch.location(in: self)
             let distance = hypot(currentLocation.x - initialTouchLocation.x, currentLocation.y - initialTouchLocation.y)
 
-            if distance > 4.0 {
+            if distance > 2 {
                 removeActiveHighlightRegion()
                 isTouchSequenceActive = false
             }
@@ -264,7 +263,53 @@ public class LTXLabel: LTXPlatformView {
         }
 
     #elseif canImport(AppKit)
-    // TODO: IMPL those event on macOS
+        override public func mouseDown(with event: NSEvent) {
+            let touchLocation = convert(event.locationInWindow, from: nil)
+            initialTouchLocation = touchLocation
+
+            if let hitHighlightRegion = highlightRegionAtPoint(touchLocation) {
+                addActiveHighlightRegion(hitHighlightRegion)
+            }
+
+            isTouchSequenceActive = true
+        }
+
+        override public func mouseDragged(with event: NSEvent) {
+            guard activeHighlightRegion != nil else { return }
+
+            let currentLocation = convert(event.locationInWindow, from: nil)
+            let distance = hypot(currentLocation.x - initialTouchLocation.x, currentLocation.y - initialTouchLocation.y)
+
+            if distance > 4.0 {
+                removeActiveHighlightRegion()
+                isTouchSequenceActive = false
+            }
+        }
+
+        override public func mouseUp(with event: NSEvent) {
+            guard let activeHighlightRegion else {
+                isTouchSequenceActive = false
+                return
+            }
+
+            let touchLocation = convert(event.locationInWindow, from: nil)
+
+            if isHighlightRegion(activeHighlightRegion, containsPoint: touchLocation) {
+                tapHandler?(activeHighlightRegion, touchLocation)
+            }
+
+            removeActiveHighlightRegion()
+            isTouchSequenceActive = false
+        }
+
+        override public func hitTest(_ point: NSPoint) -> NSView? {
+            if !bounds.contains(point) { return nil }
+            if highlightRegionAtPoint(point) == nil {
+                return super.hitTest(point)
+            }
+            return self
+        }
+
     #else
         #error("unsupported platform")
     #endif
@@ -288,6 +333,9 @@ public class LTXLabel: LTXPlatformView {
     private func highlightRegionAtPoint(_ point: CGPoint) -> LTXHighlightRegion? {
         for region in highlightRegions {
             if isHighlightRegion(region, containsPoint: point) {
+                if region.attributes[.link] == nil {
+                    continue
+                }
                 return region
             }
         }
