@@ -17,6 +17,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		508E02F12D9460870052EB6A /* Exceptions for "LitextSampleMac" folder in "LitextSampleMac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EDD2ED2A2D64B803006C1403 /* LitextSampleMac */;
+		};
 		EDD2ECFD2D64B75C006C1403 /* Exceptions for "LitextSamples" folder in "LitextSamples" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -37,6 +44,9 @@
 		};
 		EDD2ED2C2D64B803006C1403 /* LitextSampleMac */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				508E02F12D9460870052EB6A /* Exceptions for "LitextSampleMac" folder in "LitextSampleMac" target */,
+			);
 			path = LitextSampleMac;
 			sourceTree = "<group>";
 		};
@@ -416,6 +426,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LitextSampleMac/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -445,6 +456,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LitextSampleMac/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;

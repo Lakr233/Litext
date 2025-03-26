@@ -6,7 +6,14 @@
 import Foundation
 
 #if canImport(UIKit)
+
+    protocol LTXSelectionHandleDelegate: AnyObject {
+        func selectionHandleDidMove(_ type: LTXSelectionHandle.HandleType, toLocationInSuperView point: CGPoint)
+    }
+
     public class LTXSelectionHandle: UIView {
+        static let knobRadius: CGFloat = 12
+
         public enum HandleType {
             case start
             case end
@@ -14,13 +21,15 @@ import Foundation
 
         public let type: HandleType
 
+        weak var delegate: LTXSelectionHandleDelegate?
+
         private let knobView: UIView = {
             let view = UIView()
             view.backgroundColor = .systemBlue
-            view.layer.cornerRadius = 6
+            view.layer.cornerRadius = knobRadius / 2
             view.layer.shadowColor = UIColor.black.cgColor
             view.layer.shadowOffset = CGSize(width: 0, height: 1)
-            view.layer.shadowOpacity = 0.3
+            view.layer.shadowOpacity = 0.25
             view.layer.shadowRadius = 1.5
             return view
         }()
@@ -31,11 +40,9 @@ import Foundation
             return view
         }()
 
-        public var dragHandler: ((CGPoint) -> Void)?
-
         public init(type: HandleType) {
             self.type = type
-            super.init(frame: CGRect(x: 0, y: 0, width: 12, height: 24))
+            super.init(frame: .zero)
             setupView()
         }
 
@@ -49,23 +56,59 @@ import Foundation
             backgroundColor = .clear
             isUserInteractionEnabled = true
             addSubview(stickView)
-            stickView.frame = CGRect(x: 6 - 1, y: 0, width: 2, height: 14)
             addSubview(knobView)
-            knobView.frame = CGRect(x: 0, y: 14, width: 12, height: 12)
             let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+            panGesture.cancelsTouchesInView = true
             addGestureRecognizer(panGesture)
-            if type == .start {
-                stickView.center.x = 7
-                transform = CGAffineTransform(scaleX: 1.0, y: 1.0)
-            } else {
-                stickView.center.x = 5
-                transform = CGAffineTransform(scaleX: 1.0, y: 1.0)
+        }
+
+        override public func layoutSubviews() {
+            super.layoutSubviews()
+            let stickWidth = 2
+            stickView.frame = .init(
+                x: bounds.midX - CGFloat(stickWidth) / 2,
+                y: bounds.minY,
+                width: CGFloat(stickWidth),
+                height: bounds.height
+            )
+
+            let knobRadius: CGFloat = knobView.layer.cornerRadius
+            switch type {
+            case .start:
+                knobView.frame = .init(
+                    x: bounds.midX - knobRadius,
+                    y: 0,
+                    width: knobRadius * 2,
+                    height: knobRadius * 2
+                )
+            case .end:
+                knobView.frame = .init(
+                    x: bounds.midX - knobRadius,
+                    y: bounds.height - knobRadius * 2,
+                    width: knobRadius * 2,
+                    height: knobRadius * 2
+                )
             }
         }
 
+        private var frameAtGestureBegin: CGRect = .zero
+
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            let point = gesture.location(in: superview)
-            dragHandler?(point)
+            switch gesture.state {
+            case .began:
+                frameAtGestureBegin = frame
+                fallthrough
+            case .changed:
+                let translation = gesture.translation(in: superview)
+                let newFrame = CGRect(
+                    x: frameAtGestureBegin.origin.x + translation.x,
+                    y: frameAtGestureBegin.origin.y + translation.y,
+                    width: frameAtGestureBegin.width,
+                    height: frameAtGestureBegin.height
+                )
+                delegate?.selectionHandleDidMove(type, toLocationInSuperView: .init(x: newFrame.midX, y: newFrame.midY))
+            default: return
+            }
         }
 
         override public func point(inside point: CGPoint, with _: UIEvent?) -> Bool {

@@ -46,6 +46,14 @@ import Foundation
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             if !bounds.contains(point) { return false }
 
+            if selectionHandleStart.frame.contains(point) {
+                return super.point(inside: point, with: event)
+            }
+
+            if selectionHandleEnd.frame.contains(point) {
+                return super.point(inside: point, with: event)
+            }
+
             for view in attachmentViews {
                 if view.frame.contains(point) {
                     return super.point(inside: point, with: event)
@@ -67,8 +75,8 @@ import Foundation
                 return
             }
 
-            // 确保视图可以在交互时成为第一响应者
             if isSelectable, !isFirstResponder {
+                // to received keyboard event from there
                 _ = becomeFirstResponder()
             }
 
@@ -89,17 +97,21 @@ import Foundation
             if !isSelectable { return }
 
             if interactionState.clickCount <= 1 {
-                if isLocationInSelection(location: location) {
-                } else {
-                    clearSelection()
-                }
             } else if interactionState.clickCount == 2 {
                 if let index = textIndexAtPoint(location) {
                     selectWordAtIndex(index)
+                    // prevent touches did end discard the changes
+                    DispatchQueue.main.asyncAfter(deadline: .now()) {
+                        self.selectWordAtIndex(index)
+                    }
                 }
             } else {
                 if let index = textIndexAtPoint(location) {
                     selectLineAtIndex(index)
+                    // prevent touches did end discard the changes
+                    DispatchQueue.main.asyncAfter(deadline: .now()) {
+                        self.selectLineAtIndex(index)
+                    }
                 }
             }
         }
@@ -116,10 +128,12 @@ import Foundation
             deactivateHighlightRegion()
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+                // check if is a pointer device
+
                 // on iOS we block the selection change by touches moved
                 // instead user is required to use those handlers
                 interactionState.isFirstMove = false
-                selectionRange = nil
+//                selectionRange = nil
             #else
                 if interactionState.isFirstMove {
                     interactionState.isFirstMove = false
@@ -137,6 +151,9 @@ import Foundation
                 return
             }
             let location = firstTouch.location(in: self)
+            if !isTouchReallyMoved(location), !isLocationInSelection(location: location) {
+                clearSelection()
+            }
             defer { deactivateHighlightRegion() }
             for region in highlightRegions {
                 let rects = region.rects.map {
@@ -158,6 +175,29 @@ import Foundation
             }
             _ = firstTouch
             deactivateHighlightRegion()
+        }
+    }
+
+    extension LTXLabel: LTXSelectionHandleDelegate {
+        func selectionHandleDidMove(_ type: LTXSelectionHandle.HandleType, toLocationInSuperView point: CGPoint) {
+            print(point)
+            guard let selectionRange, let textLocation = nearestTextIndexAtPoint(point) else { return }
+            switch type {
+            case .start:
+                let startLocation = min(textLocation, selectionRange.location + selectionRange.length - 1)
+                let length = selectionRange.location + selectionRange.length - startLocation
+                self.selectionRange = .init(
+                    location: startLocation,
+                    length: length
+                )
+            case .end:
+                let startLocation = selectionRange.location
+                let endingLocation = max(textLocation, startLocation + 1)
+                self.selectionRange = .init(
+                    location: startLocation,
+                    length: endingLocation - startLocation
+                )
+            }
         }
     }
 
@@ -191,7 +231,7 @@ import Foundation
             menuController.menuItems = menuItems
             menuController.showMenu(
                 from: self,
-                rect: unionRect
+                rect: unionRect.insetBy(dx: -8, dy: -8)
             )
         }
 

@@ -66,8 +66,8 @@ public class LTXLabel: LTXPlatformView {
     var selectionLayer: CAShapeLayer?
 
     #if canImport(UIKit)
-        var startSelectionHandle: LTXSelectionHandle?
-        var endSelectionHandle: LTXSelectionHandle?
+        var selectionHandleStart: LTXSelectionHandle = .init(type: .start)
+        var selectionHandleEnd: LTXSelectionHandle = .init(type: .end)
     #endif
 
     struct InteractionState {
@@ -101,6 +101,13 @@ public class LTXLabel: LTXPlatformView {
     private func commonInit() {
         #if canImport(UIKit)
             backgroundColor = .clear
+            clipsToBounds = false // for selection handle
+            selectionHandleStart.isHidden = true
+            selectionHandleStart.delegate = self
+            addSubview(selectionHandleStart)
+            selectionHandleEnd.isHidden = true
+            selectionHandleEnd.delegate = self
+            addSubview(selectionHandleEnd)
         #elseif canImport(AppKit)
             wantsLayer = true
             layer?.backgroundColor = .clear
@@ -135,23 +142,5 @@ public class LTXLabel: LTXPlatformView {
             #error("unsupported platform")
         #endif
         invalidateIntrinsicContentSize()
-    }
-
-    // 判断是否使用iOS风格的选择模式
-    func shouldUseIOSStyleSelection() -> Bool {
-        #if canImport(UIKit)
-            #if targetEnvironment(macCatalyst)
-                // macCatalyst 使用 Mac 风格
-                return false
-            #else
-                // 其他 iOS 设备使用 iOS 风格
-                return true
-            #endif
-        #elseif canImport(AppKit)
-            // Mac 平台使用 Mac 风格
-            return false
-        #else
-            #error("unsupported platform")
-        #endif
     }
 }
