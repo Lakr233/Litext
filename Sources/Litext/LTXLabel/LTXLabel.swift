@@ -116,6 +116,21 @@ public class LTXLabel: LTXPlatformView {
             true
         }
     #endif
+
+    #if canImport(UIKit)
+        override public func didMoveToWindow() {
+            super.didMoveToWindow()
+            clearSelection()
+            invalidateTextLayout()
+        }
+
+    #elseif canImport(AppKit)
+        override public func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            clearSelection()
+            invalidateTextLayout()
+        }
+    #endif
 }
 
 extension LTXLabel {

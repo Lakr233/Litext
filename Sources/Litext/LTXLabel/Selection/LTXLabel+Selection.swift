@@ -11,8 +11,6 @@ import QuartzCore
 public extension LTXLabel {
     @objc func clearSelection() {
         selectionRange = nil
-        selectionLayer?.removeFromSuperlayer()
-        selectionLayer = nil
     }
 
     @objc func copySelectedText() {

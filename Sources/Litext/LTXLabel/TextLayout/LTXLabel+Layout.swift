@@ -9,6 +9,7 @@ import QuartzCore
 
 public extension LTXLabel {
     func invalidateTextLayout() {
+        clearSelection()
         flags.layoutIsDirty = true
         #if canImport(UIKit)
             setNeedsLayout()
