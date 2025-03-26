@@ -16,12 +16,10 @@ public class LTXAttachment {
         size = .zero
     }
 
-    // 获取 attachment 的文本表示
     public func attributedStringRepresentation() -> NSAttributedString {
         if let view = view as? LTXAttributeStringRepresentable {
             return view.attributedStringRepresentation()
         }
-        // 如果没有实现协议，返回空格
         return NSAttributedString(string: " ")
     }
 
