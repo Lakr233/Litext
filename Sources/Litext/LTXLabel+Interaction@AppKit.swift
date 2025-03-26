@@ -17,6 +17,14 @@
                 return
             }
 
+            if let hitRegion = highlightRegionAtPoint(point),
+               let linkURL = hitRegion.attributes[.link] as? URL
+            {
+                currentLinkURL = linkURL
+                showLinkContextMenu(at: point)
+                return
+            }
+
             super.rightMouseDown(with: event)
         }
 
@@ -42,7 +50,7 @@
             initialTouchLocation = touchLocation
 
             let hitHighlightRegion = highlightRegionAtPoint(touchLocation)
-            
+
             let currentTime = Date().timeIntervalSince1970
             if currentTime - interactionState.lastClickTime <= interactionState.multiClickTimeThreshold {
                 interactionState.clickCount += 1
@@ -53,7 +61,7 @@
                 interactionState.clickCount = 1
             }
             interactionState.lastClickTime = currentTime
-            
+
             if isSelectable {
                 if interactionState.clickCount == 2 {
                     if let index = textIndexAtPoint(touchLocation) {
@@ -146,7 +154,7 @@
 
         override func hitTest(_ point: NSPoint) -> NSView? {
             if !bounds.contains(point) { return nil }
-            
+
             for view in attachmentViews {
                 if view.frame.contains(point) {
                     return super.hitTest(point)
@@ -194,16 +202,36 @@
             }
         }
 
+        private func showLinkContextMenu(at _: NSPoint) {
+            let menu = NSMenu()
+
+            menu.addItem(
+                withTitle: LocalizedText.openLink,
+                action: #selector(openLink(_:)),
+                keyEquivalent: ""
+            )
+
+            menu.addItem(
+                withTitle: LocalizedText.copyLink,
+                action: #selector(copyLink(_:)),
+                keyEquivalent: ""
+            )
+
+            if let event = NSApp.currentEvent {
+                NSMenu.popUpContextMenu(menu, with: event, for: self)
+            }
+        }
+
         @objc private func copyLink(_: Any) {
             guard let linkURL = currentLinkURL else { return }
 
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
-            pasteboard.setString(linkURL, forType: .string)
+            pasteboard.setString(linkURL.absoluteString, forType: .string)
         }
 
         @objc private func openLink(_: Any) {
-            guard let linkURL = currentLinkURL, let url = URL(string: linkURL) else { return }
+            guard let url = currentLinkURL else { return }
             NSWorkspace.shared.open(url)
         }
 

@@ -24,12 +24,31 @@ extension LTXLabel {
 
         let flippedPoint = CGPoint(x: point.x, y: bounds.height - point.y)
 
+        if let lineInfo = findLineContainingPoint(flippedPoint, ctFrame: ctFrame) {
+            return findCharacterIndexInLine(flippedPoint, lineInfo: lineInfo)
+        }
+
+        // 如果点击位置在最后一行之后，返回文本末尾
+        let lines = CTFrameGetLines(ctFrame) as [AnyObject]
+        if !lines.isEmpty {
+            var lineOrigins = [CGPoint](repeating: .zero, count: lines.count)
+            CTFrameGetLineOrigins(ctFrame, CFRange(location: 0, length: 0), &lineOrigins)
+
+            if flippedPoint.y < lineOrigins[lines.count - 1].y {
+                let lastLine = lines[lines.count - 1] as! CTLine
+                let range = CTLineGetStringRange(lastLine)
+                return range.location + range.length
+            }
+        }
+
+        return nil
+    }
+
+    private func findLineContainingPoint(_ point: CGPoint, ctFrame: CTFrame) -> (line: CTLine, origin: CGPoint, index: Int)? {
         let lines = CTFrameGetLines(ctFrame) as [AnyObject]
         var lineOrigins = [CGPoint](repeating: .zero, count: lines.count)
         CTFrameGetLineOrigins(ctFrame, CFRange(location: 0, length: 0), &lineOrigins)
 
-        // 查找点所在的行
-        var lineIndex = -1
         for i in 0 ..< lines.count {
             let origin = lineOrigins[i]
             var ascent: CGFloat = 0
@@ -47,30 +66,21 @@ extension LTXLabel {
                 height: lineHeight
             )
 
-            if flippedPoint.y >= lineRect.minY, flippedPoint.y <= lineRect.maxY {
-                lineIndex = i
-                break
+            if point.y >= lineRect.minY, point.y <= lineRect.maxY {
+                return (line: line, origin: origin, index: i)
             }
         }
 
-        // 如果点击位置在最后一行之后，返回文本末尾
-        if lineIndex == -1, !lines.isEmpty, flippedPoint.y < lineOrigins[lines.count - 1].y {
-            let lastLine = lines[lines.count - 1] as! CTLine
-            let range = CTLineGetStringRange(lastLine)
-            return range.location + range.length
-        }
+        return nil
+    }
 
-        // 如果未找到对应行，返回nil
-        if lineIndex == -1 {
-            return nil
-        }
-
-        let line = lines[lineIndex] as! CTLine
-        let lineOrigin = lineOrigins[lineIndex]
+    private func findCharacterIndexInLine(_ point: CGPoint, lineInfo: (line: CTLine, origin: CGPoint, index: Int)) -> Int {
+        let line = lineInfo.line
+        let lineOrigin = lineInfo.origin
         let lineRange = CTLineGetStringRange(line)
 
         // 检查点击位置是否在行的开始之前
-        if flippedPoint.x <= lineOrigin.x {
+        if point.x <= lineOrigin.x {
             return lineRange.location
         }
 
@@ -79,9 +89,9 @@ extension LTXLabel {
             let charIndex = lineRange.location + j
             let offset = CTLineGetOffsetForStringIndex(line, charIndex, nil)
 
-            if offset >= flippedPoint.x - lineOrigin.x {
+            if offset >= point.x - lineOrigin.x {
                 // 如果点击位置更接近上一个字符，返回上一个索引
-                if j > 0, offset - (flippedPoint.x - lineOrigin.x) > (flippedPoint.x - lineOrigin.x) - CTLineGetOffsetForStringIndex(line, charIndex - 1, nil) {
+                if j > 0, offset - (point.x - lineOrigin.x) > (point.x - lineOrigin.x) - CTLineGetOffsetForStringIndex(line, charIndex - 1, nil) {
                     return charIndex - 1
                 }
                 return charIndex
@@ -91,29 +101,29 @@ extension LTXLabel {
         // 如果点击位置在行尾之后，返回行尾索引
         return lineRange.location + lineRange.length
     }
-    
+
     func selectWordAtIndex(_ index: Int) {
-        guard isSelectable, let textLayout = textLayout else { return }
+        guard isSelectable, let textLayout else { return }
         let attributedString = textLayout.attributedString
         guard attributedString.length > 0, index < attributedString.length else { return }
-        
+
         let nsString = attributedString.string as NSString
         let range = nsString.rangeOfWord(at: index)
-        
-        if range.location != NSNotFound && range.length > 0 {
+
+        if range.location != NSNotFound, range.length > 0 {
             updateSelectionWithRange(range)
         }
     }
-    
+
     func selectLineAtIndex(_ index: Int) {
-        guard isSelectable, let textLayout = textLayout else { return }
+        guard isSelectable, let textLayout else { return }
         let attributedString = textLayout.attributedString
         guard attributedString.length > 0, index < attributedString.length else { return }
-        
+
         let nsString = attributedString.string as NSString
         let lineRange = nsString.rangeOfLine(at: index)
-        
-        if lineRange.location != NSNotFound && lineRange.length > 0 {
+
+        if lineRange.location != NSNotFound, lineRange.length > 0 {
             updateSelectionWithRange(lineRange)
         }
     }
@@ -163,8 +173,12 @@ extension LTXLabel {
             return
         }
 
-        // 创建选区路径
-        for boxedRect in selectionRects {
+        createSelectionPath(selectionPath, fromRects: selectionRects)
+        createSelectionLayer(withPath: selectionPath)
+    }
+
+    private func createSelectionPath(_ selectionPath: LTXPlatformBezierPath, fromRects rects: [NSValue]) {
+        for boxedRect in rects {
             #if canImport(UIKit)
                 let rect = boxedRect.cgRectValue
             #elseif canImport(AppKit)
@@ -185,13 +199,15 @@ extension LTXLabel {
                 #error("unsupported platform")
             #endif
         }
+    }
 
+    private func createSelectionLayer(withPath path: LTXPlatformBezierPath) {
         let selLayer = CAShapeLayer()
 
         #if canImport(UIKit)
-            selLayer.path = selectionPath.cgPath
+            selLayer.path = path.cgPath
         #elseif canImport(AppKit)
-            selLayer.path = selectionPath.quartzPath
+            selLayer.path = path.quartzPath
         #else
             #error("unsupported platform")
         #endif
@@ -267,7 +283,7 @@ extension LTXLabel {
             }
 
             if highlightRegionAtPoint(point) != nil {
-                NSCursor.arrow.set()
+                NSCursor.pointingHand.set()
             } else {
                 NSCursor.iBeam.set()
             }
@@ -285,34 +301,34 @@ extension NSString {
     func rangeOfWord(at index: Int) -> NSRange {
         let options: NSString.EnumerationOptions = [.byWords, .substringNotRequired]
         var resultRange = NSRange(location: NSNotFound, length: 0)
-        
-        enumerateSubstrings(in: NSRange(location: 0, length: length), options: options) { substring, substringRange, _, stop in
+
+        enumerateSubstrings(in: NSRange(location: 0, length: length), options: options) { _, substringRange, _, stop in
             if substringRange.contains(index) {
                 resultRange = substringRange
                 stop.pointee = true
             }
         }
-        
+
         return resultRange
     }
-    
+
     func rangeOfLine(at index: Int) -> NSRange {
         var startIndex = index
-        while startIndex > 0 && character(at: startIndex - 1) != 0x0A { // 0x0A 是换行符 '\n'
+        while startIndex > 0, character(at: startIndex - 1) != 0x0A { // 0x0A 是换行符 '\n'
             startIndex -= 1
         }
-        
+
         var endIndex = index
-        while endIndex < length && character(at: endIndex) != 0x0A {
+        while endIndex < length, character(at: endIndex) != 0x0A {
             endIndex += 1
         }
-        
+
         return NSRange(location: startIndex, length: endIndex - startIndex)
     }
 }
 
 extension NSRange {
     func contains(_ index: Int) -> Bool {
-        return index >= location && index < (location + length)
+        index >= location && index < (location + length)
     }
 }
