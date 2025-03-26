@@ -4,7 +4,7 @@
 //
 
 #if canImport(UIKit)
-    // pass
+// pass
 #elseif canImport(AppKit)
     import AppKit
 
