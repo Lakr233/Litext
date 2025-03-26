@@ -13,6 +13,7 @@ A lightweight rich-text library for UIKit and AppKit platforms.
 - 🔗 Clickable links support
 - 🎨 Custom drawing callbacks
 - 📐 Auto layout integration (experimental)
+- 📃 Text Selection
 
 ![Screenshot](./Artworks/screenshot.png)
 
