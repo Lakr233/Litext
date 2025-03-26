@@ -3,27 +3,27 @@
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 
-import CoreGraphics
-import CoreText
-import Foundation
+@_exported import CoreGraphics
+@_exported import CoreText
+@_exported import Foundation
 
 #if canImport(UIKit)
-    import UIKit
+    @_exported import UIKit
 
     public typealias LTXPlatformView = UIView
     public typealias LTXPlatformBezierPath = UIBezierPath
+
     public typealias PlatformColor = UIColor
     public typealias PlatformFont = UIFont
-    public typealias PlatformSwitch = UISwitch
     public typealias PlatformApplication = UIApplication
 #elseif canImport(AppKit)
-    import AppKit
+    @_exported import AppKit
 
     public typealias LTXPlatformView = NSView
     public typealias LTXPlatformBezierPath = NSBezierPath
+
     public typealias PlatformColor = NSColor
     public typealias PlatformFont = NSFont
-    public typealias PlatformSwitch = NSSwitch
     public typealias PlatformApplication = NSApplication
 #else
     #error("unsupported platform")
