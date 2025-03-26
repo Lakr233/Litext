@@ -6,6 +6,8 @@
 import CoreText
 import Foundation
 
+private var menuOwnerIdentifier: UUID = .init()
+
 #if canImport(UIKit)
     public extension LTXLabel {
         override var keyCommands: [UIKeyCommand]? {
@@ -155,10 +157,13 @@ import Foundation
             defer { deactivateHighlightRegion() }
 
             if !isTouchReallyMoved(location),
-               interactionState.clickCount <= 1,
-               !isLocationInSelection(location: location)
+               interactionState.clickCount <= 1
             {
-                clearSelection()
+                if isLocationInSelection(location: location) {
+                    showSelectionMenuController()
+                } else {
+                    clearSelection()
+                }
             }
 
             guard selectionRange == nil, !isTouchReallyMoved(location) else { return }
@@ -242,6 +247,8 @@ import Foundation
                 ))
             }
             menuController.menuItems = menuItems
+            
+            menuOwnerIdentifier = self.id
             menuController.showMenu(
                 from: self,
                 rect: unionRect.insetBy(dx: -8, dy: -8)
@@ -249,6 +256,7 @@ import Foundation
         }
 
         func hideSelectionMenuController() {
+            guard menuOwnerIdentifier == self.id else { return }
             UIMenuController.shared.hideMenu()
         }
 
