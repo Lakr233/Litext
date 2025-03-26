@@ -10,9 +10,9 @@ let package = Package(
         .macOS(.v11),
     ],
     products: [
-        .library(name: "Litext", targets: ["Litext"])
+        .library(name: "Litext", targets: ["Litext"]),
     ],
     targets: [
-        .target(name: "Litext", publicHeadersPath: "include")
+        .target(name: "Litext"),
     ]
 )

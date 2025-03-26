@@ -1,26 +1,25 @@
 //
-//  Created by ktiays on 2025/2/18.
-//  Copyright (c) 2025 Helixform. All rights reserved.
+//  Created by Lakr233 & Helixform on 2025/2/18.
+//  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 
 import AppKit
 import Litext
 
 final class ViewController: NSViewController {
-
-    let label: LTXLabel = .init()
+    let label = LTXLabel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         view.addSubview(label)
-        
+
         let attributedString: NSMutableAttributedString = .init()
         attributedString.append(
             .init(
                 string: "Lorem ipsum",
                 attributes: [
-                    .font: NSFont.systemFont(ofSize: 18, weight: .bold)
+                    .font: NSFont.systemFont(ofSize: 18, weight: .bold),
                 ]
             )
         )
@@ -28,7 +27,7 @@ final class ViewController: NSViewController {
             .init(
                 string: " dolor sit amet, consectetur adipiscing elit. ",
                 attributes: [
-                    .font: NSFont.systemFont(ofSize: 14)
+                    .font: NSFont.systemFont(ofSize: 14),
                 ]
             )
         )
@@ -55,12 +54,12 @@ final class ViewController: NSViewController {
 
         let attachment: LTXAttachment = .init()
         attachment.view = NSSwitch()
-        attachment.size = attachment.view.intrinsicContentSize
+        attachment.size = attachment.view!.intrinsicContentSize
         attributedString.append(
             .init(
                 string: LTXReplacementText,
                 attributes: [
-                    .LTXAttachmentAttributeName: attachment,
+                    LTXAttachmentAttributeName: attachment,
                     kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate,
                 ]
             )
@@ -68,7 +67,7 @@ final class ViewController: NSViewController {
         attributedString.append(
             .init(
                 string:
-                    " Sed quis pretium ligula. Duis dictum faucibus turpis, et sagittis dolor. Ut dapibus fermentum sollicitudin. Nulla commodo pulvinar lobortis. Nunc vel justo ornare nisi pulvinar rhoncus. Duis ornare gravida mauris, sed scelerisque nibh dapibus id.\nNew line test.",
+                " Sed quis pretium ligula. Duis dictum faucibus turpis, et sagittis dolor. Ut dapibus fermentum sollicitudin. Nulla commodo pulvinar lobortis. Nunc vel justo ornare nisi pulvinar rhoncus. Duis ornare gravida mauris, sed scelerisque nibh dapibus id.\nNew line test.",
                 attributes: [
                     .font: NSFont.systemFont(ofSize: 16),
                     .foregroundColor: NSColor.systemOrange,
@@ -80,12 +79,12 @@ final class ViewController: NSViewController {
         paragraphStyle.lineSpacing = 4
         attributedString.addAttributes(
             [
-                .paragraphStyle: paragraphStyle
+                .paragraphStyle: paragraphStyle,
             ],
             range: NSRange(location: 0, length: attributedString.length)
         )
-        
-        self.label.attributedText = attributedString
+
+        label.attributedText = attributedString
     }
 
     override func viewWillLayout() {
