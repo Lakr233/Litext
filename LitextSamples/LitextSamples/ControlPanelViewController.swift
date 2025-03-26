@@ -49,6 +49,12 @@ class ControlPanelViewController: UIViewController {
         setupTableView()
     }
 
+    override var keyCommands: [UIKeyCommand]? {
+        [
+            UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [], action: #selector(dismiss)),
+        ]
+    }
+
     private func setupTableView() {
         tableView.delegate = self
         tableView.dataSource = self

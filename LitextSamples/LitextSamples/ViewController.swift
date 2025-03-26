@@ -106,6 +106,8 @@ class ViewController: UIViewController {
 
     @objc func showControlPanel() {
         let controlPanelVC = ControlPanelViewController()
+        controlPanelVC.isModalInPresentation = false
+
         controlPanelVC.delegate = self
 
         controlPanelVC.fontSize = fontSize
