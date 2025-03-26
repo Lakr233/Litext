@@ -13,7 +13,10 @@ public extension LTXLabel {
     override var intrinsicContentSize: CGSize {
         guard let textLayout else { return .zero }
 
-        var constraintSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        var constraintSize = CGSize(
+            width: CGFloat.greatestFiniteMagnitude,
+            height: CGFloat.greatestFiniteMagnitude
+        )
 
         if preferredMaxLayoutWidth > 0 {
             constraintSize.width = preferredMaxLayoutWidth
@@ -21,7 +24,9 @@ public extension LTXLabel {
             constraintSize.width = lastContainerSize.width
         }
 
-        return textLayout.suggestContainerSize(withSize: constraintSize)
+        return textLayout.suggestContainerSize(
+            withSize: constraintSize
+        )
     }
 
     #if canImport(UIKit)

@@ -7,6 +7,18 @@ import Foundation
 import QuartzCore
 
 extension LTXLabel {
+    func activateHighlightRegionAtPoint(_ location: CGPoint) -> Bool {
+        if let hitHighlightRegion = highlightRegionAtPoint(location) {
+            addActiveHighlightRegion(hitHighlightRegion)
+            return true
+        }
+        return false
+    }
+
+    func deactivateHighlightRegion() {
+        removeActiveHighlightRegion()
+    }
+
     func highlightRegionAtPoint(_ point: CGPoint) -> LTXHighlightRegion? {
         for region in highlightRegions {
             if isHighlightRegion(region, containsPoint: point) {
@@ -29,21 +41,12 @@ extension LTXLabel {
                 #error("unsupported platform")
             #endif
 
-            let convertedRect = convertRectFromTextLayout(rect, forInteraction: true)
+            let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
             if convertedRect.contains(point) {
                 return true
             }
         }
         return false
-    }
-
-    func convertRectFromTextLayout(_ rect: CGRect, forInteraction interaction: Bool) -> CGRect {
-        var result = rect
-        result.origin.y = bounds.height - result.origin.y - result.size.height
-        if interaction {
-            result = result.insetBy(dx: -4, dy: -4)
-        }
-        return result
     }
 
     func addActiveHighlightRegion(_ highlightRegion: LTXHighlightRegion) {
@@ -61,7 +64,7 @@ extension LTXLabel {
                 #error("unsupported platform")
             #endif
 
-            let convertedRect = convertRectFromTextLayout(rect, forInteraction: true)
+            let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
 
             #if canImport(UIKit)
                 let subpath = LTXPlatformBezierPath(roundedRect: convertedRect, cornerRadius: 4)
@@ -110,7 +113,7 @@ extension LTXLabel {
         highlightRegion.associatedObject = highlightLayer
     }
 
-    func removeActiveHighlightRegion() {
+    private func removeActiveHighlightRegion() {
         guard let activeHighlightRegion else { return }
 
         if let highlightLayer = activeHighlightRegion.associatedObject as? CALayer {

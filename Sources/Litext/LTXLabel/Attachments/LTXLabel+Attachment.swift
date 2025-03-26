@@ -6,6 +6,15 @@
 import Foundation
 
 extension LTXLabel {
+    func isLocationAboveAttachmentView(location: CGPoint) -> Bool {
+        for view in attachmentViews {
+            if view.frame.contains(location) {
+                return true
+            }
+        }
+        return false
+    }
+
     func updateAttachmentViews() {
         let viewsToRemove = attachmentViews
         var newAttachmentViews: Set<LTXPlatformView> = []
@@ -29,7 +38,7 @@ extension LTXLabel {
                 #error("unsupported platform")
             #endif
 
-            let convertedRect = convertRectFromTextLayout(rect, forInteraction: false)
+            let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
             view.frame = convertedRect
         }
 
