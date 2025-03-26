@@ -348,6 +348,7 @@ class ViewController: UIViewController {
         )
 
         label.backgroundColor = backgroundColor
+        label.isSelectable = true
 
         label.attributedText = attributedString
         label.tapHandler = { [weak self] highlightRegion, _ in

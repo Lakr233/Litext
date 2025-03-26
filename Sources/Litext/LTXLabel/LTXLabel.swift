@@ -50,28 +50,31 @@ public class LTXLabel: LTXPlatformView {
 
     public var tapHandler: LTXLabelTapHandler?
 
-    public internal(set) var isTouchSequenceActive: Bool = false
-
     // MARK: - Internal Properties
 
     var textLayout: LTXTextLayout?
     var attachmentViews: Set<LTXPlatformView> = []
     var highlightRegions: [LTXHighlightRegion] = []
     var activeHighlightRegion: LTXHighlightRegion?
-    var initialTouchLocation: CGPoint = .zero
     var lastContainerSize: CGSize = .zero
 
-    var selectionStartPoint: CGPoint?
-    var selectionEndPoint: CGPoint?
-    var selectionRange: NSRange?
+    var selectionRange: NSRange? {
+        didSet { updateSelectionLayer() }
+    }
+
+    var selectedLinkForMenuAction: URL?
     var selectionLayer: CAShapeLayer?
 
-    var currentLinkURL: URL?
+    #if canImport(UIKit)
+        var startSelectionHandle: LTXSelectionHandle?
+        var endSelectionHandle: LTXSelectionHandle?
+    #endif
 
     struct InteractionState {
-        var clickCount: Int = 0
+        var initialTouchLocation: CGPoint = .zero
+        var clickCount: Int = 1
         var lastClickTime: TimeInterval = 0
-        let multiClickTimeThreshold: TimeInterval = 0.3
+        var isFirstMove: Bool = false
     }
 
     var interactionState = InteractionState()
@@ -79,7 +82,6 @@ public class LTXLabel: LTXPlatformView {
     struct Flags {
         var layoutIsDirty: Bool = false
         var needsUpdateHighlightRegions: Bool = false
-        var isSelectingText: Bool = false
     }
 
     var flags = Flags()
@@ -133,5 +135,23 @@ public class LTXLabel: LTXPlatformView {
             #error("unsupported platform")
         #endif
         invalidateIntrinsicContentSize()
+    }
+
+    // 判断是否使用iOS风格的选择模式
+    func shouldUseIOSStyleSelection() -> Bool {
+        #if canImport(UIKit)
+            #if targetEnvironment(macCatalyst)
+                // macCatalyst 使用 Mac 风格
+                return false
+            #else
+                // 其他 iOS 设备使用 iOS 风格
+                return true
+            #endif
+        #elseif canImport(AppKit)
+            // Mac 平台使用 Mac 风格
+            return false
+        #else
+            #error("unsupported platform")
+        #endif
     }
 }

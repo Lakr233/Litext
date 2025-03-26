@@ -1,0 +1,71 @@
+//
+//  Created by Litext Team.
+//  Copyright (c) 2025 Litext Team. All rights reserved.
+//
+
+import CoreGraphics
+import CoreText
+import Foundation
+import QuartzCore
+
+extension LTXLabel {
+    func selectWordAtIndex(_ index: Int) {
+        guard isSelectable, let textLayout else { return }
+        let attributedString = textLayout.attributedString
+        guard attributedString.length > 0, index < attributedString.length else { return }
+        let nsString = attributedString.string as NSString
+        let range = nsString.rangeOfWord(at: index)
+        guard range.location != NSNotFound, range.length > 0 else { return }
+        selectionRange = range
+    }
+
+    func selectSentenceAtIndex(_ index: Int) {
+        guard isSelectable, let textLayout else { return }
+        guard let text = textLayout.attributedString.string as NSString? else { return }
+        let sentenceDelimiters = CharacterSet(charactersIn: ".!?")
+        var startIndex = index
+        while startIndex > 0 {
+            let prevChar = text.substring(with: NSRange(location: startIndex - 1, length: 1))
+            if sentenceDelimiters.contains(prevChar.unicodeScalars.first!) {
+                break
+            }
+            startIndex -= 1
+        }
+        var endIndex = index
+        while endIndex < text.length {
+            if endIndex < text.length - 1 {
+                let currentChar = text.substring(with: NSRange(location: endIndex, length: 1))
+                if sentenceDelimiters.contains(currentChar.unicodeScalars.first!) {
+                    endIndex += 1
+                    break
+                }
+            }
+            endIndex += 1
+        }
+        let range = NSRange(location: startIndex, length: endIndex - startIndex)
+        selectionRange = range
+    }
+
+    func selectLineAtIndex(_ index: Int) {
+        guard isSelectable, let textLayout else { return }
+        let attributedString = textLayout.attributedString
+        guard attributedString.length > 0,
+              index < attributedString.length
+        else { return }
+
+        let nsString = attributedString.string as NSString
+        let lineRange = nsString.rangeOfLine(at: index)
+
+        guard lineRange.location != NSNotFound, lineRange.length > 0 else { return }
+        selectionRange = lineRange
+    }
+
+    @objc func selectAllText() {
+        guard isSelectable, let textLayout else { return }
+        let attributedString = textLayout.attributedString
+        guard attributedString.length > 0 else { return }
+
+        let range = NSRange(location: 0, length: attributedString.length)
+        selectionRange = range
+    }
+}
