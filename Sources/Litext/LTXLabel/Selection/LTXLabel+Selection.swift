@@ -81,9 +81,25 @@ extension LTXLabel {
             length: min(range.length, maxLen)
         )
 
-        return textLayout
+        let selectedText = textLayout
             .attributedString
             .attributedSubstring(from: safeRange)
+
+        let mutableResult = NSMutableAttributedString(attributedString: selectedText)
+        mutableResult.enumerateAttribute(
+            LTXAttachmentAttributeName,
+            in: NSRange(location: 0, length: mutableResult.length),
+            options: []
+        ) { value, range, _ in
+            if let attachment = value as? LTXAttachment {
+                mutableResult.replaceCharacters(
+                    in: range,
+                    with: attachment.attributedStringRepresentation()
+                )
+            }
+        }
+
+        return mutableResult
     }
 
     func selectedPlainText() -> String? {
