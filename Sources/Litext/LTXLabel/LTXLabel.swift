@@ -65,7 +65,7 @@ public class LTXLabel: LTXPlatformView {
     var selectedLinkForMenuAction: URL?
     var selectionLayer: CAShapeLayer?
 
-    #if canImport(UIKit)
+    #if canImport(UIKit) && !targetEnvironment(macCatalyst)
         var selectionHandleStart: LTXSelectionHandle = .init(type: .start)
         var selectionHandleEnd: LTXSelectionHandle = .init(type: .end)
     #endif
@@ -101,13 +101,17 @@ public class LTXLabel: LTXPlatformView {
     private func commonInit() {
         #if canImport(UIKit)
             backgroundColor = .clear
-            clipsToBounds = false // for selection handle
-            selectionHandleStart.isHidden = true
-            selectionHandleStart.delegate = self
-            addSubview(selectionHandleStart)
-            selectionHandleEnd.isHidden = true
-            selectionHandleEnd.delegate = self
-            addSubview(selectionHandleEnd)
+
+            #if targetEnvironment(macCatalyst)
+            #else
+                clipsToBounds = false // for selection handle
+                selectionHandleStart.isHidden = true
+                selectionHandleStart.delegate = self
+                addSubview(selectionHandleStart)
+                selectionHandleEnd.isHidden = true
+                selectionHandleEnd.delegate = self
+                addSubview(selectionHandleEnd)
+            #endif
         #elseif canImport(AppKit)
             wantsLayer = true
             layer?.backgroundColor = .clear
@@ -133,7 +137,6 @@ public class LTXLabel: LTXPlatformView {
 
     func invalidateTextLayout() {
         flags.layoutIsDirty = true
-        clearSelection()
         #if canImport(UIKit)
             setNeedsLayout()
         #elseif canImport(AppKit)

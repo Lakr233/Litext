@@ -210,7 +210,7 @@ import Foundation
                 NSCursor.pointingHand.set()
                 return
             }
-            
+
             if let index = textIndexAtPoint(point) {
                 let range = NSRange(location: index, length: 1)
                 let rect = textLayout?.rects(for: range).first
@@ -222,7 +222,7 @@ import Foundation
                     }
                 }
             }
-            
+
             resetCursor()
         }
 
