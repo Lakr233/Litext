@@ -80,6 +80,8 @@ public class LTXLabel: LTXPlatformView {
     }
 
     private func commonInit() {
+        registerNotificationCenterForSelectionDeduplicate()
+
         #if canImport(UIKit)
             backgroundColor = .clear
 
@@ -97,7 +99,6 @@ public class LTXLabel: LTXPlatformView {
             wantsLayer = true
             layer?.backgroundColor = .clear
         #endif
-        attachmentViews = []
     }
 
     // MARK: - Platform Specific

@@ -8,6 +8,10 @@ import CoreText
 import Foundation
 import QuartzCore
 
+private let kDeduplicateSelectionNotification = Notification.Name(
+    rawValue: "LTXLabelDeduplicateSelectionNotification"
+)
+
 extension LTXLabel {
     func updateSelectionLayer() {
         selectionLayer?.removeFromSuperlayer()
@@ -70,6 +74,22 @@ extension LTXLabel {
                 height: endRect.height + LTXSelectionHandle.knobRadius
             )
         #endif
+
+        NotificationCenter.default.post(name: kDeduplicateSelectionNotification, object: self)
+    }
+
+    func registerNotificationCenterForSelectionDeduplicate() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(deduplicateSelection),
+            name: kDeduplicateSelectionNotification,
+            object: nil
+        )
+    }
+
+    @objc private func deduplicateSelection(_ notification: Notification) {
+        guard let object = notification.object as? LTXLabel, object != self else { return }
+        clearSelection()
     }
 
     private func createSelectionPath(_ selectionPath: LTXPlatformBezierPath, fromRects rects: [CGRect]) {
