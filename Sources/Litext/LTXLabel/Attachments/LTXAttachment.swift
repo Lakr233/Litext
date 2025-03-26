@@ -6,9 +6,9 @@
 import CoreText
 import Foundation
 
-public class LTXAttachment {
-    public var size: CGSize
-    public var view: LTXPlatformView?
+open class LTXAttachment {
+    open var size: CGSize
+    open var view: LTXPlatformView?
 
     private var _runDelegate: CTRunDelegate?
 
@@ -16,14 +16,14 @@ public class LTXAttachment {
         size = .zero
     }
 
-    public func attributedStringRepresentation() -> NSAttributedString {
+    open func attributedStringRepresentation() -> NSAttributedString {
         if let view = view as? LTXAttributeStringRepresentable {
             return view.attributedStringRepresentation()
         }
         return NSAttributedString(string: " ")
     }
 
-    public var runDelegate: CTRunDelegate {
+    open var runDelegate: CTRunDelegate {
         if _runDelegate == nil {
             var callbacks = CTRunDelegateCallbacks(
                 version: kCTRunDelegateVersion1,

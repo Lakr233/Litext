@@ -87,7 +87,7 @@ extension LTXLabel {
 
         let mutableResult = NSMutableAttributedString(attributedString: selectedText)
         mutableResult.enumerateAttribute(
-            LTXAttachmentAttributeName,
+            .ltxAttachment,
             in: NSRange(location: 0, length: mutableResult.length),
             options: []
         ) { value, range, _ in
