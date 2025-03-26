@@ -56,6 +56,9 @@ public class LTXLabel: LTXPlatformView {
         didSet { updateSelectionLayer() }
     }
 
+    #if canImport(UIKit)
+        var firstResponderKeeper: Timer?
+    #endif
     var selectedLinkForMenuAction: URL?
     var selectionLayer: CAShapeLayer?
 
@@ -80,6 +83,9 @@ public class LTXLabel: LTXPlatformView {
     }
 
     deinit {
+        #if canImport(UIKit)
+            firstResponderKeeper?.invalidate()
+        #endif
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -99,6 +105,15 @@ public class LTXLabel: LTXPlatformView {
                 selectionHandleEnd.delegate = self
                 addSubview(selectionHandleEnd)
             #endif
+
+            let timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+                guard let self else { return }
+                if selectionRange != nil, !isFirstResponder {
+                    becomeFirstResponder()
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            firstResponderKeeper = timer
         #elseif canImport(AppKit)
             wantsLayer = true
             layer?.backgroundColor = .clear
