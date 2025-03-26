@@ -26,7 +26,7 @@ public class LTXLabel: LTXPlatformView {
     public var isSelectable: Bool = false {
         didSet { if !isSelectable { clearSelection() } }
     }
-    
+
     public internal(set) var isInteractionInProgress = false
 
     #if canImport(UIKit)
