@@ -13,6 +13,11 @@ extension LTXLabel {
         selectionLayer?.removeFromSuperlayer()
         selectionLayer = nil
 
+        #if canImport(UIKit)
+            selectionHandleStart.isHidden = true
+            selectionHandleEnd.isHidden = true
+        #endif
+
         guard let textLayout,
               let range = selectionRange,
               range.location != NSNotFound,
@@ -38,6 +43,32 @@ extension LTXLabel {
 
         #if canImport(UIKit) && !targetEnvironment(macCatalyst)
             showSelectionMenuController()
+        #endif
+
+        #if canImport(UIKit)
+            selectionHandleStart.isHidden = false
+            selectionHandleEnd.isHidden = false
+
+            var beginRect = textLayout.rects(
+                for: NSRange(location: range.location, length: 1)
+            ).first ?? .zero
+            beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
+            selectionHandleStart.frame = .init(
+                x: beginRect.minX - LTXSelectionHandle.knobRadius - 1,
+                y: beginRect.minY - LTXSelectionHandle.knobRadius * 2,
+                width: LTXSelectionHandle.knobRadius * 2,
+                height: beginRect.height + LTXSelectionHandle.knobRadius * 2
+            )
+            var endRect = textLayout.rects(
+                for: NSRange(location: range.location + range.length - 1, length: 1)
+            ).first ?? .zero
+            endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
+            selectionHandleEnd.frame = .init(
+                x: endRect.maxX - LTXSelectionHandle.knobRadius + 1,
+                y: endRect.minY,
+                width: LTXSelectionHandle.knobRadius * 2,
+                height: endRect.height + LTXSelectionHandle.knobRadius * 2
+            )
         #endif
     }
 

@@ -39,6 +39,10 @@ extension LTXLabel {
         )
     }
 
+    func nearestTextIndexAtPoint(_: CGPoint) -> Int? {
+        nil
+    }
+
     func textIndexAtPoint(_ point: CGPoint) -> Int? {
         guard let textLayout,
               let ctFrame = textLayout.ctFrame
