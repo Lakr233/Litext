@@ -160,7 +160,7 @@ import Foundation
                 clearSelection()
             }
 
-            guard selectionRange == nil else { return }
+            guard selectionRange == nil, !isTouchReallyMoved(location) else { return }
             for region in highlightRegions {
                 let rects = region.rects.map {
                     convertRectFromTextLayout($0.cgRectValue, insetForInteraction: true)
