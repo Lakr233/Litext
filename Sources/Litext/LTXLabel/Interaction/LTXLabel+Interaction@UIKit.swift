@@ -247,8 +247,8 @@ private var menuOwnerIdentifier: UUID = .init()
                 ))
             }
             menuController.menuItems = menuItems
-            
-            menuOwnerIdentifier = self.id
+
+            menuOwnerIdentifier = id
             menuController.showMenu(
                 from: self,
                 rect: unionRect.insetBy(dx: -8, dy: -8)
@@ -256,7 +256,7 @@ private var menuOwnerIdentifier: UUID = .init()
         }
 
         func hideSelectionMenuController() {
-            guard menuOwnerIdentifier == self.id else { return }
+            guard menuOwnerIdentifier == id else { return }
             UIMenuController.shared.hideMenu()
         }
 
