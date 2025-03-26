@@ -18,8 +18,8 @@ A lightweight rich-text library for UIKit and AppKit platforms.
 
 ## Supported Platforms
 
-- macOS 11.0+
 - iOS 13.0+
+- macOS 12.0+
 
 ## Installation
 

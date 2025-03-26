@@ -32,6 +32,8 @@ final class ViewController: NSViewController {
         setupLayout()
         updateAttributedText()
 
+        label.isSelectable = true
+
         controlButton.target = self
         controlButton.action = #selector(showControlPanel)
     }

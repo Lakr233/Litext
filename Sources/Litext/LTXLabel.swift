@@ -30,6 +30,14 @@ public class LTXLabel: LTXPlatformView {
         }
     }
 
+    public var isSelectable: Bool = false {
+        didSet {
+            if !isSelectable {
+                clearSelection()
+            }
+        }
+    }
+
     #if canImport(UIKit)
 
     #elseif canImport(AppKit)
@@ -53,9 +61,28 @@ public class LTXLabel: LTXPlatformView {
     var initialTouchLocation: CGPoint = .zero
     var lastContainerSize: CGSize = .zero
 
+    // Selection properties
+    var selectionStartPoint: CGPoint?
+    var selectionEndPoint: CGPoint?
+    var selectionRange: NSRange?
+    var selectionLayer: CAShapeLayer?
+
+    // 右键菜单相关
+    var currentLinkURL: String?
+    
+    // 交互状态结构体
+    struct InteractionState {
+        var clickCount: Int = 0
+        var lastClickTime: TimeInterval = 0
+        let multiClickTimeThreshold: TimeInterval = 0.3
+    }
+    
+    var interactionState = InteractionState()
+
     struct Flags {
         var layoutIsDirty: Bool = false
         var needsUpdateHighlightRegions: Bool = false
+        var isSelectingText: Bool = false
     }
 
     var flags = Flags()
@@ -100,6 +127,7 @@ public class LTXLabel: LTXPlatformView {
 
     func invalidateTextLayout() {
         flags.layoutIsDirty = true
+        clearSelection()
         #if canImport(UIKit)
             setNeedsLayout()
         #elseif canImport(AppKit)
