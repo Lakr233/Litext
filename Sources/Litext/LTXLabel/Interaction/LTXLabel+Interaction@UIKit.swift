@@ -233,10 +233,12 @@ import Foundation
                 title: LocalizedText.copy,
                 action: #selector(copyMenuItemTapped)
             ))
-            menuItems.append(UIMenuItem(
-                title: LocalizedText.selectAll,
-                action: #selector(selectAllTapped)
-            ))
+            if selectionRange != selectAllRange() {
+                menuItems.append(UIMenuItem(
+                    title: LocalizedText.selectAll,
+                    action: #selector(selectAllTapped)
+                ))
+            }
             menuController.menuItems = menuItems
             menuController.showMenu(
                 from: self,

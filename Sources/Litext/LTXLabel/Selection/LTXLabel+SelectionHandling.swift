@@ -60,12 +60,15 @@ extension LTXLabel {
         selectionRange = lineRange
     }
 
-    @objc func selectAllText() {
-        guard isSelectable, let textLayout else { return }
+    func selectAllRange() -> NSRange? {
+        guard isSelectable, let textLayout else { return nil }
         let attributedString = textLayout.attributedString
-        guard attributedString.length > 0 else { return }
+        guard attributedString.length > 0 else { return nil }
+        return NSRange(location: 0, length: attributedString.length)
+    }
 
-        let range = NSRange(location: 0, length: attributedString.length)
+    @objc func selectAllText() {
+        guard let range = selectAllRange() else { return }
         selectionRange = range
     }
 }
