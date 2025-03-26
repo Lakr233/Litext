@@ -133,7 +133,6 @@ import Foundation
                 // on iOS we block the selection change by touches moved
                 // instead user is required to use those handlers
                 interactionState.isFirstMove = false
-//                selectionRange = nil
             #else
                 if interactionState.isFirstMove {
                     interactionState.isFirstMove = false
@@ -180,7 +179,6 @@ import Foundation
 
     extension LTXLabel: LTXSelectionHandleDelegate {
         func selectionHandleDidMove(_ type: LTXSelectionHandle.HandleType, toLocationInSuperView point: CGPoint) {
-            print(point)
             guard let selectionRange, let textLocation = nearestTextIndexAtPoint(point) else { return }
             switch type {
             case .start:
@@ -228,6 +226,10 @@ import Foundation
                 title: LocalizedText.copy,
                 action: #selector(copyMenuItemTapped)
             ))
+            menuItems.append(UIMenuItem(
+                title: LocalizedText.selectAll,
+                action: #selector(selectAllTapped)
+            ))
             menuController.menuItems = menuItems
             menuController.showMenu(
                 from: self,
@@ -235,12 +237,20 @@ import Foundation
             )
         }
 
-        func hideSelectionMenuController() { UIMenuController.shared.hideMenu()
+        func hideSelectionMenuController() {
+            UIMenuController.shared.hideMenu()
         }
 
         @objc private func copyMenuItemTapped() {
             copySelectedText()
             clearSelection()
+        }
+
+        @objc private func selectAllTapped() {
+            selectAllText()
+            DispatchQueue.main.async {
+                self.showSelectionMenuController()
+            }
         }
 
         override public var canBecomeFirstResponder: Bool {

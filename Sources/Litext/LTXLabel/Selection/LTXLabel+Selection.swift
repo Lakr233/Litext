@@ -30,8 +30,8 @@ public extension LTXLabel {
 
 extension LTXLabel {
     func updateSelectinoRange(withLocation location: CGPoint) {
-        guard let startIndex = textIndexAtPoint(interactionState.initialTouchLocation),
-              let endIndex = textIndexAtPoint(location)
+        guard let startIndex = nearestTextIndexAtPoint(interactionState.initialTouchLocation),
+              let endIndex = nearestTextIndexAtPoint(location)
         else { return }
         selectionRange = NSRange(
             location: min(startIndex, endIndex),
@@ -39,8 +39,108 @@ extension LTXLabel {
         )
     }
 
-    func nearestTextIndexAtPoint(_: CGPoint) -> Int? {
-        nil
+    func nearestTextIndexAtPoint(_ point: CGPoint) -> Int? {
+        guard let textLayout,
+              let ctFrame = textLayout.ctFrame
+        else { return nil }
+
+        let flippedPoint = CGPoint(
+            x: point.x,
+            y: bounds.height - point.y
+        )
+
+        if let lineInfo = findLineContainingPoint(
+            flippedPoint,
+            ctFrame: ctFrame
+        ) {
+            return findCharacterIndexInLine(
+                flippedPoint,
+                lineInfo: lineInfo
+            )
+        }
+
+        let lines = CTFrameGetLines(ctFrame) as [AnyObject]
+        guard !lines.isEmpty else { return nil }
+
+        var lineOrigins = [CGPoint](
+            repeating: .zero,
+            count: lines.count
+        )
+        CTFrameGetLineOrigins(
+            ctFrame,
+            CFRange(location: 0, length: 0),
+            &lineOrigins
+        )
+
+        if flippedPoint.y > lineOrigins[0].y {
+            let firstLine = lines[0] as! CTLine
+            if flippedPoint.x < lineOrigins[0].x {
+                return CTLineGetStringRange(firstLine).location
+            } else {
+                let range = CTLineGetStringRange(firstLine)
+                let lineWidth = CTLineGetTypographicBounds(firstLine, nil, nil, nil)
+                if flippedPoint.x > lineOrigins[0].x + lineWidth {
+                    return range.location + range.length
+                } else {
+                    return findCharacterIndexInLine(
+                        flippedPoint,
+                        lineInfo: (firstLine, lineOrigins[0], 0)
+                    )
+                }
+            }
+        }
+
+        if flippedPoint.y < lineOrigins[lines.count - 1].y {
+            let lastLine = lines[lines.count - 1] as! CTLine
+            if flippedPoint.x < lineOrigins[lines.count - 1].x {
+                return CTLineGetStringRange(lastLine).location
+            } else {
+                let range = CTLineGetStringRange(lastLine)
+                let lineWidth = CTLineGetTypographicBounds(lastLine, nil, nil, nil)
+                if flippedPoint.x > lineOrigins[lines.count - 1].x + lineWidth {
+                    return range.location + range.length
+                } else {
+                    return findCharacterIndexInLine(
+                        flippedPoint,
+                        lineInfo: (lastLine, lineOrigins[lines.count - 1], lines.count - 1)
+                    )
+                }
+            }
+        }
+
+        var closestLineIndex = 0
+        var minDistance = CGFloat.greatestFiniteMagnitude
+
+        for i in 0 ..< lines.count {
+            let line = lines[i] as! CTLine
+            let origin = lineOrigins[i]
+            var ascent: CGFloat = 0
+            var descent: CGFloat = 0
+            var leading: CGFloat = 0
+
+            CTLineGetTypographicBounds(
+                line,
+                &ascent,
+                &descent,
+                &leading
+            )
+
+            let lineMiddleY = origin.y - descent + (ascent + descent) / 2
+            let distance = abs(flippedPoint.y - lineMiddleY)
+
+            if distance < minDistance {
+                minDistance = distance
+                closestLineIndex = i
+            }
+        }
+
+        let closestLine = lines[closestLineIndex] as! CTLine
+        let closestOrigin = lineOrigins[closestLineIndex]
+
+        return findCharacterIndexInLine(
+            flippedPoint,
+            lineInfo: (closestLine, closestOrigin, closestLineIndex)
+        )
     }
 
     func textIndexAtPoint(_ point: CGPoint) -> Int? {

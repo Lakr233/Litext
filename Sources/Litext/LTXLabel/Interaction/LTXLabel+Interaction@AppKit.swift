@@ -5,6 +5,8 @@
 //  Created by 秋星桥 on 3/26/25.
 //
 
+import Foundation
+
 #if canImport(UIKit)
 
 #elseif canImport(AppKit)
@@ -206,9 +208,22 @@
 
             if highlightRegionAtPoint(point) != nil {
                 NSCursor.pointingHand.set()
-            } else {
-                NSCursor.iBeam.set()
+                return
             }
+            
+            if let index = textIndexAtPoint(point) {
+                let range = NSRange(location: index, length: 1)
+                let rect = textLayout?.rects(for: range).first
+                if let rect {
+                    let realRect = convertRectFromTextLayout(rect, insetForInteraction: true)
+                    if realRect.contains(point) {
+                        NSCursor.iBeam.set()
+                        return
+                    }
+                }
+            }
+            
+            resetCursor()
         }
 
         private func resetCursor() {
