@@ -6,8 +6,8 @@
 import CoreText
 import Foundation
 
-public extension LTXLabel {
-    #if canImport(UIKit)
+#if canImport(UIKit)
+    public extension LTXLabel {
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             if !bounds.contains(point) {
                 return false
@@ -65,56 +65,5 @@ public extension LTXLabel {
             removeActiveHighlightRegion()
             isTouchSequenceActive = false
         }
-
-    #elseif canImport(AppKit)
-        override func mouseDown(with event: NSEvent) {
-            let touchLocation = convert(event.locationInWindow, from: nil)
-            initialTouchLocation = touchLocation
-
-            if let hitHighlightRegion = highlightRegionAtPoint(touchLocation) {
-                addActiveHighlightRegion(hitHighlightRegion)
-            }
-
-            isTouchSequenceActive = true
-        }
-
-        override func mouseDragged(with event: NSEvent) {
-            guard activeHighlightRegion != nil else { return }
-
-            let currentLocation = convert(event.locationInWindow, from: nil)
-            let distance = hypot(currentLocation.x - initialTouchLocation.x, currentLocation.y - initialTouchLocation.y)
-
-            if distance > 4.0 {
-                removeActiveHighlightRegion()
-                isTouchSequenceActive = false
-            }
-        }
-
-        override func mouseUp(with event: NSEvent) {
-            guard let activeHighlightRegion else {
-                isTouchSequenceActive = false
-                return
-            }
-
-            let touchLocation = convert(event.locationInWindow, from: nil)
-
-            if isHighlightRegion(activeHighlightRegion, containsPoint: touchLocation) {
-                tapHandler?(activeHighlightRegion, touchLocation)
-            }
-
-            removeActiveHighlightRegion()
-            isTouchSequenceActive = false
-        }
-
-        override func hitTest(_ point: NSPoint) -> NSView? {
-            if !bounds.contains(point) { return nil }
-            if highlightRegionAtPoint(point) == nil {
-                return super.hitTest(point)
-            }
-            return self
-        }
-
-    #else
-        #error("unsupported platform")
-    #endif
-}
+    }
+#endif

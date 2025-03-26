@@ -63,8 +63,8 @@ public class LTXTextLayout: NSObject {
         }
     }
 
+    var ctFrame: CTFrame?
     private var framesetter: CTFramesetter
-    private var ctFrame: CTFrame?
     private var lines: [CTLine]?
     private var highlightRegionsByLocation: [Int: LTXHighlightRegion] = [:]
     private var lineDrawingActions: Set<LTXLineDrawingAction> = []
@@ -139,6 +139,64 @@ public class LTXTextLayout: NSObject {
     public func updateHighlightRegions(with context: CGContext) {
         _highlightRegions.removeAll()
         extractHighlightRegions(with: context)
+    }
+
+    public func enumerateTextRects(in range: NSRange, using block: (CGRect) -> Void) {
+        guard let ctFrame else { return }
+
+        let lines = CTFrameGetLines(ctFrame) as NSArray
+        let lineCount = lines.count
+        var origins = [CGPoint](repeating: .zero, count: lineCount)
+        CTFrameGetLineOrigins(ctFrame, CFRange(location: 0, length: 0), &origins)
+
+        for i in 0 ..< lineCount {
+            let line = lines[i] as! CTLine
+            let lineRange = CTLineGetStringRange(line)
+
+            let lineStart = lineRange.location
+            let lineEnd = lineStart + lineRange.length
+            let selStart = range.location
+            let selEnd = selStart + range.length
+
+            if selEnd < lineStart || selStart > lineEnd {
+                continue
+            }
+
+            let overlapStart = max(lineStart, selStart)
+            let overlapEnd = min(lineEnd, selEnd)
+
+            if overlapStart >= overlapEnd {
+                continue
+            }
+
+            var startOffset: CGFloat = 0
+            var endOffset: CGFloat = 0
+
+            if overlapStart > lineStart {
+                startOffset = CTLineGetOffsetForStringIndex(line, overlapStart, nil)
+            }
+
+            if overlapEnd < lineEnd {
+                endOffset = CTLineGetOffsetForStringIndex(line, overlapEnd, nil)
+            } else {
+                endOffset = CTLineGetTypographicBounds(line, nil, nil, nil)
+            }
+
+            let origin = origins[i]
+            var ascent: CGFloat = 0
+            var descent: CGFloat = 0
+            var leading: CGFloat = 0
+            CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+
+            let rect = CGRect(
+                x: origin.x + startOffset,
+                y: origin.y - descent,
+                width: endOffset - startOffset,
+                height: ascent + descent + leading
+            )
+
+            block(rect)
+        }
     }
 
     // MARK: - Private Methods

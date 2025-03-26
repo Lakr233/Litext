@@ -157,7 +157,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: ", ",
@@ -167,7 +167,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "underlined text",
@@ -179,7 +179,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: ", ",
@@ -189,7 +189,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "strikethrough",
@@ -226,7 +226,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: " Toggle Switch",
@@ -236,14 +236,14 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         let buttonAttachment = LTXAttachment()
         let button = UIButton(type: .system)
         button.setTitle("Click Me", for: .normal)
         button.sizeToFit()
         buttonAttachment.view = button
         buttonAttachment.size = button.intrinsicContentSize
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "\n\n",
@@ -253,7 +253,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: LTXReplacementText,
@@ -263,7 +263,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "\n\n组合样式：",
@@ -273,7 +273,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "粗体带下划线",
@@ -284,7 +284,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: " 和 ",
@@ -294,7 +294,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "高亮背景文本",
@@ -305,7 +305,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "\n\n中文测试，那只敏捷的棕毛狐狸🦊跳上了那只懒狗🐶。",
@@ -315,7 +315,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "\n\n这是一段被删除的文字，",
@@ -326,7 +326,7 @@ class ViewController: UIViewController {
                 ]
             )
         )
-        
+
         attributedString.append(
             NSAttributedString(
                 string: "这是新文字。",

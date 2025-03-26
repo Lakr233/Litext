@@ -5,9 +5,11 @@ import PackageDescription
 
 let package = Package(
     name: "Litext",
+    defaultLocalization: "en",
     platforms: [
         .iOS(.v13),
-        .macOS(.v11),
+        .macCatalyst(.v13),
+        .macOS(.v12),
     ],
     products: [
         .library(name: "Litext", targets: ["Litext"]),
