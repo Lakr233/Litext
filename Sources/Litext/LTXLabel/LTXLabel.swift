@@ -56,9 +56,7 @@ public class LTXLabel: LTXPlatformView {
         didSet { updateSelectionLayer() }
     }
 
-    #if canImport(UIKit)
-        var firstResponderKeeper: Timer?
-    #endif
+    var firstResponderKeeper: Timer?
     var selectedLinkForMenuAction: URL?
     var selectionLayer: CAShapeLayer?
 
@@ -83,14 +81,28 @@ public class LTXLabel: LTXPlatformView {
     }
 
     deinit {
-        #if canImport(UIKit)
-            firstResponderKeeper?.invalidate()
-        #endif
+        firstResponderKeeper?.invalidate()
+        firstResponderKeeper = nil
+        attributedText = .init()
+        attachmentViews = []
+        clearSelection()
+        deactivateHighlightRegion()
         NotificationCenter.default.removeObserver(self)
     }
 
     private func commonInit() {
         registerNotificationCenterForSelectionDeduplicate()
+
+        #if canImport(UIKit)
+            let timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+                guard let self else { return }
+                if selectionRange != nil, !isFirstResponder {
+                    becomeFirstResponder()
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            firstResponderKeeper = timer
+        #endif
 
         #if canImport(UIKit)
             backgroundColor = .clear
@@ -105,15 +117,6 @@ public class LTXLabel: LTXPlatformView {
                 selectionHandleEnd.delegate = self
                 addSubview(selectionHandleEnd)
             #endif
-
-            let timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-                guard let self else { return }
-                if selectionRange != nil, !isFirstResponder {
-                    becomeFirstResponder()
-                }
-            }
-            RunLoop.main.add(timer, forMode: .common)
-            firstResponderKeeper = timer
         #elseif canImport(AppKit)
             wantsLayer = true
             layer?.backgroundColor = .clear
