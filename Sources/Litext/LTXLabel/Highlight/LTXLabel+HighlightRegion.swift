@@ -37,8 +37,6 @@ extension LTXLabel {
                 let rect = boxedRect.cgRectValue
             #elseif canImport(AppKit)
                 let rect = boxedRect.rectValue
-            #else
-                #error("unsupported platform")
             #endif
 
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
@@ -60,8 +58,6 @@ extension LTXLabel {
                 let rect = boxedRect.cgRectValue
             #elseif canImport(AppKit)
                 let rect = boxedRect.rectValue
-            #else
-                #error("unsupported platform")
             #endif
 
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
@@ -72,8 +68,6 @@ extension LTXLabel {
             #elseif canImport(AppKit)
                 let subpath = LTXPlatformBezierPath.bezierPath(withRoundedRect: convertedRect, cornerRadius: 4)
                 highlightPath.appendPath(subpath)
-            #else
-                #error("unsupported platform")
             #endif
         }
 
@@ -85,8 +79,6 @@ extension LTXLabel {
                 highlightColor = .systemBlue
             #elseif canImport(AppKit)
                 highlightColor = .linkColor
-            #else
-                #error("unsupported platform")
             #endif
         }
 
@@ -96,8 +88,6 @@ extension LTXLabel {
             highlightLayer.path = highlightPath.cgPath
         #elseif canImport(AppKit)
             highlightLayer.path = highlightPath.quartzPath
-        #else
-            #error("unsupported platform")
         #endif
 
         highlightLayer.fillColor = highlightColor.withAlphaComponent(0.1).cgColor
@@ -106,8 +96,6 @@ extension LTXLabel {
             layer.addSublayer(highlightLayer)
         #elseif canImport(AppKit)
             layer?.addSublayer(highlightLayer)
-        #else
-            #error("unsupported platform")
         #endif
 
         highlightRegion.associatedObject = highlightLayer

@@ -8,18 +8,11 @@ import CoreText
 import Foundation
 import QuartzCore
 
-public typealias LTXLabelTapHandler = (LTXHighlightRegion?, CGPoint) -> Void
-
 public class LTXLabel: LTXPlatformView {
     // MARK: - Public Properties
 
-    public var attributedText: NSAttributedString? {
-        didSet {
-            if let attributedText {
-                textLayout = LTXTextLayout(attributedString: attributedText)
-                invalidateTextLayout()
-            }
-        }
+    public var attributedText: NSAttributedString = .init() {
+        didSet { textLayout = LTXTextLayout(attributedString: attributedText) }
     }
 
     public var preferredMaxLayoutWidth: CGFloat = 0 {
@@ -31,12 +24,10 @@ public class LTXLabel: LTXPlatformView {
     }
 
     public var isSelectable: Bool = false {
-        didSet {
-            if !isSelectable {
-                clearSelection()
-            }
-        }
+        didSet { if !isSelectable { clearSelection() } }
     }
+    
+    public internal(set) var isInteractionInProgress = false
 
     #if canImport(UIKit)
 
@@ -52,7 +43,10 @@ public class LTXLabel: LTXPlatformView {
 
     // MARK: - Internal Properties
 
-    var textLayout: LTXTextLayout?
+    var textLayout: LTXTextLayout? {
+        didSet { invalidateTextLayout() }
+    }
+
     var attachmentViews: Set<LTXPlatformView> = []
     var highlightRegions: [LTXHighlightRegion] = []
     var activeHighlightRegion: LTXHighlightRegion?
@@ -70,20 +64,7 @@ public class LTXLabel: LTXPlatformView {
         var selectionHandleEnd: LTXSelectionHandle = .init(type: .end)
     #endif
 
-    struct InteractionState {
-        var initialTouchLocation: CGPoint = .zero
-        var clickCount: Int = 1
-        var lastClickTime: TimeInterval = 0
-        var isFirstMove: Bool = false
-    }
-
     var interactionState = InteractionState()
-
-    struct Flags {
-        var layoutIsDirty: Bool = false
-        var needsUpdateHighlightRegions: Bool = false
-    }
-
     var flags = Flags()
 
     // MARK: - Initialization
@@ -115,35 +96,29 @@ public class LTXLabel: LTXPlatformView {
         #elseif canImport(AppKit)
             wantsLayer = true
             layer?.backgroundColor = .clear
-        #else
-            #error("unsupported platform")
         #endif
         attachmentViews = []
     }
 
     // MARK: - Platform Specific
 
-    #if canImport(UIKit)
-    // pass
-    #elseif canImport(AppKit)
+    #if !canImport(UIKit) && canImport(AppKit)
         override public var isFlipped: Bool {
             true
         }
-    #else
-        #error("unsupported platform")
     #endif
+}
 
-    // MARK: - Text Layout
+extension LTXLabel {
+    struct InteractionState {
+        var initialTouchLocation: CGPoint = .zero
+        var clickCount: Int = 1
+        var lastClickTime: TimeInterval = 0
+        var isFirstMove: Bool = false
+    }
 
-    func invalidateTextLayout() {
-        flags.layoutIsDirty = true
-        #if canImport(UIKit)
-            setNeedsLayout()
-        #elseif canImport(AppKit)
-            needsLayout = true
-        #else
-            #error("unsupported platform")
-        #endif
-        invalidateIntrinsicContentSize()
+    struct Flags {
+        var layoutIsDirty: Bool = false
+        var needsUpdateHighlightRegions: Bool = false
     }
 }

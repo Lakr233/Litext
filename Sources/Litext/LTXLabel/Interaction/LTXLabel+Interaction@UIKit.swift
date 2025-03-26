@@ -144,6 +144,7 @@ import Foundation
         }
 
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+            isInteractionInProgress = false
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {
@@ -173,6 +174,7 @@ import Foundation
         }
 
         override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+            isInteractionInProgress = false
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {
