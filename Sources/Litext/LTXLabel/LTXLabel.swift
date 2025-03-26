@@ -56,7 +56,6 @@ public class LTXLabel: LTXPlatformView {
         didSet { updateSelectionLayer() }
     }
 
-    var firstResponderKeeper: Timer?
     var selectedLinkForMenuAction: URL?
     var selectionLayer: CAShapeLayer?
 
@@ -81,8 +80,6 @@ public class LTXLabel: LTXPlatformView {
     }
 
     deinit {
-        firstResponderKeeper?.invalidate()
-        firstResponderKeeper = nil
         attributedText = .init()
         attachmentViews = []
         clearSelection()
@@ -92,17 +89,6 @@ public class LTXLabel: LTXPlatformView {
 
     private func commonInit() {
         registerNotificationCenterForSelectionDeduplicate()
-
-        #if canImport(UIKit)
-            let timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-                guard let self else { return }
-                if selectionRange != nil, !isFirstResponder {
-                    becomeFirstResponder()
-                }
-            }
-            RunLoop.main.add(timer, forMode: .common)
-            firstResponderKeeper = timer
-        #endif
 
         #if canImport(UIKit)
             backgroundColor = .clear
