@@ -6,10 +6,6 @@
 import CoreText
 import Foundation
 
-public let LTXReplacementText = "\u{FFFC}"
-public let LTXAttachmentAttributeName = NSAttributedString.Key("LTXAttachment")
-public let LTXLineDrawingCallbackName = NSAttributedString.Key("LTXLineDrawingCallback")
-
 public class LTXAttachment {
     public var size: CGSize
     public var view: LTXPlatformView?

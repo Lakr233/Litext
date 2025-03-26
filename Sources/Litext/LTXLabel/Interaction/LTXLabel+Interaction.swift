@@ -14,6 +14,7 @@ extension LTXLabel {
     func setInteractionStateToBegin(initialLocation: CGPoint) {
         interactionState.initialTouchLocation = initialLocation
         interactionState.isFirstMove = true
+        isInteractionInProgress = true
     }
 
     func bumpClickCountIfWithinTimeGap() {

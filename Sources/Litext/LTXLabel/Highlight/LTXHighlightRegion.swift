@@ -23,8 +23,6 @@ public class LTXHighlightRegion {
             rects.append(NSValue(cgRect: rect))
         #elseif canImport(AppKit)
             rects.append(NSValue(rect: rect))
-        #else
-            #error("unsupported platform")
         #endif
     }
 }

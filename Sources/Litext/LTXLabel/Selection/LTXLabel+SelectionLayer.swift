@@ -82,8 +82,6 @@ extension LTXLabel {
             #elseif canImport(AppKit)
                 let subpath = LTXPlatformBezierPath(rect: convertedRect)
                 selectionPath.appendPath(subpath)
-            #else
-                #error("unsupported platform")
             #endif
         }
     }
@@ -95,24 +93,18 @@ extension LTXLabel {
             selLayer.path = path.cgPath
         #elseif canImport(AppKit)
             selLayer.path = path.quartzPath
-        #else
-            #error("unsupported platform")
         #endif
 
         #if canImport(UIKit)
             selLayer.fillColor = UIColor.systemBlue.withAlphaComponent(0.1).cgColor
         #elseif canImport(AppKit)
             selLayer.fillColor = NSColor.linkColor.withAlphaComponent(0.1).cgColor
-        #else
-            #error("unsupported platform")
         #endif
 
         #if canImport(UIKit)
             layer.insertSublayer(selLayer, at: 0)
         #elseif canImport(AppKit)
             layer?.insertSublayer(selLayer, at: 0)
-        #else
-            #error("unsupported platform")
         #endif
 
         selectionLayer = selLayer

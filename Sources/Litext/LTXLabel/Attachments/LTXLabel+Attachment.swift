@@ -34,8 +34,6 @@ extension LTXLabel {
                 let rect = highlightRegion.rects.first!.cgRectValue
             #elseif canImport(AppKit)
                 let rect = highlightRegion.rects.first!.rectValue
-            #else
-                #error("unsupported platform")
             #endif
 
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)

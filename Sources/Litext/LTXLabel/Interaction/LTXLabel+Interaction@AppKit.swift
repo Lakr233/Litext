@@ -89,6 +89,7 @@ import Foundation
         }
 
         override func mouseUp(with event: NSEvent) {
+            isInteractionInProgress = false
             defer { deactivateHighlightRegion() }
             let location = convert(event.locationInWindow, from: nil)
 

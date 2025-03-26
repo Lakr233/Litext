@@ -8,7 +8,15 @@ import Foundation
 import QuartzCore
 
 public extension LTXLabel {
-    // MARK: - Layout & Auto Layout Support
+    func invalidateTextLayout() {
+        flags.layoutIsDirty = true
+        #if canImport(UIKit)
+            setNeedsLayout()
+        #elseif canImport(AppKit)
+            needsLayout = true
+        #endif
+        invalidateIntrinsicContentSize()
+    }
 
     override var intrinsicContentSize: CGSize {
         guard let textLayout else { return .zero }
@@ -71,40 +79,5 @@ public extension LTXLabel {
                 needsDisplay = true
             }
         }
-    #else
-        #error("unsupported platform")
-    #endif
-
-    // MARK: - Rendering
-
-    #if canImport(UIKit)
-        override func draw(_: CGRect) {
-            guard let context = UIGraphicsGetCurrentContext() else { return }
-
-            if flags.needsUpdateHighlightRegions {
-                textLayout?.updateHighlightRegions(with: context)
-                highlightRegions = textLayout?.highlightRegions ?? []
-                updateAttachmentViews()
-                flags.needsUpdateHighlightRegions = false
-            }
-
-            textLayout?.draw(in: context)
-        }
-
-    #elseif canImport(AppKit)
-        override func draw(_: NSRect) {
-            guard let context = NSGraphicsContext.current?.cgContext else { return }
-
-            if flags.needsUpdateHighlightRegions {
-                textLayout?.updateHighlightRegions(with: context)
-                highlightRegions = textLayout?.highlightRegions ?? []
-                updateAttachmentViews()
-                flags.needsUpdateHighlightRegions = false
-            }
-
-            textLayout?.draw(in: context)
-        }
-    #else
-        #error("unsupported platform")
     #endif
 }

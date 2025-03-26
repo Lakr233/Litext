@@ -3,11 +3,7 @@
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 
-#if canImport(UIKit)
-// pass
-#elseif canImport(AppKit)
-    import AppKit
-
+#if !canImport(UIKit) && canImport(AppKit)
     extension NSBezierPath {
         func appendPath(_ path: NSBezierPath) {
             append(path)
