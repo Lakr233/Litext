@@ -21,34 +21,47 @@ private func _hasHighlightAttributes(_ attributes: [NSAttributedString.Key: Any]
 }
 
 private func _createTruncatedLine(lastLine: CTLine, attrString: NSAttributedString, width: CGFloat) -> CTLine? {
-    var truncationTokenAttributes: [NSAttributedString.Key: Any] = [:]
-    let lastLineGlyphRuns = CTLineGetGlyphRuns(lastLine) as NSArray
-    if let lastGlyphRun = lastLineGlyphRuns.lastObject as! CTRun? {
-        let lastRunAttributes = CTRunGetAttributes(lastGlyphRun) as! [NSAttributedString.Key: Any]
+    // 从最后一行的最后一个跑步中获取属性
+    let truncationTokenAttributes = extractTruncationAttributes(from: lastLine)
 
-        if let font = lastRunAttributes[.font] {
-            truncationTokenAttributes[.font] = font
-        }
-        if let foregroundColor = lastRunAttributes[.foregroundColor] {
-            truncationTokenAttributes[.foregroundColor] = foregroundColor
-        }
-        if let paragraphStyle = lastRunAttributes[.paragraphStyle] {
-            truncationTokenAttributes[.paragraphStyle] = paragraphStyle
-        }
-    }
-
+    // 创建截断标记字符串
     let truncationTokenString = NSAttributedString(string: kTruncationToken, attributes: truncationTokenAttributes)
     let truncationLine = CTLineCreateWithAttributedString(truncationTokenString)
 
+    // 获取最后一行的文本范围
     let lastLineStringRange = CTLineGetStringRange(lastLine)
     let nsRange = NSRange(location: lastLineStringRange.location, length: lastLineStringRange.length)
+
+    // 创建新的最后一行内容，附加截断标记
     let lastLineString = NSMutableAttributedString(attributedString: attrString.attributedSubstring(from: nsRange))
     lastLineString.append(truncationTokenString)
     let newLastLine = CTLineCreateWithAttributedString(lastLineString)
 
+    // 创建截断后的行
     let truncatedLine = CTLineCreateTruncatedLine(newLastLine, width, .end, truncationLine)
 
     return truncatedLine
+}
+
+private func extractTruncationAttributes(from line: CTLine) -> [NSAttributedString.Key: Any] {
+    var attributes: [NSAttributedString.Key: Any] = [:]
+
+    let lastLineGlyphRuns = CTLineGetGlyphRuns(line) as NSArray
+    if let lastGlyphRun = lastLineGlyphRuns.lastObject as! CTRun? {
+        let lastRunAttributes = CTRunGetAttributes(lastGlyphRun) as! [NSAttributedString.Key: Any]
+
+        if let font = lastRunAttributes[.font] {
+            attributes[.font] = font
+        }
+        if let foregroundColor = lastRunAttributes[.foregroundColor] {
+            attributes[.foregroundColor] = foregroundColor
+        }
+        if let paragraphStyle = lastRunAttributes[.paragraphStyle] {
+            attributes[.paragraphStyle] = paragraphStyle
+        }
+    }
+
+    return attributes
 }
 
 public class LTXTextLayout: NSObject {
@@ -66,7 +79,7 @@ public class LTXTextLayout: NSObject {
     var ctFrame: CTFrame?
     private var framesetter: CTFramesetter
     private var lines: [CTLine]?
-    private var highlightRegionsByLocation: [Int: LTXHighlightRegion] = [:]
+    private var _highlightRegions: [Int: LTXHighlightRegion]
     private var lineDrawingActions: Set<LTXLineDrawingAction> = []
 
     public class func textLayout(withAttributedString attributedString: NSAttributedString) -> LTXTextLayout {
@@ -82,8 +95,6 @@ public class LTXTextLayout: NSObject {
     }
 
     deinit {}
-
-    private var _highlightRegions: [Int: LTXHighlightRegion]
 
     public func invalidateLayout() {
         generateLayout()
@@ -112,6 +123,12 @@ public class LTXTextLayout: NSObject {
 
         if let ctFrame { CTFrameDraw(ctFrame, context) }
 
+        processLineDrawingActions(in: context)
+
+        context.restoreGState()
+    }
+
+    private func processLineDrawingActions(in context: CGContext) {
         enumerateLines { line, _, lineOrigin in
             let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
 
@@ -132,8 +149,6 @@ public class LTXTextLayout: NSObject {
                 }
             }
         }
-
-        context.restoreGState()
     }
 
     public func updateHighlightRegions(with context: CGContext) {
@@ -158,6 +173,7 @@ public class LTXTextLayout: NSObject {
             let selStart = range.location
             let selEnd = selStart + range.length
 
+            // 如果当前行与选择范围没有重叠，跳过
             if selEnd < lineStart || selStart > lineEnd {
                 continue
             }
@@ -165,38 +181,52 @@ public class LTXTextLayout: NSObject {
             let overlapStart = max(lineStart, selStart)
             let overlapEnd = min(lineEnd, selEnd)
 
+            // 如果重叠部分长度为0，跳过
             if overlapStart >= overlapEnd {
                 continue
             }
 
-            var startOffset: CGFloat = 0
-            var endOffset: CGFloat = 0
-
-            if overlapStart > lineStart {
-                startOffset = CTLineGetOffsetForStringIndex(line, overlapStart, nil)
-            }
-
-            if overlapEnd < lineEnd {
-                endOffset = CTLineGetOffsetForStringIndex(line, overlapEnd, nil)
-            } else {
-                endOffset = CTLineGetTypographicBounds(line, nil, nil, nil)
-            }
-
-            let origin = origins[i]
-            var ascent: CGFloat = 0
-            var descent: CGFloat = 0
-            var leading: CGFloat = 0
-            CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
-
-            let rect = CGRect(
-                x: origin.x + startOffset,
-                y: origin.y - descent,
-                width: endOffset - startOffset,
-                height: ascent + descent + leading
-            )
-
-            block(rect)
+            calculateAndAddTextRect(for: line, origin: origins[i], overlapStart: overlapStart,
+                                    overlapEnd: overlapEnd, lineStart: lineStart, lineEnd: lineEnd,
+                                    using: block)
         }
+    }
+
+    private func calculateAndAddTextRect(for line: CTLine, origin: CGPoint,
+                                         overlapStart: CFIndex, overlapEnd: CFIndex,
+                                         lineStart: CFIndex, lineEnd: CFIndex,
+                                         using block: (CGRect) -> Void)
+    {
+        var startOffset: CGFloat = 0
+        var endOffset: CGFloat = 0
+
+        // 计算起始偏移
+        if overlapStart > lineStart {
+            startOffset = CTLineGetOffsetForStringIndex(line, overlapStart, nil)
+        }
+
+        // 计算结束偏移
+        if overlapEnd < lineEnd {
+            endOffset = CTLineGetOffsetForStringIndex(line, overlapEnd, nil)
+        } else {
+            endOffset = CTLineGetTypographicBounds(line, nil, nil, nil)
+        }
+
+        // 获取行的垂直度量
+        var ascent: CGFloat = 0
+        var descent: CGFloat = 0
+        var leading: CGFloat = 0
+        CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+
+        // 创建文本矩形
+        let rect = CGRect(
+            x: origin.x + startOffset,
+            y: origin.y - descent,
+            width: endOffset - startOffset,
+            height: ascent + descent + leading
+        )
+
+        block(rect)
     }
 
     // MARK: - Private Methods
@@ -212,13 +242,23 @@ public class LTXTextLayout: NSObject {
             lines = CTFrameGetLines(ctFrame) as? [CTLine]
         }
 
+        processTruncation(in: containerBounds)
+    }
+
+    private func processTruncation(in containerBounds: CGRect) {
         if let lines, let ctFrame {
             let visibleRange = CTFrameGetVisibleStringRange(ctFrame)
+            // 如果没有截断或没有行，则返回
             if visibleRange.length == attributedString.length || lines.isEmpty {
                 return
             }
 
-            if let lastLine = lines.last, let truncatedLine = _createTruncatedLine(lastLine: lastLine, attrString: attributedString, width: containerBounds.width) {
+            // 处理文本截断
+            if let lastLine = lines.last,
+               let truncatedLine = _createTruncatedLine(lastLine: lastLine,
+                                                        attrString: attributedString,
+                                                        width: containerBounds.width)
+            {
                 var newLines = lines
                 newLines[newLines.count - 1] = truncatedLine
                 self.lines = newLines
@@ -238,32 +278,40 @@ public class LTXTextLayout: NSObject {
                     continue
                 }
 
-                let cfStringRange = CTRunGetStringRange(glyphRun)
-                let stringRange = NSRange(location: cfStringRange.location, length: cfStringRange.length)
-
-                var effectiveRange = NSRange()
-                _ = self.attributedString.attributes(at: stringRange.location, effectiveRange: &effectiveRange)
-
-                let highlightRegion: LTXHighlightRegion
-                if let existingRegion = self._highlightRegions[effectiveRange.location] {
-                    highlightRegion = existingRegion
-                } else {
-                    highlightRegion = LTXHighlightRegion(attributes: attributes, stringRange: stringRange)
-                    self._highlightRegions[effectiveRange.location] = highlightRegion
-                }
-
-                var runBounds = CTRunGetImageBounds(glyphRun, context, CFRange(location: 0, length: 0))
-
-                if let attachment = attributes[LTXAttachmentAttributeName] as? LTXAttachment {
-                    runBounds.size = attachment.size
-                    runBounds.origin.y -= attachment.size.height * 0.1
-                }
-
-                runBounds.origin.x += lineOrigin.x
-                runBounds.origin.y += lineOrigin.y
-                highlightRegion.addRect(runBounds)
+                processHighlightRegionForRun(glyphRun, attributes: attributes, lineOrigin: lineOrigin, with: context)
             }
         }
+    }
+
+    private func processHighlightRegionForRun(_ glyphRun: CTRun, attributes: [NSAttributedString.Key: Any],
+                                              lineOrigin: CGPoint, with context: CGContext)
+    {
+        let cfStringRange = CTRunGetStringRange(glyphRun)
+        let stringRange = NSRange(location: cfStringRange.location, length: cfStringRange.length)
+
+        var effectiveRange = NSRange()
+        _ = attributedString.attributes(at: stringRange.location, effectiveRange: &effectiveRange)
+
+        let highlightRegion: LTXHighlightRegion
+        if let existingRegion = _highlightRegions[effectiveRange.location] {
+            highlightRegion = existingRegion
+        } else {
+            highlightRegion = LTXHighlightRegion(attributes: attributes, stringRange: stringRange)
+            _highlightRegions[effectiveRange.location] = highlightRegion
+        }
+
+        var runBounds = CTRunGetImageBounds(glyphRun, context, CFRange(location: 0, length: 0))
+
+        // 如果是附件，调整边界
+        if let attachment = attributes[LTXAttachmentAttributeName] as? LTXAttachment {
+            runBounds.size = attachment.size
+            runBounds.origin.y -= attachment.size.height * 0.1
+        }
+
+        // 调整边界位置为相对于容器的坐标
+        runBounds.origin.x += lineOrigin.x
+        runBounds.origin.y += lineOrigin.y
+        highlightRegion.addRect(runBounds)
     }
 
     private func enumerateLines(using block: (CTLine, Int, CGPoint) -> Void) {
