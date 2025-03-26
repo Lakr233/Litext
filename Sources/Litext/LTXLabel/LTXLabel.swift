@@ -10,7 +10,7 @@ import QuartzCore
 
 public class LTXLabel: LTXPlatformView, Identifiable {
     public let id: UUID = .init()
-    
+
     // MARK: - Public Properties
 
     public var attributedText: NSAttributedString = .init() {

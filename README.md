@@ -90,7 +90,7 @@ attributedString.append(
     NSAttributedString(
         string: LTXReplacementText,
         attributes: [
-            .LTXAttachmentAttributeName: attachment,
+            .ltxAttachment: attachment,
             kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate
         ]
     )
