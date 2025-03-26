@@ -13,7 +13,7 @@ extension LTXLabel {
         selectionLayer?.removeFromSuperlayer()
         selectionLayer = nil
 
-        #if canImport(UIKit)
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
             selectionHandleStart.isHidden = true
             selectionHandleEnd.isHidden = true
         #endif
@@ -45,7 +45,7 @@ extension LTXLabel {
             showSelectionMenuController()
         #endif
 
-        #if canImport(UIKit)
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
             selectionHandleStart.isHidden = false
             selectionHandleEnd.isHidden = false
 

@@ -46,13 +46,15 @@ import Foundation
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             if !bounds.contains(point) { return false }
 
-            if selectionHandleStart.frame.contains(point) {
-                return super.point(inside: point, with: event)
-            }
+            #if !targetEnvironment(macCatalyst)
+                if selectionHandleStart.frame.contains(point) {
+                    return super.point(inside: point, with: event)
+                }
 
-            if selectionHandleEnd.frame.contains(point) {
-                return super.point(inside: point, with: event)
-            }
+                if selectionHandleEnd.frame.contains(point) {
+                    return super.point(inside: point, with: event)
+                }
+            #endif
 
             for view in attachmentViews {
                 if view.frame.contains(point) {
@@ -136,7 +138,6 @@ import Foundation
             #else
                 if interactionState.isFirstMove {
                     interactionState.isFirstMove = false
-                    selectionRange = nil
                 }
                 if isSelectable { updateSelectinoRange(withLocation: location) }
             #endif
@@ -150,10 +151,16 @@ import Foundation
                 return
             }
             let location = firstTouch.location(in: self)
-            if !isTouchReallyMoved(location), !isLocationInSelection(location: location) {
+            defer { deactivateHighlightRegion() }
+
+            if !isTouchReallyMoved(location),
+               interactionState.clickCount <= 1,
+               !isLocationInSelection(location: location)
+            {
                 clearSelection()
             }
-            defer { deactivateHighlightRegion() }
+
+            guard selectionRange == nil else { return }
             for region in highlightRegions {
                 let rects = region.rects.map {
                     convertRectFromTextLayout($0.cgRectValue, insetForInteraction: true)

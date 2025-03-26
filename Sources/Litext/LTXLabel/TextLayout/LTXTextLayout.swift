@@ -427,4 +427,165 @@ public class LTXTextLayout: NSObject {
             block(line, i, origin)
         }
     }
+
+    // MARK: - Text Index Helpers
+
+    public func textIndex(at point: CGPoint) -> Int? {
+        guard let ctFrame else { return nil }
+
+        if let lineInfo = findLineContainingPoint(point, ctFrame: ctFrame) {
+            return findCharacterIndexInLine(point, lineInfo: lineInfo)
+        }
+
+        let lines = CTFrameGetLines(ctFrame) as [AnyObject]
+        guard !lines.isEmpty else { return nil }
+        var lineOrigins = [CGPoint](repeating: .zero, count: lines.count)
+        CTFrameGetLineOrigins(ctFrame, CFRange(location: 0, length: 0), &lineOrigins)
+
+        guard point.y < lineOrigins[lines.count - 1].y else { return nil }
+        let lastLine = lines[lines.count - 1] as! CTLine
+        let range = CTLineGetStringRange(lastLine)
+        return range.location + range.length
+    }
+
+    public func nearestTextIndex(at point: CGPoint) -> Int? {
+        guard let ctFrame else { return nil }
+
+        if let lineInfo = findLineContainingPoint(point, ctFrame: ctFrame) {
+            return findCharacterIndexInLine(point, lineInfo: lineInfo)
+        }
+
+        let lines = CTFrameGetLines(ctFrame) as [AnyObject]
+        guard !lines.isEmpty else { return nil }
+
+        var lineOrigins = [CGPoint](repeating: .zero, count: lines.count)
+        CTFrameGetLineOrigins(ctFrame, CFRange(location: 0, length: 0), &lineOrigins)
+
+        // 如果点在文本上方
+        if point.y > lineOrigins[0].y {
+            let firstLine = lines[0] as! CTLine
+            if point.x < lineOrigins[0].x {
+                return CTLineGetStringRange(firstLine).location
+            } else {
+                let range = CTLineGetStringRange(firstLine)
+                let lineWidth = CTLineGetTypographicBounds(firstLine, nil, nil, nil)
+                if point.x > lineOrigins[0].x + lineWidth {
+                    return range.location + range.length
+                } else {
+                    return findCharacterIndexInLine(point, lineInfo: (firstLine, lineOrigins[0], 0))
+                }
+            }
+        }
+
+        // 如果点在文本下方
+        if point.y < lineOrigins[lines.count - 1].y {
+            let lastLine = lines[lines.count - 1] as! CTLine
+            if point.x < lineOrigins[lines.count - 1].x {
+                return CTLineGetStringRange(lastLine).location
+            } else {
+                let range = CTLineGetStringRange(lastLine)
+                let lineWidth = CTLineGetTypographicBounds(lastLine, nil, nil, nil)
+                if point.x > lineOrigins[lines.count - 1].x + lineWidth {
+                    return range.location + range.length
+                } else {
+                    return findCharacterIndexInLine(point, lineInfo: (lastLine, lineOrigins[lines.count - 1], lines.count - 1))
+                }
+            }
+        }
+
+        // 如果点在两行之间，找到最近的行
+        var closestLineIndex = 0
+        var minDistance = CGFloat.greatestFiniteMagnitude
+
+        for i in 0 ..< lines.count {
+            let line = lines[i] as! CTLine
+            let origin = lineOrigins[i]
+            var ascent: CGFloat = 0
+            var descent: CGFloat = 0
+            var leading: CGFloat = 0
+
+            CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+
+            let lineMiddleY = origin.y - descent + (ascent + descent) / 2
+            let distance = abs(point.y - lineMiddleY)
+
+            if distance < minDistance {
+                minDistance = distance
+                closestLineIndex = i
+            }
+        }
+
+        let closestLine = lines[closestLineIndex] as! CTLine
+        let closestOrigin = lineOrigins[closestLineIndex]
+
+        return findCharacterIndexInLine(point, lineInfo: (closestLine, closestOrigin, closestLineIndex))
+    }
+
+    // MARK: - Private Text Index Helpers
+
+    private func findLineContainingPoint(
+        _ point: CGPoint,
+        ctFrame: CTFrame
+    ) -> (line: CTLine, origin: CGPoint, index: Int)? {
+        let lines = CTFrameGetLines(ctFrame) as [AnyObject]
+        var lineOrigins = [CGPoint](repeating: .zero, count: lines.count)
+        CTFrameGetLineOrigins(ctFrame, CFRange(location: 0, length: 0), &lineOrigins)
+
+        for i in 0 ..< lines.count {
+            let origin = lineOrigins[i]
+            var ascent: CGFloat = 0
+            var descent: CGFloat = 0
+            var leading: CGFloat = 0
+
+            let line = lines[i] as! CTLine
+            let lineWidth = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+            let lineHeight = ascent + descent + leading
+
+            let lineRect = CGRect(
+                x: origin.x,
+                y: origin.y - descent,
+                width: lineWidth,
+                height: lineHeight
+            )
+
+            if point.y >= lineRect.minY, point.y <= lineRect.maxY {
+                return (line: line, origin: origin, index: i)
+            }
+        }
+
+        return nil
+    }
+
+    private func findCharacterIndexInLine(
+        _ point: CGPoint,
+        lineInfo: (line: CTLine, origin: CGPoint, index: Int)
+    ) -> Int {
+        let line = lineInfo.line
+        let lineOrigin = lineInfo.origin
+        let lineRange = CTLineGetStringRange(line)
+
+        if point.x <= lineOrigin.x {
+            return lineRange.location
+        }
+
+        for characterOffset in 0 ..< lineRange.length {
+            let characterIndex = lineRange.location + characterOffset
+            let positionOffset = CTLineGetOffsetForStringIndex(line, characterIndex, nil)
+
+            if positionOffset >= point.x - lineOrigin.x {
+                let distanceToNextChar = positionOffset - (point.x - lineOrigin.x)
+                if characterOffset > 0 {
+                    let previousCharIndex = characterIndex - 1
+                    let previousPositionOffset = CTLineGetOffsetForStringIndex(line, previousCharIndex, nil)
+                    let distanceToPrevChar = (point.x - lineOrigin.x) - previousPositionOffset
+                    if distanceToNextChar > distanceToPrevChar {
+                        return previousCharIndex
+                    }
+                }
+                return characterIndex
+            }
+        }
+
+        return lineRange.location + lineRange.length
+    }
 }

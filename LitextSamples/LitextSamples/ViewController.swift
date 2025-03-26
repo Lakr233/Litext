@@ -99,7 +99,9 @@ class ViewController: UIViewController {
             label.intrinsicContentSize.height + 200,
             scrollView.bounds.height
         )
-        contentView.heightAnchor.constraint(equalToConstant: contentHeight).isActive = true
+        let cons = contentView.heightAnchor.constraint(equalToConstant: contentHeight)
+        cons.priority = .required
+        cons.isActive = true
     }
 
     @objc func showControlPanel() {
