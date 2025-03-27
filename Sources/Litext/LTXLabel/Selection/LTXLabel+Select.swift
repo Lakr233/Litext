@@ -8,6 +8,13 @@ import CoreText
 import Foundation
 import QuartzCore
 
+public extension LTXLabel {
+    @objc func selectAllText() {
+        guard let range = selectAllRange() else { return }
+        selectionRange = range
+    }
+}
+
 extension LTXLabel {
     func selectWordAtIndex(_ index: Int) {
         guard isSelectable, let textLayout else { return }
@@ -65,10 +72,5 @@ extension LTXLabel {
         let attributedString = textLayout.attributedString
         guard attributedString.length > 0 else { return nil }
         return NSRange(location: 0, length: attributedString.length)
-    }
-
-    @objc func selectAllText() {
-        guard let range = selectAllRange() else { return }
-        selectionRange = range
     }
 }
