@@ -54,7 +54,7 @@ public class LTXLabel: LTXPlatformView, Identifiable {
     var activeHighlightRegion: LTXHighlightRegion?
     var lastContainerSize: CGSize = .zero
 
-    var selectionRange: NSRange? {
+    public internal(set) var selectionRange: NSRange? {
         didSet { updateSelectionLayer() }
     }
 
