@@ -189,6 +189,12 @@ private var menuOwnerIdentifier: UUID = .init()
             _ = firstTouch
             deactivateHighlightRegion()
         }
+
+        // for handling right click on iOS
+        func installContextMenuInteraction() {
+            let interaction = UIContextMenuInteraction(delegate: self)
+            addInteraction(interaction)
+        }
     }
 
     extension LTXLabel: LTXSelectionHandleDelegate {
@@ -210,6 +216,20 @@ private var menuOwnerIdentifier: UUID = .init()
                     length: endingLocation - startLocation
                 )
             }
+        }
+    }
+
+    extension LTXLabel: UIContextMenuInteractionDelegate {
+        public func contextMenuInteraction(
+            _: UIContextMenuInteraction,
+            configurationForMenuAtLocation location: CGPoint
+        ) -> UIContextMenuConfiguration? {
+            DispatchQueue.main.async {
+                guard self.isSelectable else { return }
+                guard self.isLocationInSelection(location: location) else { return }
+                self.showSelectionMenuController()
+            }
+            return nil
         }
     }
 
