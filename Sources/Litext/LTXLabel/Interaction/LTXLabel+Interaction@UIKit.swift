@@ -130,6 +130,7 @@ private var menuOwnerIdentifier: UUID = .init()
             let location = firstTouch.location(in: self)
             guard isTouchReallyMoved(location) else { return }
             deactivateHighlightRegion()
+            performContinuousStateReset()
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst)
                 // check if is a pointer device
