@@ -25,6 +25,15 @@ public class LTXLabel: LTXPlatformView, Identifiable {
         }
     }
 
+    override public var frame: CGRect {
+        get { super.frame }
+        set {
+            guard newValue != super.frame else { return }
+            super.frame = newValue
+            invalidateTextLayout()
+        }
+    }
+
     public var isSelectable: Bool = false {
         didSet { if !isSelectable { clearSelection() } }
     }
