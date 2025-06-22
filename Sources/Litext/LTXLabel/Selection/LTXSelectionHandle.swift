@@ -13,6 +13,7 @@ import Foundation
 
     public class LTXSelectionHandle: UIView {
         static let knobRadius: CGFloat = 12
+        static let knobExtraResponsiveArea: CGFloat = 20
 
         public enum HandleType {
             case start
@@ -112,7 +113,10 @@ import Foundation
         }
 
         override public func point(inside point: CGPoint, with _: UIEvent?) -> Bool {
-            let touchRect = bounds.insetBy(dx: -20, dy: -20)
+            let touchRect = bounds.insetBy(
+                dx: -Self.knobExtraResponsiveArea,
+                dy: -Self.knobExtraResponsiveArea
+            )
             return touchRect.contains(point)
         }
     }
