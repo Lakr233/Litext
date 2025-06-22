@@ -9,7 +9,19 @@ import QuartzCore
 
 public extension LTXLabel {
     func invalidateTextLayout() {
-        clearSelection()
+        if let selectionRange,
+           let textLayout
+        {
+            let oldText = textLayout.attributedString.string
+            let newText = attributedText.string
+
+            if !newText.hasPrefix(oldText) {
+                clearSelection()
+            }
+        } else {
+            clearSelection()
+        }
+
         flags.layoutIsDirty = true
         #if canImport(UIKit)
             setNeedsLayout()
