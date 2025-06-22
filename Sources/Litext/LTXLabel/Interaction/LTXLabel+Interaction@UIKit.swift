@@ -19,7 +19,7 @@ private var menuOwnerIdentifier: UUID = .init()
                 UIKeyCommand(
                     title: LocalizedText.copy,
                     image: nil,
-                    action: #selector(copySelectedText),
+                    action: #selector(copyKeyCommand),
                     input: "c",
                     modifierFlags: .command,
                     propertyList: nil,
@@ -320,7 +320,10 @@ private var menuOwnerIdentifier: UUID = .init()
         }
 
         @objc private func copyMenuItemTapped() {
-            copySelectedText()
+            let copiedText = copySelectedText()
+            if copiedText.length <= 0 {
+                _ = copyFromSubviewsRecursively()
+            }
             clearSelection()
         }
 
@@ -328,6 +331,13 @@ private var menuOwnerIdentifier: UUID = .init()
             selectAllText()
             DispatchQueue.main.async {
                 self.showSelectionMenuController()
+            }
+        }
+
+        @objc private func copyKeyCommand() {
+            let copiedText = copySelectedText()
+            if copiedText.length <= 0 {
+                _ = copyFromSubviewsRecursively()
             }
         }
 
@@ -347,6 +357,26 @@ private var menuOwnerIdentifier: UUID = .init()
                 action,
                 withSender: sender
             )
+        }
+
+        private func copyFromSubviewsRecursively() -> Bool {
+            copyFromSubviewsRecursively(in: self)
+        }
+
+        private func copyFromSubviewsRecursively(in view: UIView) -> Bool {
+            for subview in view.subviews {
+                if let ltxLabel = subview as? LTXLabel {
+                    let copiedText = ltxLabel.copySelectedText()
+                    if copiedText.length > 0 {
+                        return true
+                    }
+                } else {
+                    if copyFromSubviewsRecursively(in: subview) {
+                        return true
+                    }
+                }
+            }
+            return false
         }
     }
 #endif

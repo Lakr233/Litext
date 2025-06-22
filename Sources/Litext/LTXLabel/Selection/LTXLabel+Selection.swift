@@ -13,8 +13,10 @@ public extension LTXLabel {
         selectionRange = nil
     }
 
-    @objc func copySelectedText() {
-        guard let selectedText = selectedAttributedText() else { return }
+    @objc func copySelectedText() -> NSAttributedString {
+        guard let selectedText = selectedAttributedText() else {
+            return .init()
+        }
 
         #if canImport(UIKit)
             UIPasteboard.general.string = selectedText.string
@@ -23,6 +25,8 @@ public extension LTXLabel {
             pasteboard.clearContents()
             pasteboard.setString(selectedText.string, forType: .string)
         #endif
+
+        return selectedText.copy() as! NSAttributedString
     }
 }
 

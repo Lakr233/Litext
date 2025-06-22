@@ -22,7 +22,10 @@ import Foundation
             let key = event.charactersIgnoringModifiers
 
             if key == "c", let range = selectionRange, range.length > 0 {
-                copySelectedText()
+                let copiedText = copySelectedText()
+                if copiedText.length <= 0 {
+                    _ = copyFromSubviewsRecursively()
+                }
                 return true
             }
 
@@ -245,7 +248,30 @@ import Foundation
         }
 
         @objc func copyAction(_: Any?) {
-            copySelectedText()
+            let copiedText = copySelectedText()
+            if copiedText.length <= 0 {
+                _ = copyFromSubviewsRecursively()
+            }
+        }
+
+        private func copyFromSubviewsRecursively() -> Bool {
+            copyFromSubviewsRecursively(in: self)
+        }
+
+        private func copyFromSubviewsRecursively(in view: NSView) -> Bool {
+            for subview in view.subviews {
+                if let ltxLabel = subview as? LTXLabel {
+                    let copiedText = ltxLabel.copySelectedText()
+                    if copiedText.length > 0 {
+                        return true
+                    }
+                } else {
+                    if copyFromSubviewsRecursively(in: subview) {
+                        return true
+                    }
+                }
+            }
+            return false
         }
     }
 #endif
