@@ -9,6 +9,8 @@ import Foundation
 private var menuOwnerIdentifier: UUID = .init()
 
 #if canImport(UIKit)
+    import UIKit
+
     public extension LTXLabel {
         override var keyCommands: [UIKeyCommand]? {
             guard isSelectable else { return nil }
@@ -196,6 +198,13 @@ private var menuOwnerIdentifier: UUID = .init()
             let interaction = UIContextMenuInteraction(delegate: self)
             addInteraction(interaction)
         }
+
+        func installTextPointerInteraction() {
+            if #available(iOS 13.4, macCatalyst 13.4, *) {
+                let pointerInteraction = UIPointerInteraction(delegate: self)
+                self.addInteraction(pointerInteraction)
+            }
+        }
     }
 
     extension LTXLabel: LTXSelectionHandleDelegate {
@@ -225,12 +234,41 @@ private var menuOwnerIdentifier: UUID = .init()
             _: UIContextMenuInteraction,
             configurationForMenuAtLocation location: CGPoint
         ) -> UIContextMenuConfiguration? {
-            DispatchQueue.main.async {
-                guard self.isSelectable else { return }
-                guard self.isLocationInSelection(location: location) else { return }
-                self.showSelectionMenuController()
-            }
-            return nil
+            #if targetEnvironment(macCatalyst)
+                var menuItems: [UIMenuElement] = [
+                    UIAction(title: LocalizedText.copy, image: nil) { _ in
+                        self.copySelectedText()
+                    },
+                ]
+                if selectionRange != selectAllRange() {
+                    menuItems.append(
+                        UIAction(title: LocalizedText.selectAll, image: nil) { _ in
+                            self.selectAllText()
+                        }
+                    )
+                }
+                return .init(
+                    identifier: nil,
+                    previewProvider: nil
+                ) { _ in
+                    .init(children: menuItems)
+                }
+            #else
+                DispatchQueue.main.async {
+                    guard self.isSelectable else { return }
+                    guard self.isLocationInSelection(location: location) else { return }
+                    self.showSelectionMenuController()
+                }
+                return nil
+            #endif
+        }
+    }
+
+    @available(iOS 13.4, macCatalyst 13.4, *)
+    extension LTXLabel: UIPointerInteractionDelegate {
+        public func pointerInteraction(_: UIPointerInteraction, styleFor _: UIPointerRegion) -> UIPointerStyle? {
+            guard isSelectable else { return nil }
+            return UIPointerStyle(shape: .verticalBeam(length: 1), constrainedAxes: [])
         }
     }
 
