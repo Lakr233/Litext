@@ -104,6 +104,7 @@ public class LTXLabel: LTXPlatformView, Identifiable {
         #if canImport(UIKit)
             backgroundColor = .clear
             installContextMenuInteraction()
+            installTextPointerInteraction()
 
             #if targetEnvironment(macCatalyst)
             #else
