@@ -227,6 +227,7 @@ private var menuOwnerIdentifier: UUID = .init()
             configurationForMenuAtLocation location: CGPoint
         ) -> UIContextMenuConfiguration? {
             #if targetEnvironment(macCatalyst)
+                guard selectionRange != nil else { return nil }
                 var menuItems: [UIMenuElement] = [
                     UIAction(title: LocalizedText.copy, image: nil) { _ in
                         self.copySelectedText()
