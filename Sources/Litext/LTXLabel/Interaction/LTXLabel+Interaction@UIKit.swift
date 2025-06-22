@@ -12,35 +12,24 @@ private var menuOwnerIdentifier: UUID = .init()
     import UIKit
 
     public extension LTXLabel {
-        override var keyCommands: [UIKeyCommand]? {
-            guard isSelectable else { return nil }
-
-            return [
-                UIKeyCommand(
-                    title: LocalizedText.copy,
-                    image: nil,
-                    action: #selector(copyKeyCommand),
-                    input: "c",
-                    modifierFlags: .command,
-                    propertyList: nil,
-                    alternates: [],
-                    discoverabilityTitle: LocalizedText.copy,
-                    attributes: [],
-                    state: .off
-                ),
-                UIKeyCommand(
-                    title: LocalizedText.selectAll,
-                    image: nil,
-                    action: #selector(selectAllText),
-                    input: "a",
-                    modifierFlags: .command,
-                    propertyList: nil,
-                    alternates: [],
-                    discoverabilityTitle: LocalizedText.selectAll,
-                    attributes: [],
-                    state: .off
-                ),
-            ]
+        override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            guard isSelectable else {
+                super.pressesBegan(presses, with: event)
+                return
+            }
+            var didHandleEvent = false
+            for press in presses {
+                guard let key = press.key else { continue }
+                if key.charactersIgnoringModifiers == "c", key.modifierFlags.contains(.command) {
+                    let copiedText = copySelectedText()
+                    didHandleEvent = copiedText.length > 0
+                }
+                if key.charactersIgnoringModifiers == "a", key.modifierFlags.contains(.command) {
+                    selectAllText()
+                    didHandleEvent = true
+                }
+            }
+            if !didHandleEvent { super.pressesBegan(presses, with: event) }
         }
 
         override var canBecomeFocused: Bool {
@@ -164,7 +153,9 @@ private var menuOwnerIdentifier: UUID = .init()
                interactionState.clickCount <= 1
             {
                 if isLocationInSelection(location: location) {
-                    showSelectionMenuController()
+                    #if !targetEnvironment(macCatalyst)
+                        showSelectionMenuController()
+                    #endif
                 } else {
                     clearSelection()
                 }
