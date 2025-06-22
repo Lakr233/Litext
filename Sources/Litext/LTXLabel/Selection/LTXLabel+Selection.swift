@@ -13,6 +13,7 @@ public extension LTXLabel {
         selectionRange = nil
     }
 
+    @discardableResult
     @objc func copySelectedText() -> NSAttributedString {
         guard let selectedText = selectedAttributedText() else {
             return .init()
