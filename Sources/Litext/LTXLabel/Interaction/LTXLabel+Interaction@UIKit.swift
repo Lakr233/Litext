@@ -48,17 +48,18 @@ private var menuOwnerIdentifier: UUID = .init()
         }
 
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-            if !bounds.contains(point) { return false }
-
             #if !targetEnvironment(macCatalyst)
-                if selectionHandleStart.frame.contains(point) {
-                    return super.point(inside: point, with: event)
-                }
-
-                if selectionHandleEnd.frame.contains(point) {
-                    return super.point(inside: point, with: event)
+                for handler in [selectionHandleStart, selectionHandleEnd] {
+                    let rect = handler.frame
+                        .insetBy(
+                            dx: -LTXSelectionHandle.knobExtraResponsiveArea,
+                            dy: -LTXSelectionHandle.knobExtraResponsiveArea
+                        )
+                    if rect.contains(point) { return true }
                 }
             #endif
+
+            if !bounds.contains(point) { return false }
 
             for view in attachmentViews {
                 if view.frame.contains(point) {
