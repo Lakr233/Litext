@@ -261,6 +261,7 @@ private var menuOwnerIdentifier: UUID = .init()
     extension LTXLabel: UIPointerInteractionDelegate {
         public func pointerInteraction(_: UIPointerInteraction, styleFor _: UIPointerRegion) -> UIPointerStyle? {
             guard isSelectable else { return nil }
+            guard parentViewController?.presentedViewController == nil else { return nil }
             return UIPointerStyle(shape: .verticalBeam(length: 1), constrainedAxes: [])
         }
     }
@@ -370,6 +371,23 @@ private var menuOwnerIdentifier: UUID = .init()
                 }
             }
             return false
+        }
+    }
+
+#endif
+
+#if canImport(UIKit)
+
+    extension UIView {
+        var parentViewController: UIViewController? {
+            weak var parentResponder: UIResponder? = self
+            while parentResponder != nil {
+                parentResponder = parentResponder!.next
+                if let viewController = parentResponder as? UIViewController {
+                    return viewController
+                }
+            }
+            return nil
         }
     }
 #endif
