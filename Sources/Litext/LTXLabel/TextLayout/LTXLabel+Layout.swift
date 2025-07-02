@@ -65,6 +65,7 @@ public extension LTXLabel {
                 flags.needsUpdateHighlightRegions = true
                 flags.layoutIsDirty = false
 
+                updateSelectionLayer()
                 setNeedsDisplay()
             }
         }
