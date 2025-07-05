@@ -355,11 +355,7 @@ class ViewController: UIViewController {
         label.isSelectable = true
 
         label.attributedText = attributedString
-        label.tapHandler = { [weak self] highlightRegion, _ in
-            if let url = highlightRegion?.attributes[.link] as? URL, let self {
-                handleLinkTap(url)
-            }
-        }
+        label.delegate = self
     }
 
     private func createFont() -> UIFont {
@@ -388,6 +384,22 @@ class ViewController: UIViewController {
 
     func updateTextAttributesForStyleChange() {
         updateAttributedText()
+    }
+}
+
+extension ViewController: LTXLabelDelegate {
+    func ltxLabelDidTapOnHighlightContent(_: Litext.LTXLabel, region: Litext.LTXHighlightRegion?, location _: CGPoint) {
+        if let url = region?.attributes[.link] as? URL {
+            handleLinkTap(url)
+        }
+    }
+
+    func ltxLabelSelectionDidChange(_: Litext.LTXLabel, selection: NSRange?) {
+        print(String(describing: selection))
+    }
+
+    func ltxLabelDetectedUserEventMovingAtLocation(_ ltxLabel: LTXLabel, location: CGPoint) {
+        print(#function, ltxLabel, location)
     }
 }
 

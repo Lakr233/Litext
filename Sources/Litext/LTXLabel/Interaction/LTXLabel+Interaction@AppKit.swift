@@ -80,6 +80,7 @@ import Foundation
             let location = convert(event.locationInWindow, from: nil)
 
             guard isTouchReallyMoved(location) else { return }
+            defer { self.delegate?.ltxLabelDetectedUserEventMovingAtLocation(self, location: location) }
 
             deactivateHighlightRegion()
 
@@ -101,7 +102,7 @@ import Foundation
                     convertRectFromTextLayout($0.rectValue, insetForInteraction: true)
                 }
                 for rect in rects where rect.contains(location) {
-                    self.tapHandler?(region, location)
+                    self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
                     break
                 }
             }

@@ -50,7 +50,7 @@ public class LTXLabel: LTXPlatformView, Identifiable {
         }
     #endif
 
-    public var tapHandler: LTXLabelTapHandler?
+    public weak var delegate: LTXLabelDelegate?
 
     // MARK: - Internal Properties
 
@@ -64,7 +64,12 @@ public class LTXLabel: LTXPlatformView, Identifiable {
     var lastContainerSize: CGSize = .zero
 
     public internal(set) var selectionRange: NSRange? {
-        didSet { updateSelectionLayer() }
+        didSet {
+            updateSelectionLayer()
+            if selectionRange != oldValue {
+                delegate?.ltxLabelSelectionDidChange(self, selection: selectionRange)
+            }
+        }
     }
 
     var selectedLinkForMenuAction: URL?

@@ -318,12 +318,7 @@ final class ViewController: NSViewController {
 
         label.backgroundColor = backgroundColor
         label.attributedText = attributedString
-
-        label.tapHandler = { [weak self] highlightRegion, _ in
-            if let url = highlightRegion?.attributes[.link] as? URL {
-                self?.handleLinkTap(url)
-            }
-        }
+        label.delegate = self
     }
 
     private func createFont() -> NSFont {
@@ -345,6 +340,22 @@ final class ViewController: NSViewController {
 
     func handleLinkTap(_ url: URL) {
         NSWorkspace.shared.open(url)
+    }
+}
+
+extension ViewController: LTXLabelDelegate {
+    func ltxLabelDidTapOnHighlightContent(_: Litext.LTXLabel, region: Litext.LTXHighlightRegion?, location _: CGPoint) {
+        if let url = region?.attributes[.link] as? URL {
+            handleLinkTap(url)
+        }
+    }
+
+    func ltxLabelSelectionDidChange(_: Litext.LTXLabel, selection: NSRange?) {
+        print(String(describing: selection))
+    }
+
+    func ltxLabelDetectedUserEventMovingAtLocation(_ ltxLabel: LTXLabel, location: CGPoint) {
+        print(#function, ltxLabel, location)
     }
 }
 
