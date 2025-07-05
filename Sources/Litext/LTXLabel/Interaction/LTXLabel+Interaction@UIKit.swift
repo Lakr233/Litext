@@ -119,8 +119,11 @@ private var menuOwnerIdentifier: UUID = .init()
                 super.touchesMoved(touches, with: event)
                 return
             }
+
             let location = firstTouch.location(in: self)
             guard isTouchReallyMoved(location) else { return }
+            defer { self.delegate?.ltxLabelDetectedUserEventMovingAtLocation(self, location: location) }
+
             deactivateHighlightRegion()
             performContinuousStateReset()
 
@@ -167,7 +170,7 @@ private var menuOwnerIdentifier: UUID = .init()
                     convertRectFromTextLayout($0.cgRectValue, insetForInteraction: true)
                 }
                 for rect in rects where rect.contains(location) {
-                    self.tapHandler?(region, location)
+                    self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
                     break
                 }
             }
