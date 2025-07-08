@@ -11,17 +11,14 @@ open class LTXAttachment {
     open var data: Any?
     private var _runDelegate: CTRunDelegate?
 
+    open func attributedStringRepresentation() -> NSAttributedString {
+        .init(string: viewProvider.textRepresentation())
+    }
+
     public init(viewProvider: any LTXAttachmentViewProvider, data: Any? = nil, _runDelegate: CTRunDelegate? = nil) {
         self.viewProvider = viewProvider
         self.data = data
         self._runDelegate = _runDelegate
-    }
-
-    open func attributedStringRepresentation() -> NSAttributedString {
-        if let viewProvider = viewProvider as? LTXAttributeStringRepresentable {
-            return viewProvider.attributedStringRepresentation()
-        }
-        return NSAttributedString(string: " ")
     }
 
     open var runDelegate: CTRunDelegate {

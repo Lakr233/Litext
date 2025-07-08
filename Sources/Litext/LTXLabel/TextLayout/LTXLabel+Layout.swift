@@ -74,18 +74,19 @@ public extension LTXLabel {
             super.layout()
 
             let containerSize = bounds.size
-            if flags.layoutIsDirty || lastContainerSize != containerSize {
+            if flags.layoutIsDirty || lastContainerSize != containerSize, let textLayout {
                 if flags.layoutIsDirty || containerSize.width != lastContainerSize.width {
                     invalidateIntrinsicContentSize()
                 }
+                defer { flags.layoutIsDirty = false }
 
                 lastContainerSize = containerSize
-                textLayout?.containerSize = containerSize
-                flags.needsUpdateHighlightRegions = true
-                flags.layoutIsDirty = false
+                textLayout.containerSize = containerSize
+                textLayout.updateHighlightRegions()
+                highlightRegions = textLayout.highlightRegions
 
                 updateSelectionLayer()
-                updateAttachmentViews()
+                updateAttachmentViews(reconfigureViews: true)
                 needsDisplay = true
             }
         }

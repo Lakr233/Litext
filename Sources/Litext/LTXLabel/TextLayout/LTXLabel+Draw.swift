@@ -11,28 +11,12 @@ public extension LTXLabel {
     #if canImport(UIKit)
         override func draw(_: CGRect) {
             guard let context = UIGraphicsGetCurrentContext() else { return }
-
-            if flags.needsUpdateHighlightRegions {
-                textLayout?.updateHighlightRegions(with: context)
-                highlightRegions = textLayout?.highlightRegions ?? []
-                updateAttachmentViews()
-                flags.needsUpdateHighlightRegions = false
-            }
-
             textLayout?.draw(in: context)
         }
 
     #elseif canImport(AppKit)
         override func draw(_: NSRect) {
             guard let context = NSGraphicsContext.current?.cgContext else { return }
-
-            if flags.needsUpdateHighlightRegions {
-                textLayout?.updateHighlightRegions(with: context)
-                highlightRegions = textLayout?.highlightRegions ?? []
-                updateAttachmentViews()
-                flags.needsUpdateHighlightRegions = false
-            }
-
             textLayout?.draw(in: context)
         }
     #endif

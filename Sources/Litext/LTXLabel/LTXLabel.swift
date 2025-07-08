@@ -6,8 +6,8 @@
 import CoreFoundation
 import CoreText
 import Foundation
-import QuartzCore
 import OrderedCollections
+import QuartzCore
 
 public class LTXLabel: LTXPlatformView, Identifiable {
     public let id: UUID = .init()
@@ -59,10 +59,11 @@ public class LTXLabel: LTXPlatformView, Identifiable {
         didSet { invalidateTextLayout() }
     }
 
-    var attachmentViewMap: [String : OrderedSet<LTXPlatformView>] = [:]
+    var attachmentViewMap: [String: OrderedSet<LTXPlatformView>] = [:]
     var attachmentViews: [LTXPlatformView] {
-        attachmentViewMap.values.flatMap { $0 }
+        attachmentViewMap.values.flatMap(\.self)
     }
+
     var highlightRegions: [LTXHighlightRegion] = []
     var activeHighlightRegion: LTXHighlightRegion?
     var lastContainerSize: CGSize = .zero
@@ -164,6 +165,5 @@ extension LTXLabel {
 
     struct Flags {
         var layoutIsDirty: Bool = false
-        var needsUpdateHighlightRegions: Bool = false
     }
 }

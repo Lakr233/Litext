@@ -177,9 +177,9 @@ public class LTXTextLayout: NSObject {
         }
     }
 
-    public func updateHighlightRegions(with context: CGContext) {
+    public func updateHighlightRegions() {
         _highlightRegions.removeAll()
-        extractHighlightRegions(with: context)
+        extractHighlightRegions()
     }
 
     public func rects(for range: NSRange) -> [CGRect] {
@@ -335,7 +335,7 @@ public class LTXTextLayout: NSObject {
         }
     }
 
-    private func extractHighlightRegions(with context: CGContext) {
+    private func extractHighlightRegions() {
         enumerateLines { line, _, lineOrigin in
             let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
 
@@ -352,8 +352,7 @@ public class LTXTextLayout: NSObject {
                 processHighlightRegionForRun(
                     glyphRun,
                     attributes: attributes,
-                    lineOrigin: lineOrigin,
-                    with: context
+                    lineOrigin: lineOrigin
                 )
             }
         }
@@ -362,8 +361,7 @@ public class LTXTextLayout: NSObject {
     private func processHighlightRegionForRun(
         _ glyphRun: CTRun,
         attributes: [NSAttributedString.Key: Any],
-        lineOrigin: CGPoint,
-        with context: CGContext
+        lineOrigin: CGPoint
     ) {
         let cfStringRange = CTRunGetStringRange(glyphRun)
         let stringRange = NSRange(
@@ -392,7 +390,7 @@ public class LTXTextLayout: NSObject {
 
         var runBounds = CTRunGetImageBounds(
             glyphRun,
-            context,
+            nil,
             CFRange(location: 0, length: 0)
         )
 
