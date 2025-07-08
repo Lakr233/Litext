@@ -34,8 +34,6 @@ dependencies: [
 
 ## Usage
 
-### Basic Setup
-
 ```swift
 import Litext
 
@@ -53,48 +51,6 @@ let attributedString = NSMutableAttributedString(
 
 // Set the attributed text
 label.attributedText = attributedString
-```
-
-### Link Handling
-
-```swift
-let linkString = NSAttributedString(
-    string: "Visit our website",
-    attributes: [
-        .font: NSFont.systemFont(ofSize: 14),
-        .link: URL(string: "https://example.com")!,
-        .foregroundColor: NSColor.linkColor
-    ]
-)
-attributedString.append(linkString)
-
-// Handle link taps
-label.tapHandler = { highlightRegion in
-    if let url = highlightRegion.attributes[.link] as? URL {
-        NSWorkspace.shared.open(url)
-    }
-}
-```
-
-### Embedding Native Views
-
-```swift
-// Create and configure attachment
-let attachment = LTXAttachment()
-let switchView = NSSwitch()
-attachment.view = switchView
-attachment.size = switchView.intrinsicContentSize
-
-// Add attachment to text
-attributedString.append(
-    NSAttributedString(
-        string: LTXReplacementText,
-        attributes: [
-            .ltxAttachment: attachment,
-            kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate
-        ]
-    )
-)
 ```
 
 ## License
