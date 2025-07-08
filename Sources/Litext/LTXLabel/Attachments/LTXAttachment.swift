@@ -37,12 +37,12 @@ private extension LTXAttachment {
             getAscent: { refCon in
                 let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
                 let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
-                return boundingSize.height * 0.9
+                return boundingSize.height * 0.85
             },
             getDescent: { refCon in
                 let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
                 let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
-                return boundingSize.height * 0.1
+                return boundingSize.height * 0.15
             },
             getWidth: { refCon in
                 let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()

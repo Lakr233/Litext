@@ -397,7 +397,10 @@ public class LTXTextLayout: NSObject {
         if let attachment = attributes[LTXAttachmentAttributeName] as? LTXAttachment {
             let size = attachment.viewProvider.boundingSize(for: attachment)
             runBounds.size = size
-            runBounds.origin.y -= size.height * 0.1
+            var ascent: CGFloat = 0
+            var descent: CGFloat = 0
+            CTRunGetTypographicBounds(glyphRun, CFRange(), &ascent, &descent, nil)
+            runBounds.origin.y -= descent
         }
 
         runBounds.origin.x += lineOrigin.x

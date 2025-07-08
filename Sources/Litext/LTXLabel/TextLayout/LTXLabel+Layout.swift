@@ -86,7 +86,8 @@ public extension LTXLabel {
                 highlightRegions = textLayout.highlightRegions
 
                 updateSelectionLayer()
-                updateAttachmentViews(reconfigureViews: true)
+                // only reconfigure views if layout is dirty
+                updateAttachmentViews(reconfigureViews: flags.layoutIsDirty)
                 needsDisplay = true
             }
         }
