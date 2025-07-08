@@ -6,52 +6,68 @@
 import CoreText
 import Foundation
 
+//
+// LTXAttachment can not be reused
+//
+// please use LTXAttachmentViewProvider to implement a reusable view provider
+//
+
 open class LTXAttachment {
     open var viewProvider: any LTXAttachmentViewProvider
     open var data: Any?
-    private var _runDelegate: CTRunDelegate?
 
     open func attributedStringRepresentation() -> NSAttributedString {
         .init(string: viewProvider.textRepresentation())
     }
 
-    public init(viewProvider: any LTXAttachmentViewProvider, data: Any? = nil, _runDelegate: CTRunDelegate? = nil) {
+    public init(viewProvider: any LTXAttachmentViewProvider, data: Any? = nil) {
         self.viewProvider = viewProvider
         self.data = data
-        self._runDelegate = _runDelegate
     }
 
-    open var runDelegate: CTRunDelegate {
-        if _runDelegate == nil {
-            _runDelegate = Self.createDefaultRunDelegate(attachment: self)
-        }
-        return _runDelegate!
+    deinit {
+        self.runDelegateReferenceObject = nil
+        self.runDelegate = nil
+    }
+
+    private var runDelegateReferenceObject: RunDelegateReferenceObject?
+    private var runDelegate: CTRunDelegate?
+    func updateRunDelegate(maxWidth: CGFloat) -> CTRunDelegate? {
+        runDelegateReferenceObject = nil
+        runDelegate = nil
+        let (referenceObject, delegate) = Self.createDefaultRunDelegate(attachment: self, labelWidth: maxWidth)
+        runDelegateReferenceObject = referenceObject
+        runDelegate = delegate
+        return delegate
     }
 }
 
-private extension LTXAttachment {
-    static func createDefaultRunDelegate(attachment: LTXAttachment) -> CTRunDelegate? {
+extension LTXAttachment {
+    static func createDefaultRunDelegate(attachment: LTXAttachment, labelWidth: CGFloat) -> (RunDelegateReferenceObject, CTRunDelegate?) {
+        let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
+        let referenceObject = RunDelegateReferenceObject(
+            width: min(labelWidth, boundingSize.width),
+            height: boundingSize.height,
+        )
+
         var callbacks = CTRunDelegateCallbacks(
             version: kCTRunDelegateVersion1,
             dealloc: { _ in },
             getAscent: { refCon in
-                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
-                return boundingSize.height * 0.85
+                let size = Unmanaged<RunDelegateReferenceObject>.fromOpaque(refCon).takeUnretainedValue()
+                return size.height * 0.85
             },
             getDescent: { refCon in
-                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
-                return boundingSize.height * 0.15
+                let size = Unmanaged<RunDelegateReferenceObject>.fromOpaque(refCon).takeUnretainedValue()
+                return size.height * 0.15
             },
             getWidth: { refCon in
-                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
-                return boundingSize.width
+                let size = Unmanaged<RunDelegateReferenceObject>.fromOpaque(refCon).takeUnretainedValue()
+                return size.width
             }
         )
 
-        let unmanagedSelf = Unmanaged.passUnretained(attachment)
-        return CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque())
+        let delegate = CTRunDelegateCreate(&callbacks, Unmanaged.passUnretained(referenceObject).toOpaque())
+        return (referenceObject, delegate)
     }
 }

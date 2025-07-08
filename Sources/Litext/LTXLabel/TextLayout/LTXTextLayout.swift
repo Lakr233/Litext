@@ -112,9 +112,7 @@ public class LTXTextLayout: NSObject {
     public init(attributedString: NSAttributedString) {
         self.attributedString = attributedString
         containerSize = .zero
-        framesetter = CTFramesetterCreateWithAttributedString(
-            attributedString
-        )
+        framesetter = CTFramesetterCreateWithAttributedString(attributedString)
         _highlightRegions = [:]
         super.init()
     }
@@ -352,6 +350,7 @@ public class LTXTextLayout: NSObject {
                 processHighlightRegionForRun(
                     glyphRun,
                     attributes: attributes,
+                    line: line,
                     lineOrigin: lineOrigin
                 )
             }
@@ -361,6 +360,7 @@ public class LTXTextLayout: NSObject {
     private func processHighlightRegionForRun(
         _ glyphRun: CTRun,
         attributes: [NSAttributedString.Key: Any],
+        line _: CTLine,
         lineOrigin: CGPoint
     ) {
         let cfStringRange = CTRunGetStringRange(glyphRun)

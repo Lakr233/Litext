@@ -38,9 +38,7 @@ public extension LTXLabel {
             constraintSize.width = lastContainerSize.width
         }
 
-        return textLayout.suggestContainerSize(
-            withSize: constraintSize
-        )
+        return textLayout.suggestContainerSize(withSize: constraintSize)
     }
 
     #if canImport(UIKit)
@@ -74,7 +72,11 @@ public extension LTXLabel {
             super.layout()
 
             let containerSize = bounds.size
-            if flags.layoutIsDirty || lastContainerSize != containerSize, let textLayout {
+            if flags.layoutIsDirty || lastContainerSize != containerSize {
+                generateRunDelegatesForAttachments()
+
+                let textLayout = textLayout!
+
                 if flags.layoutIsDirty || containerSize.width != lastContainerSize.width {
                     invalidateIntrinsicContentSize()
                 }

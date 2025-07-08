@@ -188,10 +188,7 @@ final class ViewController: NSViewController {
         attributedString.append(
             NSAttributedString(
                 string: LTXReplacementText,
-                attributes: [
-                    LTXAttachmentAttributeName: attachment,
-                    kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate,
-                ]
+                attributes: [LTXAttachmentAttributeName: attachment]
             )
         )
 
@@ -220,10 +217,7 @@ final class ViewController: NSViewController {
         attributedString.append(
             NSAttributedString(
                 string: LTXReplacementText,
-                attributes: [
-                    LTXAttachmentAttributeName: buttonAttachment,
-                    kCTRunDelegateAttributeName as NSAttributedString.Key: buttonAttachment.runDelegate,
-                ]
+                attributes: [LTXAttachmentAttributeName: buttonAttachment]
             )
         )
 

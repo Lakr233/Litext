@@ -167,3 +167,14 @@ extension LTXLabel {
         var layoutIsDirty: Bool = false
     }
 }
+
+extension LTXLabel {
+    static func boundingHeight(usingWidth: CGFloat, attributeText: NSAttributedString) -> CGFloat {
+        let attributeText = attributeText.mutableCopy() as! NSMutableAttributedString
+        rebuildAttachmentRunDelegate(attributeText: attributeText, maxWidth: usingWidth)
+        let layout = LTXTextLayout(attributedString: attributeText)
+        let size = CGSize(width: usingWidth, height: .infinity)
+        layout.containerSize = size // for generateLayout()
+        return layout.suggestContainerSize(withSize: size).height
+    }
+}
