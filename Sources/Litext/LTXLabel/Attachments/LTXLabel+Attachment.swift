@@ -46,16 +46,11 @@ extension LTXLabel {
             if var existingViews = previousViewMap[typeIdentifier], !existingViews.isEmpty {
                 defer { previousViewMap[typeIdentifier] = existingViews }
                 let view = existingViews.removeFirst()
-                assert(view.superview == self)
-                assert(view.translatesAutoresizingMaskIntoConstraints == false)
-                assert(view.autoresizingMask == [])
                 if view.frame != convertedRect { view.frame = convertedRect }
                 if reconfigureViews { attachment.viewProvider.configureView(view, for: attachment) }
                 attachmentViewMap[typeIdentifier, default: OrderedSet<LTXPlatformView>()].append(view)
             } else {
                 let view = attachment.viewProvider.createView()
-                view.translatesAutoresizingMaskIntoConstraints = false
-                view.autoresizingMask = []
                 if view.superview != self { addSubview(view) }
                 view.frame = convertedRect
                 attachment.viewProvider.configureView(view, for: attachment)

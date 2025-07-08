@@ -12,6 +12,8 @@ class ViewController: UIViewController {
     let contentView = UIView()
     let label = LTXLabel()
     let controlButton = UIButton(type: .system)
+    
+    private var contentHeightConstraint: NSLayoutConstraint?
 
     var fontSize: CGFloat = 16
     var lineSpacing: CGFloat = 6
@@ -99,9 +101,14 @@ class ViewController: UIViewController {
             label.intrinsicContentSize.height + 200,
             scrollView.bounds.height
         )
-        let cons = contentView.heightAnchor.constraint(equalToConstant: contentHeight)
-        cons.priority = .required
-        cons.isActive = true
+        
+        if let existingConstraint = contentHeightConstraint {
+            existingConstraint.constant = contentHeight
+        } else {
+            contentHeightConstraint = contentView.heightAnchor.constraint(equalToConstant: contentHeight)
+            contentHeightConstraint?.priority = .required
+            contentHeightConstraint?.isActive = true
+        }
     }
 
     @objc func showControlPanel() {
@@ -216,18 +223,12 @@ class ViewController: UIViewController {
             )
         )
 
-        let attachment = LTXAttachment()
-        let switchView = UISwitch()
-        attachment.view = switchView
-        attachment.size = switchView.intrinsicContentSize
+        let attachment = LTXAttachment(viewProvider: LTXAttachmentViewProviderSwitch())
 
         attributedString.append(
             NSAttributedString(
                 string: LTXReplacementText,
-                attributes: [
-                    LTXAttachmentAttributeName: attachment,
-                    kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate,
-                ]
+                attributes: [ LTXAttachmentAttributeName: attachment, ]
             )
         )
 
@@ -241,12 +242,7 @@ class ViewController: UIViewController {
             )
         )
 
-        let buttonAttachment = LTXAttachment()
-        let button = UIButton(type: .system)
-        button.setTitle("Click Me", for: .normal)
-        button.sizeToFit()
-        buttonAttachment.view = button
-        buttonAttachment.size = button.intrinsicContentSize
+        let buttonAttachment = LTXAttachment(viewProvider: LTXAttachmentViewProviderButton(title: "Hello World"))
 
         attributedString.append(
             NSAttributedString(
@@ -261,10 +257,7 @@ class ViewController: UIViewController {
         attributedString.append(
             NSAttributedString(
                 string: LTXReplacementText,
-                attributes: [
-                    LTXAttachmentAttributeName: buttonAttachment,
-                    kCTRunDelegateAttributeName as NSAttributedString.Key: buttonAttachment.runDelegate,
-                ]
+                attributes: [ LTXAttachmentAttributeName: buttonAttachment ]
             )
         )
 

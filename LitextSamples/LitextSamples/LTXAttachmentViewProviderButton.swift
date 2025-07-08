@@ -5,7 +5,7 @@
 //  Created by 秋星桥 on 7/8/25.
 //
 
-import AppKit
+import UIKit
 import Foundation
 import Litext
 
@@ -20,16 +20,18 @@ class LTXAttachmentViewProviderButton: LTXAttachmentViewProvider {
     }
 
     func createView() -> Litext.LTXPlatformView {
-        let button = NSButton(title: title, target: nil, action: nil)
-        button.bezelStyle = .rounded
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.systemBlue, for: .normal)
         return button
     }
 
     func configureView(_: Litext.LTXPlatformView, for _: Litext.LTXAttachment) {}
 
     func boundingSize(for _: Litext.LTXAttachment) -> CGSize {
-        let button = NSButton(title: title, target: nil, action: nil)
-        button.bezelStyle = .rounded
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.systemBlue, for: .normal)
         return button.intrinsicContentSize
     }
 
