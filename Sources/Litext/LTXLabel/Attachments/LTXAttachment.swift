@@ -7,45 +7,54 @@ import CoreText
 import Foundation
 
 open class LTXAttachment {
-    open var size: CGSize
-    open var view: LTXPlatformView?
-
+    open var viewProvider: any LTXAttachmentViewProvider
+    open var data: Any?
     private var _runDelegate: CTRunDelegate?
 
-    public init() {
-        size = .zero
+    public init(viewProvider: any LTXAttachmentViewProvider, data: Any? = nil, _runDelegate: CTRunDelegate? = nil) {
+        self.viewProvider = viewProvider
+        self.data = data
+        self._runDelegate = _runDelegate
     }
 
     open func attributedStringRepresentation() -> NSAttributedString {
-        if let view = view as? LTXAttributeStringRepresentable {
-            return view.attributedStringRepresentation()
+        if let viewProvider = viewProvider as? LTXAttributeStringRepresentable {
+            return viewProvider.attributedStringRepresentation()
         }
         return NSAttributedString(string: " ")
     }
 
     open var runDelegate: CTRunDelegate {
         if _runDelegate == nil {
-            var callbacks = CTRunDelegateCallbacks(
-                version: kCTRunDelegateVersion1,
-                dealloc: { _ in },
-                getAscent: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.height * 0.9
-                },
-                getDescent: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.height * 0.1
-                },
-                getWidth: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.width
-                }
-            )
-
-            let unmanagedSelf = Unmanaged.passUnretained(self)
-            _runDelegate = CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque())
+            _runDelegate = Self.createDefaultRunDelegate(attachment: self)
         }
-
         return _runDelegate!
+    }
+}
+
+private extension LTXAttachment {
+    static func createDefaultRunDelegate(attachment: LTXAttachment) -> CTRunDelegate? {
+        var callbacks = CTRunDelegateCallbacks(
+            version: kCTRunDelegateVersion1,
+            dealloc: { _ in },
+            getAscent: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
+                return boundingSize.height * 0.9
+            },
+            getDescent: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
+                return boundingSize.height * 0.1
+            },
+            getWidth: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
+                return boundingSize.width
+            }
+        )
+
+        let unmanagedSelf = Unmanaged.passUnretained(attachment)
+        return CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque())
     }
 }

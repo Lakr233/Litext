@@ -10,7 +10,7 @@ import QuartzCore
 public extension LTXLabel {
     func invalidateTextLayout() {
         if let selectionRange,
-            attributedText.length >= selectionRange.location + selectionRange.length
+           attributedText.length >= selectionRange.location + selectionRange.length
         { /* pass */ } else {
             clearSelection()
         }
@@ -59,6 +59,7 @@ public extension LTXLabel {
                 flags.layoutIsDirty = false
 
                 updateSelectionLayer()
+                updateAttachmentViews()
                 setNeedsDisplay()
             }
         }
@@ -84,6 +85,7 @@ public extension LTXLabel {
                 flags.layoutIsDirty = false
 
                 updateSelectionLayer()
+                updateAttachmentViews()
                 needsDisplay = true
             }
         }

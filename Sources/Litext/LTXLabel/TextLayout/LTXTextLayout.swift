@@ -396,11 +396,10 @@ public class LTXTextLayout: NSObject {
             CFRange(location: 0, length: 0)
         )
 
-        if let attachment = attributes[
-            LTXAttachmentAttributeName
-        ] as? LTXAttachment {
-            runBounds.size = attachment.size
-            runBounds.origin.y -= attachment.size.height * 0.1
+        if let attachment = attributes[LTXAttachmentAttributeName] as? LTXAttachment {
+            let size = attachment.viewProvider.boundingSize(for: attachment)
+            runBounds.size = size
+            runBounds.origin.y -= size.height * 0.1
         }
 
         runBounds.origin.x += lineOrigin.x

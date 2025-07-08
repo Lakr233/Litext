@@ -47,10 +47,6 @@ import Foundation
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
 
-            if isLocationAboveAttachmentView(location: location) {
-                super.mouseDown(with: event)
-                return
-            }
             interactionState.isFirstMove = true
 
             if activateHighlightRegionAtPoint(location) {

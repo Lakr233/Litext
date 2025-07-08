@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import OrderedCollections
 
 extension LTXLabel {
     func isLocationAboveAttachmentView(location: CGPoint) -> Bool {
@@ -16,36 +17,43 @@ extension LTXLabel {
     }
 
     func updateAttachmentViews() {
-        let viewsToRemove = attachmentViews
-        var newAttachmentViews: Set<LTXPlatformView> = []
-
-        for highlightRegion in highlightRegions {
-            guard let attachment = highlightRegion.attributes[LTXAttachmentAttributeName] as? LTXAttachment,
-                  let view = attachment.view else { continue }
-
-            if view.superview == self {
-                newAttachmentViews.insert(view)
-            } else {
-                addSubview(view)
-                newAttachmentViews.insert(view)
+        var previousViewMap: [String : OrderedSet<LTXPlatformView>] = attachmentViewMap
+        attachmentViewMap.removeAll()
+        
+        // layout has been generated, now we need to update according to the layout
+        for highlightRegion in self.highlightRegions {
+            guard let attachment = highlightRegion.attributes[LTXAttachmentAttributeName] as? LTXAttachment else {
+                continue
             }
-
+            let typeIdentifier = attachment.viewProvider.reuseIdentifier()
+            
             #if canImport(UIKit)
-                let rect = highlightRegion.rects.first!.cgRectValue
+            let rect = highlightRegion.rects.first!.cgRectValue
             #elseif canImport(AppKit)
-                let rect = highlightRegion.rects.first!.rectValue
+            let rect = highlightRegion.rects.first!.rectValue
             #endif
-
+            
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
-            view.frame = convertedRect
-        }
-
-        for view in viewsToRemove {
-            if !newAttachmentViews.contains(view) {
-                view.removeFromSuperview()
+            
+            // grab an existing view if available and delete it from current view map
+            if var existingViews = previousViewMap[typeIdentifier], !existingViews.isEmpty {
+                defer { previousViewMap[typeIdentifier] = existingViews }
+                let view = existingViews.removeFirst()
+                view.frame = convertedRect
+                if view.superview != self { addSubview(view) }
+                attachment.viewProvider.configureView(view, for: attachment)
+                attachmentViewMap[typeIdentifier, default: OrderedSet<LTXPlatformView>()].append(view)
+            } else {
+                let view = attachment.viewProvider.createView()
+                view.frame = convertedRect
+                if view.superview != self { addSubview(view) }
+                attachment.viewProvider.configureView(view, for: attachment)
+                attachmentViewMap[typeIdentifier, default: OrderedSet<LTXPlatformView>()].append(view)
             }
         }
 
-        attachmentViews = newAttachmentViews
+        for view in attachmentViews {
+            view.removeFromSuperview()
+        }
     }
 }

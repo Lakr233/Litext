@@ -7,6 +7,7 @@ import CoreFoundation
 import CoreText
 import Foundation
 import QuartzCore
+import OrderedCollections
 
 public class LTXLabel: LTXPlatformView, Identifiable {
     public let id: UUID = .init()
@@ -58,7 +59,10 @@ public class LTXLabel: LTXPlatformView, Identifiable {
         didSet { invalidateTextLayout() }
     }
 
-    var attachmentViews: Set<LTXPlatformView> = []
+    var attachmentViewMap: [String : OrderedSet<LTXPlatformView>] = [:]
+    var attachmentViews: [LTXPlatformView] {
+        attachmentViewMap.values.flatMap { $0 }
+    }
     var highlightRegions: [LTXHighlightRegion] = []
     var activeHighlightRegion: LTXHighlightRegion?
     var lastContainerSize: CGSize = .zero
@@ -97,7 +101,6 @@ public class LTXLabel: LTXPlatformView, Identifiable {
 
     deinit {
         attributedText = .init()
-        attachmentViews = []
         clearSelection()
         deactivateHighlightRegion()
         NotificationCenter.default.removeObserver(self)

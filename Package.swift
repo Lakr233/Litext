@@ -14,7 +14,12 @@ let package = Package(
     products: [
         .library(name: "Litext", targets: ["Litext"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.2.0"),
+    ],
     targets: [
-        .target(name: "Litext"),
+        .target(name: "Litext", dependencies: [
+            .product(name: "OrderedCollections", package: "swift-collections"),
+        ]),
     ]
 )

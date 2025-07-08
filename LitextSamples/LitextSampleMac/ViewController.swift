@@ -66,7 +66,7 @@ final class ViewController: NSViewController {
         ])
 
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        
+
         NSLayoutConstraint.activate([
             label.topAnchor.constraint(equalTo: scrollView.topAnchor),
             label.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
@@ -183,10 +183,7 @@ final class ViewController: NSViewController {
             )
         )
 
-        let attachment: LTXAttachment = .init()
-        let switchView = NSSwitch()
-        attachment.view = switchView
-        attachment.size = switchView.intrinsicContentSize
+        let attachment: LTXAttachment = .init(viewProvider: LTXAttachmentViewProviderSwitch())
 
         attributedString.append(
             NSAttributedString(
@@ -208,12 +205,7 @@ final class ViewController: NSViewController {
             )
         )
 
-        let buttonAttachment = LTXAttachment()
-        let buttonView = NSButton(title: "Click Me", target: nil, action: nil)
-        buttonView.bezelStyle = .rounded
-        buttonView.controlSize = .small
-        buttonAttachment.view = buttonView
-        buttonAttachment.size = buttonView.intrinsicContentSize
+        let buttonAttachment = LTXAttachment(viewProvider: LTXAttachmentViewProviderButton(title: "Click Me"))
 
         attributedString.append(
             NSAttributedString(
