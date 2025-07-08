@@ -5,9 +5,9 @@
 //  Created by 秋星桥 on 7/8/25.
 //
 
-import UIKit
 import Foundation
 import Litext
+import UIKit
 
 class LTXAttachmentViewProviderSwitch: LTXAttachmentViewProvider {
     func reuseIdentifier() -> String {
@@ -19,8 +19,7 @@ class LTXAttachmentViewProviderSwitch: LTXAttachmentViewProvider {
     }
 
     func configureView(_ view: Litext.LTXPlatformView, for _: Litext.LTXAttachment) {
-        guard let switchView = view as? UISwitch else { return }
-        print(switchView)
+        print(#function, view)
     }
 
     func boundingSize(for _: Litext.LTXAttachment) -> CGSize {

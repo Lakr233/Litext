@@ -12,7 +12,7 @@ class ViewController: UIViewController {
     let contentView = UIView()
     let label = LTXLabel()
     let controlButton = UIButton(type: .system)
-    
+
     private var contentHeightConstraint: NSLayoutConstraint?
 
     var fontSize: CGFloat = 16
@@ -101,7 +101,7 @@ class ViewController: UIViewController {
             label.intrinsicContentSize.height + 200,
             scrollView.bounds.height
         )
-        
+
         if let existingConstraint = contentHeightConstraint {
             existingConstraint.constant = contentHeight
         } else {
@@ -228,7 +228,7 @@ class ViewController: UIViewController {
         attributedString.append(
             NSAttributedString(
                 string: LTXReplacementText,
-                attributes: [ LTXAttachmentAttributeName: attachment, ]
+                attributes: [LTXAttachmentAttributeName: attachment]
             )
         )
 
@@ -257,7 +257,7 @@ class ViewController: UIViewController {
         attributedString.append(
             NSAttributedString(
                 string: LTXReplacementText,
-                attributes: [ LTXAttachmentAttributeName: buttonAttachment ]
+                attributes: [LTXAttachmentAttributeName: buttonAttachment]
             )
         )
 

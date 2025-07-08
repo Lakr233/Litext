@@ -25,7 +25,9 @@ class LTXAttachmentViewProviderButton: LTXAttachmentViewProvider {
         return button
     }
 
-    func configureView(_: Litext.LTXPlatformView, for _: Litext.LTXAttachment) {}
+    func configureView(_ view: Litext.LTXPlatformView, for _: Litext.LTXAttachment) {
+        print(#function, view)
+    }
 
     func boundingSize(for _: Litext.LTXAttachment) -> CGSize {
         let button = NSButton(title: title, target: nil, action: nil)

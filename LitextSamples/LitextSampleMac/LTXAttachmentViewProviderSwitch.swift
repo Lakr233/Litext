@@ -19,8 +19,7 @@ class LTXAttachmentViewProviderSwitch: LTXAttachmentViewProvider {
     }
 
     func configureView(_ view: Litext.LTXPlatformView, for _: Litext.LTXAttachment) {
-        guard let switchView = view as? NSSwitch else { return }
-        print(switchView)
+        print(#function, view)
     }
 
     func boundingSize(for _: Litext.LTXAttachment) -> CGSize {

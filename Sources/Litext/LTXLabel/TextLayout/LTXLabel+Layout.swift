@@ -47,8 +47,6 @@ public extension LTXLabel {
 
             let containerSize = bounds.size
             if flags.layoutIsDirty || lastContainerSize != containerSize {
-                generateRunDelegatesForAttachments()
-
                 let textLayout = textLayout!
 
                 if flags.layoutIsDirty || containerSize.width != lastContainerSize.width {
@@ -62,8 +60,7 @@ public extension LTXLabel {
                 highlightRegions = textLayout.highlightRegions
 
                 updateSelectionLayer()
-                // only reconfigure views if layout is dirty
-                updateAttachmentViews(reconfigureViews: flags.layoutIsDirty)
+                updateAttachmentViews(reconfigureViews: false)
                 setNeedsDisplay()
             }
         }
@@ -79,8 +76,6 @@ public extension LTXLabel {
 
             let containerSize = bounds.size
             if flags.layoutIsDirty || lastContainerSize != containerSize {
-                generateRunDelegatesForAttachments()
-
                 let textLayout = textLayout!
 
                 if flags.layoutIsDirty || containerSize.width != lastContainerSize.width {
@@ -94,8 +89,7 @@ public extension LTXLabel {
                 highlightRegions = textLayout.highlightRegions
 
                 updateSelectionLayer()
-                // only reconfigure views if layout is dirty
-                updateAttachmentViews(reconfigureViews: flags.layoutIsDirty)
+                updateAttachmentViews(reconfigureViews: false)
                 needsDisplay = true
             }
         }

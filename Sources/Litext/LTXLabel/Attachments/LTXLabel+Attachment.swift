@@ -16,13 +16,6 @@ extension LTXLabel {
         return false
     }
 
-    func generateRunDelegatesForAttachments() {
-        let attributeText = attributedText.mutableCopy() as! NSMutableAttributedString
-        let maxWidth = preferredMaxLayoutWidth > 0 ? preferredMaxLayoutWidth : bounds.width
-        Self.rebuildAttachmentRunDelegate(attributeText: attributeText, maxWidth: maxWidth)
-        attributedText = attributeText
-    }
-
     func updateAttachmentViews(reconfigureViews: Bool) {
         var previousViewMap: [String: OrderedSet<LTXPlatformView>] = attachmentViewMap
         attachmentViewMap.removeAll()
@@ -67,15 +60,19 @@ extension LTXLabel {
 }
 
 extension LTXLabel {
-    static func rebuildAttachmentRunDelegate(attributeText: NSMutableAttributedString, maxWidth: CGFloat) {
+    static func rebuildAttachmentRunDelegate(attributeText: NSMutableAttributedString) {
         attributeText.removeAttribute(
             kCTRunDelegateAttributeName as NSAttributedString.Key,
             range: .init(location: 0, length: attributeText.length)
         )
         // enumerate through all the attachments and generate run delegates
-        attributeText.enumerateAttribute(LTXAttachmentAttributeName, in: NSRange(location: 0, length: attributeText.length), options: []) { value, range, _ in
+        attributeText.enumerateAttribute(
+            LTXAttachmentAttributeName,
+            in: NSRange(location: 0, length: attributeText.length),
+            options: []
+        ) { value, range, _ in
             guard let attachment = value as? LTXAttachment else { return }
-            let delegate = attachment.updateRunDelegate(maxWidth: maxWidth)
+            let delegate = attachment.updateRunDelegate()
             attributeText.addAttribute(
                 kCTRunDelegateAttributeName as NSAttributedString.Key,
                 value: delegate as Any,

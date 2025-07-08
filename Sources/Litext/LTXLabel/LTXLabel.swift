@@ -14,8 +14,16 @@ public class LTXLabel: LTXPlatformView, Identifiable {
 
     // MARK: - Public Properties
 
-    public var attributedText: NSAttributedString = .init() {
-        didSet { textLayout = LTXTextLayout(attributedString: attributedText) }
+    private var _attributedText: NSAttributedString = .init()
+    public var attributedText: NSAttributedString {
+        get { _attributedText }
+        set {
+            let attributedText = newValue.mutableCopy() as! NSMutableAttributedString
+            Self.rebuildAttachmentRunDelegate(attributeText: attributedText)
+            _attributedText = attributedText
+            textLayout = LTXTextLayout(attributedString: attributedText)
+            updateAttachmentViews(reconfigureViews: true)
+        }
     }
 
     public var preferredMaxLayoutWidth: CGFloat = 0 {
@@ -171,7 +179,7 @@ extension LTXLabel {
 extension LTXLabel {
     static func boundingHeight(usingWidth: CGFloat, attributeText: NSAttributedString) -> CGFloat {
         let attributeText = attributeText.mutableCopy() as! NSMutableAttributedString
-        rebuildAttachmentRunDelegate(attributeText: attributeText, maxWidth: usingWidth)
+        rebuildAttachmentRunDelegate(attributeText: attributeText)
         let layout = LTXTextLayout(attributedString: attributeText)
         let size = CGSize(width: usingWidth, height: .infinity)
         layout.containerSize = size // for generateLayout()

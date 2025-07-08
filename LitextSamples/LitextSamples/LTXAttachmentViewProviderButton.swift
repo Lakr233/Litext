@@ -5,9 +5,9 @@
 //  Created by 秋星桥 on 7/8/25.
 //
 
-import UIKit
 import Foundation
 import Litext
+import UIKit
 
 class LTXAttachmentViewProviderButton: LTXAttachmentViewProvider {
     let title: String
@@ -26,7 +26,9 @@ class LTXAttachmentViewProviderButton: LTXAttachmentViewProvider {
         return button
     }
 
-    func configureView(_: Litext.LTXPlatformView, for _: Litext.LTXAttachment) {}
+    func configureView(_ view: Litext.LTXPlatformView, for _: Litext.LTXAttachment) {
+        print(#function, view)
+    }
 
     func boundingSize(for _: Litext.LTXAttachment) -> CGSize {
         let button = UIButton(type: .system)

@@ -32,10 +32,10 @@ open class LTXAttachment {
 
     private var runDelegateReferenceObject: RunDelegateReferenceObject?
     private var runDelegate: CTRunDelegate?
-    func updateRunDelegate(maxWidth: CGFloat) -> CTRunDelegate? {
+    func updateRunDelegate() -> CTRunDelegate? {
         runDelegateReferenceObject = nil
         runDelegate = nil
-        let (referenceObject, delegate) = Self.createDefaultRunDelegate(attachment: self, labelWidth: maxWidth)
+        let (referenceObject, delegate) = Self.createDefaultRunDelegate(attachment: self)
         runDelegateReferenceObject = referenceObject
         runDelegate = delegate
         return delegate
@@ -43,10 +43,13 @@ open class LTXAttachment {
 }
 
 extension LTXAttachment {
-    static func createDefaultRunDelegate(attachment: LTXAttachment, labelWidth: CGFloat) -> (RunDelegateReferenceObject, CTRunDelegate?) {
+    static func createDefaultRunDelegate(
+        attachment: LTXAttachment,
+        maxWidth: CGFloat = 5000
+    ) -> (RunDelegateReferenceObject, CTRunDelegate?) {
         let boundingSize = attachment.viewProvider.boundingSize(for: attachment)
         let referenceObject = RunDelegateReferenceObject(
-            width: min(labelWidth, boundingSize.width),
+            width: min(maxWidth, boundingSize.width),
             height: boundingSize.height,
         )
 
