@@ -54,17 +54,19 @@ final class ViewController: NSViewController {
         view.addSubview(controlButton)
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -50),
+            scrollView.topAnchor.constraint(equalTo: view.topAnchor, constant: 16),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -32),
 
             controlButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            controlButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
-            controlButton.widthAnchor.constraint(equalToConstant: 150),
-            controlButton.heightAnchor.constraint(equalToConstant: 30),
+            controlButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            controlButton.widthAnchor.constraint(equalToConstant: 128),
+            controlButton.heightAnchor.constraint(equalToConstant: 32),
         ])
 
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        
         NSLayoutConstraint.activate([
             label.topAnchor.constraint(equalTo: scrollView.topAnchor),
             label.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
