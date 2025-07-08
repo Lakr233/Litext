@@ -41,7 +41,7 @@ extension LTXLabel {
                 let view = existingViews.removeFirst()
                 if view.frame != convertedRect { view.frame = convertedRect }
                 if reconfigureViews { attachment.viewProvider.configureView(view, for: attachment) }
-                attachmentViewMap[typeIdentifier, default: OrderedSet<LTXPlatformView>()].append(view)
+                attachmentViewMap[typeIdentifier, default: OrderedSet<LTXPlatformView>()].insert(view, at: 0)
             } else {
                 let view = attachment.viewProvider.createView()
                 if view.superview != self { addSubview(view) }
