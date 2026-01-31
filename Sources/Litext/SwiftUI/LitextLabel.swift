@@ -280,8 +280,13 @@ private enum Content {
     private static func mergeWithDefaults(
         _ attributes: [NSAttributedString.Key: Any]
     ) -> [NSAttributedString.Key: Any] {
+        #if os(tvOS)
+            let defaultFont = PlatformFont.preferredFont(forTextStyle: .body)
+        #else
+            let defaultFont = PlatformFont.systemFont(ofSize: PlatformFont.systemFontSize)
+        #endif
         var result: [NSAttributedString.Key: Any] = [
-            .font: PlatformFont.systemFont(ofSize: PlatformFont.systemFontSize),
+            .font: defaultFont,
             .foregroundColor: PlatformColor.label,
         ]
         for (key, value) in attributes {
