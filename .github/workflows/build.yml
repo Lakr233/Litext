@@ -1,0 +1,36 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        destination:
+          - platform=macOS
+          - platform=macOS,variant=Mac Catalyst
+          - platform=iOS
+          - platform=iOS Simulator
+          - platform=tvOS
+          - platform=tvOS Simulator
+          - platform=xrOS
+          - platform=xrOS Simulator
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          xcodebuild -scheme OhMyLitext \
+            -workspace Litext.xcworkspace \
+            -destination "generic/${{ matrix.destination }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
