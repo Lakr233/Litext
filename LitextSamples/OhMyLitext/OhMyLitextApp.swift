@@ -14,7 +14,7 @@ struct OhMyLitextApp: App {
             ContentView()
         }
         #if os(macOS) || os(visionOS) || targetEnvironment(macCatalyst)
-            .windowResizability(.contentMinSize)
+        .windowResizability(.contentMinSize)
         #endif
     }
 }

@@ -22,6 +22,7 @@ struct ContentView: View {
     @State private var lineSpacing: Double = 4
     @State private var isSelectable: Bool = true
     @State private var textColorIndex: Int = 0
+    @State private var selectionColorIndex: Int = 0
 
     private let textColors: [(name: String, color: PlatformColor)] = [
         ("Default", PlatformColor.label),
@@ -29,6 +30,15 @@ struct ContentView: View {
         ("Green", PlatformColor.systemGreen),
         ("Orange", PlatformColor.systemOrange),
         ("Purple", PlatformColor.systemPurple),
+    ]
+
+    private let selectionColors: [(name: String, color: PlatformColor?)] = [
+        ("Default", nil),
+        ("Blue", PlatformColor.systemBlue.withAlphaComponent(0.2)),
+        ("Green", PlatformColor.systemGreen.withAlphaComponent(0.2)),
+        ("Yellow", PlatformColor.systemYellow.withAlphaComponent(0.3)),
+        ("Orange", PlatformColor.systemOrange.withAlphaComponent(0.2)),
+        ("Pink", PlatformColor.systemPink.withAlphaComponent(0.2)),
     ]
 
     var body: some View {
@@ -162,7 +172,18 @@ struct ContentView: View {
                             Text(textColors[index].name).tag(index)
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.menu)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Selection Color")
+                        .font(.subheadline)
+                    Picker("Selection", selection: $selectionColorIndex) {
+                        ForEach(0 ..< selectionColors.count, id: \.self) { index in
+                            Text(selectionColors[index].name).tag(index)
+                        }
+                    }
+                    .pickerStyle(.menu)
                 }
 
                 Toggle("Selectable", isOn: $isSelectable)
@@ -172,6 +193,7 @@ struct ContentView: View {
                     lineSpacing = 4
                     isSelectable = true
                     textColorIndex = 0
+                    selectionColorIndex = 0
                 }
                 .buttonStyle(.bordered)
             }
@@ -185,6 +207,7 @@ struct ContentView: View {
 
                 LitextLabel(attributedString: mixedAttributedText())
                     .selectable(isSelectable)
+                    .selectionBackgroundColor(currentSelectionColor)
                     .onTapLink { url in
                         linkTapped = url
                         showAlert = true
@@ -202,6 +225,7 @@ struct ContentView: View {
             // Simple string init (most concise)
             LitextLabel("Hello, Litext!")
                 .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
 
             // String with custom attributes
             LitextLabel("Custom styled text", attributes: [
@@ -209,6 +233,7 @@ struct ContentView: View {
                 .foregroundColor: PlatformColor.systemBlue,
             ])
             .selectable(isSelectable)
+            .selectionBackgroundColor(currentSelectionColor)
         }
     }
 
@@ -218,6 +243,7 @@ struct ContentView: View {
 
             LitextLabel(attributedString: simpleAttributedText())
                 .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
         }
     }
 
@@ -227,6 +253,7 @@ struct ContentView: View {
 
             LitextLabel(attributedString: styledAttributedText())
                 .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
         }
     }
 
@@ -236,6 +263,7 @@ struct ContentView: View {
 
             LitextLabel(attributedString: linkAttributedText())
                 .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
                 .onTapLink { url in
                     linkTapped = url
                     showAlert = true
@@ -249,6 +277,7 @@ struct ContentView: View {
 
             LitextLabel(attributedString: longAttributedText())
                 .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
         }
     }
 
@@ -264,6 +293,10 @@ struct ContentView: View {
 extension ContentView {
     private var currentTextColor: PlatformColor {
         textColors[textColorIndex].color
+    }
+
+    private var currentSelectionColor: PlatformColor? {
+        selectionColors[selectionColorIndex].color
     }
 
     private var currentFont: PlatformFont {

@@ -52,6 +52,11 @@ extension LTXLabel {
             selectionHandleStart.isHidden = false
             selectionHandleEnd.isHidden = false
 
+            // Update handle colors to match selection color
+            let handleColor = selectionBackgroundColor?.withAlphaComponent(1.0)
+            selectionHandleStart.updateHandleColor(handleColor)
+            selectionHandleEnd.updateHandleColor(handleColor)
+
             var beginRect = textLayout.rects(
                 for: NSRange(location: range.location, length: 1)
             ).first ?? .zero
@@ -119,9 +124,11 @@ extension LTXLabel {
         #endif
 
         #if canImport(UIKit)
-            selLayer.fillColor = UIColor.systemBlue.withAlphaComponent(0.1).cgColor
+            let defaultColor = UIColor.systemBlue.withAlphaComponent(0.1)
+            selLayer.fillColor = (selectionBackgroundColor ?? defaultColor).cgColor
         #elseif canImport(AppKit)
-            selLayer.fillColor = NSColor.linkColor.withAlphaComponent(0.1).cgColor
+            let defaultColor = NSColor.linkColor.withAlphaComponent(0.1)
+            selLayer.fillColor = (selectionBackgroundColor ?? defaultColor).cgColor
         #endif
 
         #if canImport(UIKit)
