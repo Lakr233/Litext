@@ -33,11 +33,6 @@
 			path = OhMyLitext;
 			sourceTree = "<group>";
 		};
-		508316C52F2E5AF10061E34E /* OhMyLitext Watch App */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "OhMyLitext Watch App";
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,7 +58,6 @@
 			isa = PBXGroup;
 			children = (
 				5083169B2F2E5A7D0061E34E /* OhMyLitext */,
-				508316C52F2E5AF10061E34E /* OhMyLitext Watch App */,
 				EDD2ECEC2D64B75B006C1403 /* Products */,
 				508316D32F2E5C810061E34E /* Frameworks */,
 			);
