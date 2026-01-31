@@ -208,63 +208,64 @@
         #endif
     }
 
-    extension LTXLabel {
-        func showSelectionMenuController() {
-            guard let range = selectionRange, range.length > 0 else { return }
+    #if !os(tvOS) && !os(watchOS)
+        extension LTXLabel {
+            func showSelectionMenuController() {
+                guard let range = selectionRange, range.length > 0 else { return }
 
-            let rects: [CGRect] = textLayout.rects(for: range).map {
-                convertRectFromTextLayout($0, insetForInteraction: true)
-            }
-            guard !rects.isEmpty, var unionRect = rects.first else { return }
-
-            for rect in rects.dropFirst() {
-                unionRect = unionRect.union(rect)
-            }
-
-            let menuController = UIMenuController.shared
-
-            let items = LTXLabelMenuItem
-                .textSelectionMenu()
-                .compactMap { item -> UIMenuItem? in
-                    guard let selector = item.action else { return nil }
-                    guard canPerformAction(selector, withSender: nil) else { return nil }
-                    return UIMenuItem(title: item.title, action: selector)
+                let rects: [CGRect] = textLayout.rects(for: range).map {
+                    convertRectFromTextLayout($0, insetForInteraction: true)
                 }
-            menuController.menuItems = items
+                guard !rects.isEmpty, var unionRect = rects.first else { return }
 
-            menuOwnerIdentifier = id
-            menuController.showMenu(
-                from: self,
-                rect: unionRect.insetBy(dx: -8, dy: -8)
-            )
-        }
+                for rect in rects.dropFirst() {
+                    unionRect = unionRect.union(rect)
+                }
 
-        func hideSelectionMenuController() {
-            guard menuOwnerIdentifier == id else { return }
-            UIMenuController.shared.hideMenu()
-        }
+                let menuController = UIMenuController.shared
 
-        @objc func copyMenuItemTapped() {
-            let copiedText = copySelectedText()
-            if copiedText.length <= 0 {
-                _ = copyFromSubviewsRecursively()
+                let items = LTXLabelMenuItem
+                    .textSelectionMenu()
+                    .compactMap { item -> UIMenuItem? in
+                        guard let selector = item.action else { return nil }
+                        guard canPerformAction(selector, withSender: nil) else { return nil }
+                        return UIMenuItem(title: item.title, action: selector)
+                    }
+                menuController.menuItems = items
+
+                menuOwnerIdentifier = id
+                menuController.showMenu(
+                    from: self,
+                    rect: unionRect.insetBy(dx: -8, dy: -8)
+                )
             }
-            clearSelection()
-        }
 
-        @objc func selectAllTapped() {
-            selectAllText()
-            DispatchQueue.main.async {
-                self.showSelectionMenuController()
+            func hideSelectionMenuController() {
+                guard menuOwnerIdentifier == id else { return }
+                UIMenuController.shared.hideMenu()
             }
-        }
 
-        @objc func shareMenuItemTapped() {
-            guard let text = selectedPlainText(), !text.isEmpty else { return }
-            let activityController = UIActivityViewController(activityItems: [text], applicationActivities: nil)
-            activityController.popoverPresentationController?.sourceView = self
-            parentViewController?.present(activityController, animated: true)
-        }
+            @objc func copyMenuItemTapped() {
+                let copiedText = copySelectedText()
+                if copiedText.length <= 0 {
+                    _ = copyFromSubviewsRecursively()
+                }
+                clearSelection()
+            }
+
+            @objc func selectAllTapped() {
+                selectAllText()
+                DispatchQueue.main.async {
+                    self.showSelectionMenuController()
+                }
+            }
+
+            @objc func shareMenuItemTapped() {
+                guard let text = selectedPlainText(), !text.isEmpty else { return }
+                let activityController = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+                activityController.popoverPresentationController?.sourceView = self
+                parentViewController?.present(activityController, animated: true)
+            }
 
         @objc private func copyKeyCommand() {
             let copiedText = copySelectedText()
@@ -314,6 +315,7 @@
             return false
         }
     }
+    #endif
 
     extension LTXLabel {
         func isPointerDevice(touch: UITouch) -> Bool {
