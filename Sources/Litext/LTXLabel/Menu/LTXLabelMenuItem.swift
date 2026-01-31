@@ -5,7 +5,7 @@
 //  Created by OpenAI Codex.
 //
 
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(tvOS) && !os(watchOS)
 
     import UIKit
 

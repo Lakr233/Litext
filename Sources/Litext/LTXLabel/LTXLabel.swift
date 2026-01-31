@@ -89,8 +89,10 @@ public class LTXLabel: LTXPlatformView, Identifiable {
                 installTextPointerInteraction()
             #endif
 
-            isMultipleTouchEnabled = false
-            isExclusiveTouch = true
+            #if !os(tvOS)
+                isMultipleTouchEnabled = false
+                isExclusiveTouch = true
+            #endif
 
             #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 clipsToBounds = false // for selection handle
