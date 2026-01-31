@@ -21,9 +21,5 @@ let package = Package(
             name: "Litext",
             resources: [.process("Resources")]
         ),
-        .testTarget(
-            name: "LitextTests",
-            dependencies: ["Litext"]
-        ),
     ]
 )

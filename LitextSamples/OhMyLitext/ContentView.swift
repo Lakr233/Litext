@@ -9,6 +9,10 @@ import Litext
 import SwiftUI
 
 struct ContentView: View {
+    #if os(iOS)
+        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
+
     @State private var linkTapped: URL?
     @State private var showAlert = false
     @State private var showSettings = false
@@ -69,7 +73,33 @@ struct ContentView: View {
                     }
                     .padding()
                 }
-                #if os(iOS) || os(visionOS) || targetEnvironment(macCatalyst)
+                #if os(iOS)
+                .navigationTitle("Litext Demo")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "textformat.size")
+                        }
+                        .popover(isPresented: Binding(
+                            get: { showSettings && horizontalSizeClass != .compact },
+                            set: { showSettings = $0 }
+                        )) {
+                            settingsPopover
+                        }
+                    }
+                }
+                .sheet(isPresented: Binding(
+                    get: { showSettings && horizontalSizeClass == .compact },
+                    set: { showSettings = $0 }
+                )) {
+                    settingsPopover
+                        .presentationDetents([.medium])
+                        .presentationDragIndicator(.visible)
+                }
+                #elseif os(visionOS) || targetEnvironment(macCatalyst)
                 .navigationTitle("Litext Demo")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {

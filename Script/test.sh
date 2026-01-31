@@ -3,13 +3,14 @@
 cd "$(dirname "$0")"
 cd ..
 
-SCEHEME="Litext"
-WORKSPACE="${SCEHEME}.xcworkspace"
+SCEHEME="OhMyLitext"
+WORKSPACE="Litext.xcworkspace"
 
 function test_build() {
 	DESTINATION=$1
 	echo "[*] test build for $DESTINATION"
 	xcodebuild -scheme $SCEHEME -workspace $WORKSPACE -destination "$DESTINATION" \
+		CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
 		| xcbeautify --disable-logging
 	EXIT_CODE=${PIPESTATUS[0]}
 	echo "[*] finished with exit code $EXIT_CODE"
