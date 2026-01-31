@@ -25,6 +25,4 @@
     public typealias PlatformColor = NSColor
     public typealias PlatformFont = NSFont
     public typealias PlatformApplication = NSApplication
-#else
-    #error("unsupported platform")
 #endif

@@ -17,17 +17,16 @@ extension LTXLabel {
         selectionLayer?.removeFromSuperlayer()
         selectionLayer = nil
 
-        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
             selectionHandleStart.isHidden = true
             selectionHandleEnd.isHidden = true
         #endif
 
-        guard let textLayout,
-              let range = selectionRange,
+        guard let range = selectionRange,
               range.location != NSNotFound,
               range.length > 0
         else {
-            #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 hideSelectionMenuController()
             #endif
             return
@@ -36,7 +35,7 @@ extension LTXLabel {
         let selectionPath = LTXPlatformBezierPath()
         let selectionRects = textLayout.rects(for: range)
         guard !selectionRects.isEmpty else {
-            #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 hideSelectionMenuController()
             #endif
             return
@@ -45,11 +44,11 @@ extension LTXLabel {
         createSelectionPath(selectionPath, fromRects: selectionRects)
         createSelectionLayer(withPath: selectionPath)
 
-        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
             showSelectionMenuController()
         #endif
 
-        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
             selectionHandleStart.isHidden = false
             selectionHandleEnd.isHidden = false
 
@@ -101,7 +100,7 @@ extension LTXLabel {
                 selectionPath.append(subpath)
             #elseif canImport(AppKit)
                 let subpath = LTXPlatformBezierPath(rect: convertedRect)
-                selectionPath.appendPath(subpath)
+                selectionPath.append(subpath)
             #endif
         }
     }
@@ -112,7 +111,11 @@ extension LTXLabel {
         #if canImport(UIKit)
             selLayer.path = path.cgPath
         #elseif canImport(AppKit)
-            selLayer.path = path.quartzPath
+            if #available(macOS 14.0, *) {
+                selLayer.path = path.cgPath
+            } else {
+                selLayer.path = path.quartzPath
+            }
         #endif
 
         #if canImport(UIKit)

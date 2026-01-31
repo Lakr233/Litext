@@ -7,33 +7,30 @@
 
 import Foundation
 
-public extension LTXLabel {
-    #if canImport(UIKit)
+#if canImport(UIKit)
+    import UIKit
+
+    public extension LTXLabel {
         override func draw(_: CGRect) {
             guard let context = UIGraphicsGetCurrentContext() else { return }
-
-            if flags.needsUpdateHighlightRegions {
-                textLayout?.updateHighlightRegions(with: context)
-                highlightRegions = textLayout?.highlightRegions ?? []
-                updateAttachmentViews()
-                flags.needsUpdateHighlightRegions = false
-            }
-
-            textLayout?.draw(in: context)
+            UIGraphicsPushContext(context)
+            textLayout.draw(in: context)
+            UIGraphicsPopContext()
         }
+    }
 
-    #elseif canImport(AppKit)
-        override func draw(_: NSRect) {
+#elseif canImport(AppKit)
+    import AppKit
+
+    public extension LTXLabel {
+        override func draw(_ dirtyRect: NSRect) {
+            super.draw(dirtyRect)
             guard let context = NSGraphicsContext.current?.cgContext else { return }
-
-            if flags.needsUpdateHighlightRegions {
-                textLayout?.updateHighlightRegions(with: context)
-                highlightRegions = textLayout?.highlightRegions ?? []
-                updateAttachmentViews()
-                flags.needsUpdateHighlightRegions = false
-            }
-
-            textLayout?.draw(in: context)
+            textLayout.draw(in: context)
         }
-    #endif
-}
+
+        override var isFlipped: Bool {
+            true
+        }
+    }
+#endif

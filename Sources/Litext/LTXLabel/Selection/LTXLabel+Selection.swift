@@ -19,7 +19,7 @@ public extension LTXLabel {
             return .init()
         }
 
-        #if canImport(UIKit)
+        #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
             UIPasteboard.general.string = selectedText.string
         #elseif canImport(AppKit)
             let pasteboard = NSPasteboard.general
@@ -33,8 +33,7 @@ public extension LTXLabel {
 
 extension LTXLabel {
     func updateSelectinoRange(withLocation location: CGPoint) {
-        guard let textLayout,
-              let startIndex = textLayout.nearestTextIndex(at: convertPointForTextLayout(interactionState.initialTouchLocation)),
+        guard let startIndex = textLayout.nearestTextIndex(at: convertPointForTextLayout(interactionState.initialTouchLocation)),
               let endIndex = textLayout.nearestTextIndex(at: convertPointForTextLayout(location))
         else { return }
         selectionRange = NSRange(
@@ -44,13 +43,11 @@ extension LTXLabel {
     }
 
     func nearestTextIndexAtPoint(_ point: CGPoint) -> Int? {
-        guard let textLayout else { return nil }
-        return textLayout.nearestTextIndex(at: convertPointForTextLayout(point))
+        textLayout.nearestTextIndex(at: convertPointForTextLayout(point))
     }
 
     func textIndexAtPoint(_ point: CGPoint) -> Int? {
-        guard let textLayout else { return nil }
-        return textLayout.textIndex(at: convertPointForTextLayout(point))
+        textLayout.textIndex(at: convertPointForTextLayout(point))
     }
 
     func convertPointForTextLayout(_ point: CGPoint) -> CGPoint {
@@ -58,18 +55,15 @@ extension LTXLabel {
     }
 
     public func isLocationInSelection(location: CGPoint) -> Bool {
-        guard let range = selectionRange,
-              range.length > 0,
-              let rects = textLayout?.rects(for: range)
-        else { return false }
+        guard let range = selectionRange, range.length > 0 else { return false }
+        let rects = textLayout.rects(for: range)
         return rects.map {
             convertRectFromTextLayout($0, insetForInteraction: true)
         }.contains { $0.contains(location) }
     }
 
     func selectedAttributedText() -> NSAttributedString? {
-        guard let textLayout,
-              let range = selectionRange,
+        guard let range = selectionRange,
               range.location != NSNotFound,
               range.length > 0,
               textLayout.attributedString.length > 0,

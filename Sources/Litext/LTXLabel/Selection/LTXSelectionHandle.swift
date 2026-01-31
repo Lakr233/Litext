@@ -5,7 +5,7 @@
 
 import Foundation
 
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(tvOS) && !os(watchOS)
 
     protocol LTXSelectionHandleDelegate: AnyObject {
         func selectionHandleDidMove(_ type: LTXSelectionHandle.HandleType, toLocationInSuperView point: CGPoint)

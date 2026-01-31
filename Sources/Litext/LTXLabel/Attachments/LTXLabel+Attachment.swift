@@ -35,7 +35,6 @@ extension LTXLabel {
             #elseif canImport(AppKit)
                 let rect = highlightRegion.rects.first!.rectValue
             #endif
-
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
             view.frame = convertedRect
         }

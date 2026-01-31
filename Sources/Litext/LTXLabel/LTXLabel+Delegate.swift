@@ -19,7 +19,7 @@ public protocol LTXLabelDelegate: AnyObject {
         selection: NSRange?
     )
 
-    // useful for moving scrollview accordingly to handle selection
+    /// useful for moving scrollview accordingly to handle selection
     func ltxLabelDetectedUserEventMovingAtLocation(
         _ ltxLabel: LTXLabel,
         location: CGPoint

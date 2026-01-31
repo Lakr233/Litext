@@ -7,144 +7,148 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		EDD2ED3C2D64B827006C1403 /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2ED3B2D64B827006C1403 /* Litext */; };
-		EDD2ED3F2D64B832006C1403 /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2ED3E2D64B832006C1403 /* Litext */; };
+		508316CE2F2E5AF20061E34E /* OhMyLitext Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 508316C42F2E5AF10061E34E /* OhMyLitext Watch App.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		508316D52F2E5C810061E34E /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = 508316D42F2E5C810061E34E /* Litext */; };
+		508316D72F2E5C850061E34E /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = 508316D62F2E5C850061E34E /* Litext */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		508316CC2F2E5AF20061E34E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EDD2ECE32D64B75B006C1403 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 508316C32F2E5AF10061E34E;
+			remoteInfo = "OhMyLitextWatch Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		508316D22F2E5AF20061E34E /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				508316CE2F2E5AF20061E34E /* OhMyLitext Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		EDD2ECEB2D64B75B006C1403 /* LitextSamples.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LitextSamples.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		EDD2ED2B2D64B803006C1403 /* LitextSampleMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LitextSampleMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5083169A2F2E5A7D0061E34E /* OhMyLitext.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OhMyLitext.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		508316C42F2E5AF10061E34E /* OhMyLitext Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "OhMyLitext Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		508E02F12D9460870052EB6A /* Exceptions for "LitextSampleMac" folder in "LitextSampleMac" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = EDD2ED2A2D64B803006C1403 /* LitextSampleMac */;
-		};
-		EDD2ECFD2D64B75C006C1403 /* Exceptions for "LitextSamples" folder in "LitextSamples" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = EDD2ECEA2D64B75B006C1403 /* LitextSamples */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		EDD2ECED2D64B75B006C1403 /* LitextSamples */ = {
+		5083169B2F2E5A7D0061E34E /* OhMyLitext */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				EDD2ECFD2D64B75C006C1403 /* Exceptions for "LitextSamples" folder in "LitextSamples" target */,
-			);
-			path = LitextSamples;
+			path = OhMyLitext;
 			sourceTree = "<group>";
 		};
-		EDD2ED2C2D64B803006C1403 /* LitextSampleMac */ = {
+		508316C52F2E5AF10061E34E /* OhMyLitext Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				508E02F12D9460870052EB6A /* Exceptions for "LitextSampleMac" folder in "LitextSampleMac" target */,
-			);
-			path = LitextSampleMac;
+			path = "OhMyLitext Watch App";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		EDD2ECE82D64B75B006C1403 /* Frameworks */ = {
+		508316972F2E5A7D0061E34E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EDD2ED3C2D64B827006C1403 /* Litext in Frameworks */,
+				508316D52F2E5C810061E34E /* Litext in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EDD2ED282D64B803006C1403 /* Frameworks */ = {
+		508316C12F2E5AF10061E34E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EDD2ED3F2D64B832006C1403 /* Litext in Frameworks */,
+				508316D72F2E5C850061E34E /* Litext in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		EDD2ECE22D64B75B006C1403 = {
-			isa = PBXGroup;
-			children = (
-				EDD2ECED2D64B75B006C1403 /* LitextSamples */,
-				EDD2ED2C2D64B803006C1403 /* LitextSampleMac */,
-				EDD2ED3D2D64B832006C1403 /* Frameworks */,
-				EDD2ECEC2D64B75B006C1403 /* Products */,
-			);
-			sourceTree = "<group>";
-		};
-		EDD2ECEC2D64B75B006C1403 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				EDD2ECEB2D64B75B006C1403 /* LitextSamples.app */,
-				EDD2ED2B2D64B803006C1403 /* LitextSampleMac.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		EDD2ED3D2D64B832006C1403 /* Frameworks */ = {
+		508316D32F2E5C810061E34E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		EDD2ECE22D64B75B006C1403 = {
+			isa = PBXGroup;
+			children = (
+				5083169B2F2E5A7D0061E34E /* OhMyLitext */,
+				508316C52F2E5AF10061E34E /* OhMyLitext Watch App */,
+				EDD2ECEC2D64B75B006C1403 /* Products */,
+				508316D32F2E5C810061E34E /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		EDD2ECEC2D64B75B006C1403 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5083169A2F2E5A7D0061E34E /* OhMyLitext.app */,
+				508316C42F2E5AF10061E34E /* OhMyLitext Watch App.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		EDD2ECEA2D64B75B006C1403 /* LitextSamples */ = {
+		508316992F2E5A7D0061E34E /* OhMyLitext */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = EDD2ECFE2D64B75C006C1403 /* Build configuration list for PBXNativeTarget "LitextSamples" */;
+			buildConfigurationList = 508316A22F2E5A7E0061E34E /* Build configuration list for PBXNativeTarget "OhMyLitext" */;
 			buildPhases = (
-				EDD2ECE72D64B75B006C1403 /* Sources */,
-				EDD2ECE82D64B75B006C1403 /* Frameworks */,
-				EDD2ECE92D64B75B006C1403 /* Resources */,
+				508316962F2E5A7D0061E34E /* Sources */,
+				508316972F2E5A7D0061E34E /* Frameworks */,
+				508316982F2E5A7D0061E34E /* Resources */,
+				508316D22F2E5AF20061E34E /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				508316CD2F2E5AF20061E34E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				EDD2ECED2D64B75B006C1403 /* LitextSamples */,
+				5083169B2F2E5A7D0061E34E /* OhMyLitext */,
 			);
-			name = LitextSamples;
+			name = OhMyLitext;
 			packageProductDependencies = (
-				EDD2ED3B2D64B827006C1403 /* Litext */,
+				508316D42F2E5C810061E34E /* Litext */,
 			);
-			productName = LitextSamples;
-			productReference = EDD2ECEB2D64B75B006C1403 /* LitextSamples.app */;
+			productName = OhMyLitext;
+			productReference = 5083169A2F2E5A7D0061E34E /* OhMyLitext.app */;
 			productType = "com.apple.product-type.application";
 		};
-		EDD2ED2A2D64B803006C1403 /* LitextSampleMac */ = {
+		508316C32F2E5AF10061E34E /* OhMyLitext Watch App */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = EDD2ED372D64B804006C1403 /* Build configuration list for PBXNativeTarget "LitextSampleMac" */;
+			buildConfigurationList = 508316CF2F2E5AF20061E34E /* Build configuration list for PBXNativeTarget "OhMyLitext Watch App" */;
 			buildPhases = (
-				EDD2ED272D64B803006C1403 /* Sources */,
-				EDD2ED282D64B803006C1403 /* Frameworks */,
-				EDD2ED292D64B803006C1403 /* Resources */,
+				508316C02F2E5AF10061E34E /* Sources */,
+				508316C12F2E5AF10061E34E /* Frameworks */,
+				508316C22F2E5AF10061E34E /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				EDD2ED2C2D64B803006C1403 /* LitextSampleMac */,
+				508316C52F2E5AF10061E34E /* OhMyLitext Watch App */,
 			);
-			name = LitextSampleMac;
+			name = "OhMyLitext Watch App";
 			packageProductDependencies = (
-				EDD2ED3E2D64B832006C1403 /* Litext */,
+				508316D62F2E5C850061E34E /* Litext */,
 			);
-			productName = LitextSampleMac;
-			productReference = EDD2ED2B2D64B803006C1403 /* LitextSampleMac.app */;
+			productName = "OhMyLitextWatch Watch App";
+			productReference = 508316C42F2E5AF10061E34E /* OhMyLitext Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -154,14 +158,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1620;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
-					EDD2ECEA2D64B75B006C1403 = {
-						CreatedOnToolsVersion = 16.2;
+					508316992F2E5A7D0061E34E = {
+						CreatedOnToolsVersion = 26.2;
 					};
-					EDD2ED2A2D64B803006C1403 = {
-						CreatedOnToolsVersion = 16.2;
+					508316C32F2E5AF10061E34E = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -175,28 +179,27 @@
 			mainGroup = EDD2ECE22D64B75B006C1403;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				EDD2ED3A2D64B827006C1403 /* XCLocalSwiftPackageReference "../../litext" */,
+				EDD2ED3A2D64B827006C1403 /* XCLocalSwiftPackageReference ".." */,
 			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = EDD2ECEC2D64B75B006C1403 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				EDD2ECEA2D64B75B006C1403 /* LitextSamples */,
-				EDD2ED2A2D64B803006C1403 /* LitextSampleMac */,
+				508316992F2E5A7D0061E34E /* OhMyLitext */,
+				508316C32F2E5AF10061E34E /* OhMyLitext Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		EDD2ECE92D64B75B006C1403 /* Resources */ = {
+		508316982F2E5A7D0061E34E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EDD2ED292D64B803006C1403 /* Resources */ = {
+		508316C22F2E5AF10061E34E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -206,14 +209,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		EDD2ECE72D64B75B006C1403 /* Sources */ = {
+		508316962F2E5A7D0061E34E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EDD2ED272D64B803006C1403 /* Sources */ = {
+		508316C02F2E5AF10061E34E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -222,76 +225,171 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		508316CD2F2E5AF20061E34E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 508316C32F2E5AF10061E34E /* OhMyLitext Watch App */;
+			targetProxy = 508316CC2F2E5AF20061E34E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		EDD2ECFF2D64B75C006C1403 /* Debug */ = {
+		508316A32F2E5A7E0061E34E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = LitextSamples/LitextSamples.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 964G86XT2P;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = LitextSamples/Info.plist;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.litext;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitext;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator macosx xros xrsimulator";
 				SUPPORTS_MACCATALYST = YES;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,3,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Debug;
 		};
-		EDD2ED002D64B75C006C1403 /* Release */ = {
+		508316A42F2E5A7E0061E34E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = LitextSamples/LitextSamples.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 964G86XT2P;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = LitextSamples/Info.plist;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitext;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,3,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		508316D02F2E5AF20061E34E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = OhMyLitextWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wiki.qaq.OhMyLitext;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.litext;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitext.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = YES;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		508316D12F2E5AF20061E34E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = OhMyLitextWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wiki.qaq.OhMyLitext;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitext.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Release;
 		};
@@ -353,6 +451,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -409,74 +508,33 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
-		};
-		EDD2ED382D64B804006C1403 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = LitextSampleMac/LitextSampleMac.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = LitextSampleMac/Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMainStoryboardFile = Main;
-				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.ktiays.LitextSampleMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		EDD2ED392D64B804006C1403 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = LitextSampleMac/LitextSampleMac.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = LitextSampleMac/Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMainStoryboardFile = Main;
-				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.ktiays.LitextSampleMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		508316A22F2E5A7E0061E34E /* Build configuration list for PBXNativeTarget "OhMyLitext" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				508316A32F2E5A7E0061E34E /* Debug */,
+				508316A42F2E5A7E0061E34E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		508316CF2F2E5AF20061E34E /* Build configuration list for PBXNativeTarget "OhMyLitext Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				508316D02F2E5AF20061E34E /* Debug */,
+				508316D12F2E5AF20061E34E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		EDD2ECE62D64B75B006C1403 /* Build configuration list for PBXProject "LitextSamples" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -486,41 +544,22 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		EDD2ECFE2D64B75C006C1403 /* Build configuration list for PBXNativeTarget "LitextSamples" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EDD2ECFF2D64B75C006C1403 /* Debug */,
-				EDD2ED002D64B75C006C1403 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		EDD2ED372D64B804006C1403 /* Build configuration list for PBXNativeTarget "LitextSampleMac" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EDD2ED382D64B804006C1403 /* Debug */,
-				EDD2ED392D64B804006C1403 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		EDD2ED3A2D64B827006C1403 /* XCLocalSwiftPackageReference "../../litext" */ = {
+		EDD2ED3A2D64B827006C1403 /* XCLocalSwiftPackageReference ".." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../litext;
+			relativePath = ..;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		EDD2ED3B2D64B827006C1403 /* Litext */ = {
+		508316D42F2E5C810061E34E /* Litext */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Litext;
 		};
-		EDD2ED3E2D64B832006C1403 /* Litext */ = {
+		508316D62F2E5C850061E34E /* Litext */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = EDD2ED3A2D64B827006C1403 /* XCLocalSwiftPackageReference "../../litext" */;
 			productName = Litext;
 		};
 /* End XCSwiftPackageProductDependency section */

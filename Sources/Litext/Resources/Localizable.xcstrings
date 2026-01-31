@@ -13,23 +13,18 @@
       }
     },
     "Copy Link" : {
-      "comment" : "Copy link menu item",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拷贝链接"
-          }
-        }
-      }
+      "comment" : "Copy link menu item"
     },
     "Open Link" : {
-      "comment" : "Open link menu item",
+      "comment" : "Open link menu item"
+    },
+    "Search" : {
+      "comment" : "Search index menu item",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开链接"
+            "value" : "搜索"
           }
         }
       }
@@ -41,6 +36,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全选"
+          }
+        }
+      }
+    },
+    "Share" : {
+      "comment" : "Share menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享"
           }
         }
       }

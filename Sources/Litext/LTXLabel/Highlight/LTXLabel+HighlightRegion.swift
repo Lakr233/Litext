@@ -38,7 +38,6 @@ extension LTXLabel {
             #elseif canImport(AppKit)
                 let rect = boxedRect.rectValue
             #endif
-
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
             if convertedRect.contains(point) {
                 return true
@@ -59,39 +58,33 @@ extension LTXLabel {
             #elseif canImport(AppKit)
                 let rect = boxedRect.rectValue
             #endif
-
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
-
             #if canImport(UIKit)
                 let subpath = LTXPlatformBezierPath(roundedRect: convertedRect, cornerRadius: 4)
                 highlightPath.append(subpath)
             #elseif canImport(AppKit)
-                let subpath = LTXPlatformBezierPath.bezierPath(withRoundedRect: convertedRect, cornerRadius: 4)
-                highlightPath.appendPath(subpath)
+                let subpath = LTXPlatformBezierPath(roundedRect: convertedRect, xRadius: 4, yRadius: 4)
+                highlightPath.append(subpath)
             #endif
         }
 
-        let highlightColor: PlatformColor
-        if let color = highlightRegion.attributes[.foregroundColor] as? PlatformColor {
-            highlightColor = color
+        let highlightColor: PlatformColor = if let color = highlightRegion.attributes[.foregroundColor] as? PlatformColor {
+            color
         } else {
-            #if canImport(UIKit)
-                highlightColor = .systemBlue
-            #elseif canImport(AppKit)
-                highlightColor = .linkColor
-            #endif
+            .systemBlue
         }
 
         let highlightLayer = CAShapeLayer()
-
         #if canImport(UIKit)
             highlightLayer.path = highlightPath.cgPath
         #elseif canImport(AppKit)
-            highlightLayer.path = highlightPath.quartzPath
+            if #available(macOS 14.0, *) {
+                highlightLayer.path = highlightPath.cgPath
+            } else {
+                highlightLayer.path = highlightPath.quartzPath
+            }
         #endif
-
         highlightLayer.fillColor = highlightColor.withAlphaComponent(0.1).cgColor
-
         #if canImport(UIKit)
             layer.addSublayer(highlightLayer)
         #elseif canImport(AppKit)

@@ -40,26 +40,19 @@ public class LTXLabel: LTXPlatformView, Identifiable {
 
     public internal(set) var isInteractionInProgress = false
 
-    #if canImport(UIKit)
-
-    #elseif canImport(AppKit)
-        public var backgroundColor: PlatformColor = .clear {
-            didSet {
-                layer?.backgroundColor = backgroundColor.cgColor
-            }
-        }
-    #endif
-
     public weak var delegate: LTXLabelDelegate?
 
     // MARK: - Internal Properties
 
-    var textLayout: LTXTextLayout? {
+    var textLayout: LTXTextLayout = .init(attributedString: .init()) {
         didSet { invalidateTextLayout() }
     }
 
     var attachmentViews: Set<LTXPlatformView> = []
-    var highlightRegions: [LTXHighlightRegion] = []
+    var highlightRegions: [LTXHighlightRegion] {
+        textLayout.highlightRegions
+    }
+
     var activeHighlightRegion: LTXHighlightRegion?
     var lastContainerSize: CGSize = .zero
 
@@ -75,7 +68,7 @@ public class LTXLabel: LTXPlatformView, Identifiable {
     var selectedLinkForMenuAction: URL?
     var selectionLayer: CAShapeLayer?
 
-    #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+    #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
         var selectionHandleStart: LTXSelectionHandle = .init(type: .start)
         var selectionHandleEnd: LTXSelectionHandle = .init(type: .end)
     #endif
@@ -85,14 +78,48 @@ public class LTXLabel: LTXPlatformView, Identifiable {
 
     // MARK: - Initialization
 
-    override public init(frame: CGRect) {
-        super.init(frame: frame)
-        commonInit()
+    #if canImport(UIKit)
+        override public init(frame: CGRect) {
+            super.init(frame: frame)
+            registerNotificationCenterForSelectionDeduplicate()
+
+            backgroundColor = .clear
+            #if !os(tvOS) && !os(watchOS)
+                installContextMenuInteraction()
+                installTextPointerInteraction()
+            #endif
+
+            isMultipleTouchEnabled = false
+            isExclusiveTouch = true
+
+            #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+                clipsToBounds = false // for selection handle
+                selectionHandleStart.isHidden = true
+                selectionHandleStart.delegate = self
+                addSubview(selectionHandleStart)
+                selectionHandleEnd.isHidden = true
+                selectionHandleEnd.delegate = self
+                addSubview(selectionHandleEnd)
+            #endif
+        }
+
+    #elseif canImport(AppKit)
+        override public init(frame: CGRect) {
+            super.init(frame: frame)
+            registerNotificationCenterForSelectionDeduplicate()
+            wantsLayer = true
+            layer?.backgroundColor = NSColor.clear.cgColor
+        }
+    #endif
+
+    public convenience init(frame: CGRect = .zero, attributedText: NSAttributedString) {
+        self.init(frame: frame)
+        self.attributedText = attributedText
     }
 
-    public required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        commonInit()
+    @available(*, unavailable)
+    public required init?(coder _: NSCoder) {
+        fatalError()
     }
 
     deinit {
@@ -102,38 +129,6 @@ public class LTXLabel: LTXPlatformView, Identifiable {
         deactivateHighlightRegion()
         NotificationCenter.default.removeObserver(self)
     }
-
-    private func commonInit() {
-        registerNotificationCenterForSelectionDeduplicate()
-
-        #if canImport(UIKit)
-            backgroundColor = .clear
-            installContextMenuInteraction()
-            installTextPointerInteraction()
-
-            #if targetEnvironment(macCatalyst)
-            #else
-                clipsToBounds = false // for selection handle
-                selectionHandleStart.isHidden = true
-                selectionHandleStart.delegate = self
-                addSubview(selectionHandleStart)
-                selectionHandleEnd.isHidden = true
-                selectionHandleEnd.delegate = self
-                addSubview(selectionHandleEnd)
-            #endif
-        #elseif canImport(AppKit)
-            wantsLayer = true
-            layer?.backgroundColor = .clear
-        #endif
-    }
-
-    // MARK: - Platform Specific
-
-    #if !canImport(UIKit) && canImport(AppKit)
-        override public var isFlipped: Bool {
-            true
-        }
-    #endif
 
     #if canImport(UIKit)
         override public func didMoveToWindow() {
@@ -147,6 +142,17 @@ public class LTXLabel: LTXPlatformView, Identifiable {
             super.viewDidMoveToWindow()
             clearSelection()
             invalidateTextLayout()
+        }
+
+        public var backgroundColor: NSColor? {
+            get {
+                guard let cgColor = layer?.backgroundColor else { return nil }
+                return NSColor(cgColor: cgColor)
+            }
+            set {
+                wantsLayer = true
+                layer?.backgroundColor = newValue?.cgColor
+            }
         }
     #endif
 }

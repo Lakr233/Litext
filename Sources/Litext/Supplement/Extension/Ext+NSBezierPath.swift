@@ -4,6 +4,8 @@
 //
 
 #if !canImport(UIKit) && canImport(AppKit)
+    import AppKit
+
     extension NSBezierPath {
         func appendPath(_ path: NSBezierPath) {
             append(path)
@@ -33,7 +35,6 @@
                     assertionFailure() // we do not use cubic curves in Litext
                 case .quadraticCurveTo:
                     assertionFailure() // we do not use quadratic curves in Litext
-                    break
                 @unknown default:
                     break
                 }
