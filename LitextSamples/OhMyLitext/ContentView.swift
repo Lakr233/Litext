@@ -60,6 +60,7 @@ struct ContentView: View {
             NavigationStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
+                        sectionSimpleAPI
                         sectionBasicText
                         sectionStyledText
                         sectionLinks
@@ -152,27 +153,41 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 8) {
                 sectionHeader("Mixed Content")
 
-                LTXLabelView(
-                    attributedText: mixedAttributedText(),
-                    isSelectable: isSelectable
-                ) { url in
-                    linkTapped = url
-                    showAlert = true
-                }
+                LitextLabel(attributedString: mixedAttributedText())
+                    .selectable(isSelectable)
+                    .onTapLink { url in
+                        linkTapped = url
+                        showAlert = true
+                    }
             }
         }
     #endif
 
     // MARK: - Shared Section Views
 
+    var sectionSimpleAPI: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Simple API")
+
+            // Simple string init (most concise)
+            LitextLabel("Hello, Litext!")
+                .selectable(isSelectable)
+
+            // String with custom attributes
+            LitextLabel("Custom styled text", attributes: [
+                .font: PlatformFont.boldSystemFont(ofSize: 18),
+                .foregroundColor: PlatformColor.systemBlue,
+            ])
+            .selectable(isSelectable)
+        }
+    }
+
     var sectionBasicText: some View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("Basic Text")
 
-            LTXLabelView(
-                attributedText: simpleAttributedText(),
-                isSelectable: isSelectable
-            )
+            LitextLabel(attributedString: simpleAttributedText())
+                .selectable(isSelectable)
         }
     }
 
@@ -180,10 +195,8 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("Styled Text")
 
-            LTXLabelView(
-                attributedText: styledAttributedText(),
-                isSelectable: isSelectable
-            )
+            LitextLabel(attributedString: styledAttributedText())
+                .selectable(isSelectable)
         }
     }
 
@@ -191,13 +204,12 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("Links")
 
-            LTXLabelView(
-                attributedText: linkAttributedText(),
-                isSelectable: isSelectable
-            ) { url in
-                linkTapped = url
-                showAlert = true
-            }
+            LitextLabel(attributedString: linkAttributedText())
+                .selectable(isSelectable)
+                .onTapLink { url in
+                    linkTapped = url
+                    showAlert = true
+                }
         }
     }
 
@@ -205,10 +217,8 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("Long Selectable Text")
 
-            LTXLabelView(
-                attributedText: longAttributedText(),
-                isSelectable: isSelectable
-            )
+            LitextLabel(attributedString: longAttributedText())
+                .selectable(isSelectable)
         }
     }
 
