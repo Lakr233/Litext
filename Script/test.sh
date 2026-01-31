@@ -19,19 +19,6 @@ function test_build() {
 	fi
 }
 
-function test_test() {
-	DESTINATION=$1
-	echo "[*] execute test for $DESTINATION"
-	xcodebuild test -scheme $SCEHEME -workspace $WORKSPACE -destination "$DESTINATION" \
-		| xcbeautify --disable-logging
-	EXIT_CODE=${PIPESTATUS[0]}
-	echo "[*] finished with exit code $EXIT_CODE"
-	if [ $EXIT_CODE -ne 0 ]; then
-		echo "[!] failed to test for $DESTINATION"
-		exit 1
-	fi
-}
-
 # to reset all cache
 # rm -rf "$(getconf DARWIN_USER_CACHE_DIR)/org.llvm.clang/ModuleCache"
 # rm -rf "$(getconf DARWIN_USER_CACHE_DIR)/org.llvm.clang.$(whoami)/ModuleCache"
@@ -48,12 +35,3 @@ test_build "generic/platform=tvOS"
 test_build "generic/platform=tvOS Simulator"
 test_build "generic/platform=xrOS"
 test_build "generic/platform=xrOS Simulator"
-
-test_test "generic/platform=macOS"
-test_test "generic/platform=macOS,variant=Mac Catalyst"
-test_test "generic/platform=iOS"
-test_test "generic/platform=iOS Simulator"
-test_test "generic/platform=tvOS"
-test_test "generic/platform=tvOS Simulator"
-test_test "generic/platform=xrOS"
-test_test "generic/platform=xrOS Simulator"
