@@ -13,5 +13,6 @@ struct OhMyLitextApp: App {
         WindowGroup {
             ContentView()
         }
+        .windowResizability(.contentMinSize)
     }
 }

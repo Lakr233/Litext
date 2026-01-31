@@ -27,8 +27,12 @@ import SwiftUI
         public func makeUIView(context: Context) -> LTXLabel {
             let label = LTXLabel()
             label.delegate = context.coordinator
+            // Vertical: required priority to maintain proper height
             label.setContentHuggingPriority(.required, for: .vertical)
             label.setContentCompressionResistancePriority(.required, for: .vertical)
+            // Horizontal: low priority to allow resizing
+            label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             return label
         }
 
@@ -95,8 +99,12 @@ import SwiftUI
         public func makeNSView(context: Context) -> LTXLabel {
             let label = LTXLabel()
             label.delegate = context.coordinator
+            // Vertical: required priority to maintain proper height
             label.setContentHuggingPriority(.required, for: .vertical)
             label.setContentCompressionResistancePriority(.required, for: .vertical)
+            // Horizontal: low priority to allow resizing
+            label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             return label
         }
 
