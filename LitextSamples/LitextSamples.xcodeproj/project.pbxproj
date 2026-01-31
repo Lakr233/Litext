@@ -7,20 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		508316CE2F2E5AF20061E34E /* OhMyLitext Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 508316C42F2E5AF10061E34E /* OhMyLitext Watch App.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		508316D52F2E5C810061E34E /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = 508316D42F2E5C810061E34E /* Litext */; };
-		508316D72F2E5C850061E34E /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = 508316D62F2E5C850061E34E /* Litext */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		508316CC2F2E5AF20061E34E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = EDD2ECE32D64B75B006C1403 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 508316C32F2E5AF10061E34E;
-			remoteInfo = "OhMyLitextWatch Watch App";
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		508316D22F2E5AF20061E34E /* Embed Watch Content */ = {
@@ -29,7 +17,6 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				508316CE2F2E5AF20061E34E /* OhMyLitext Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -38,7 +25,6 @@
 
 /* Begin PBXFileReference section */
 		5083169A2F2E5A7D0061E34E /* OhMyLitext.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OhMyLitext.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		508316C42F2E5AF10061E34E /* OhMyLitext Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "OhMyLitext Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,14 +46,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				508316D52F2E5C810061E34E /* Litext in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		508316C12F2E5AF10061E34E /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				508316D72F2E5C850061E34E /* Litext in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -95,7 +73,6 @@
 			isa = PBXGroup;
 			children = (
 				5083169A2F2E5A7D0061E34E /* OhMyLitext.app */,
-				508316C42F2E5AF10061E34E /* OhMyLitext Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -115,7 +92,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				508316CD2F2E5AF20061E34E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5083169B2F2E5A7D0061E34E /* OhMyLitext */,
@@ -126,29 +102,6 @@
 			);
 			productName = OhMyLitext;
 			productReference = 5083169A2F2E5A7D0061E34E /* OhMyLitext.app */;
-			productType = "com.apple.product-type.application";
-		};
-		508316C32F2E5AF10061E34E /* OhMyLitext Watch App */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 508316CF2F2E5AF20061E34E /* Build configuration list for PBXNativeTarget "OhMyLitext Watch App" */;
-			buildPhases = (
-				508316C02F2E5AF10061E34E /* Sources */,
-				508316C12F2E5AF10061E34E /* Frameworks */,
-				508316C22F2E5AF10061E34E /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				508316C52F2E5AF10061E34E /* OhMyLitext Watch App */,
-			);
-			name = "OhMyLitext Watch App";
-			packageProductDependencies = (
-				508316D62F2E5C850061E34E /* Litext */,
-			);
-			productName = "OhMyLitextWatch Watch App";
-			productReference = 508316C42F2E5AF10061E34E /* OhMyLitext Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -162,9 +115,6 @@
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					508316992F2E5A7D0061E34E = {
-						CreatedOnToolsVersion = 26.2;
-					};
-					508316C32F2E5AF10061E34E = {
 						CreatedOnToolsVersion = 26.2;
 					};
 				};
@@ -186,20 +136,12 @@
 			projectRoot = "";
 			targets = (
 				508316992F2E5A7D0061E34E /* OhMyLitext */,
-				508316C32F2E5AF10061E34E /* OhMyLitext Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		508316982F2E5A7D0061E34E /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		508316C22F2E5AF10061E34E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -216,23 +158,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		508316C02F2E5AF10061E34E /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		508316CD2F2E5AF20061E34E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			platformFilter = ios;
-			target = 508316C32F2E5AF10061E34E /* OhMyLitext Watch App */;
-			targetProxy = 508316CC2F2E5AF20061E34E /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		508316A32F2E5A7E0061E34E /* Debug */ = {
@@ -326,70 +252,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,3,7";
 				XROS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Release;
-		};
-		508316D02F2E5AF20061E34E /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = OhMyLitextWatch;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wiki.qaq.OhMyLitext;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitext.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Debug;
-		};
-		508316D12F2E5AF20061E34E /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = OhMyLitextWatch;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wiki.qaq.OhMyLitext;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitext.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Release;
 		};
@@ -526,15 +388,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		508316CF2F2E5AF20061E34E /* Build configuration list for PBXNativeTarget "OhMyLitext Watch App" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				508316D02F2E5AF20061E34E /* Debug */,
-				508316D12F2E5AF20061E34E /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		EDD2ECE62D64B75B006C1403 /* Build configuration list for PBXProject "LitextSamples" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -555,10 +408,6 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		508316D42F2E5C810061E34E /* Litext */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = Litext;
-		};
-		508316D62F2E5C850061E34E /* Litext */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Litext;
 		};
