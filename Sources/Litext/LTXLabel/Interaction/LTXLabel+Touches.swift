@@ -267,54 +267,54 @@
                 parentViewController?.present(activityController, animated: true)
             }
 
-        @objc private func copyKeyCommand() {
-            let copiedText = copySelectedText()
-            if copiedText.length <= 0 {
-                _ = copyFromSubviewsRecursively()
-            }
-        }
-
-        override public var canBecomeFirstResponder: Bool {
-            isSelectable
-        }
-
-        override public func canPerformAction(
-            _ action: Selector,
-            withSender _: Any?
-        ) -> Bool {
-            if action == #selector(copyMenuItemTapped) {
-                return selectionRange != nil
-                    && selectionRange!.length > 0
-            }
-            if action == #selector(selectAllTapped) {
-                return selectionRange != selectAllRange()
-            }
-            if action == #selector(shareMenuItemTapped) {
-                return (selectedPlainText() ?? "").isEmpty == false
-            }
-            return false
-        }
-
-        private func copyFromSubviewsRecursively() -> Bool {
-            copyFromSubviewsRecursively(in: self)
-        }
-
-        private func copyFromSubviewsRecursively(in view: UIView) -> Bool {
-            for subview in view.subviews {
-                if let ltxLabel = subview as? LTXLabel {
-                    let copiedText = ltxLabel.copySelectedText()
-                    if copiedText.length > 0 {
-                        return true
-                    }
-                } else {
-                    if copyFromSubviewsRecursively(in: subview) {
-                        return true
-                    }
+            @objc private func copyKeyCommand() {
+                let copiedText = copySelectedText()
+                if copiedText.length <= 0 {
+                    _ = copyFromSubviewsRecursively()
                 }
             }
-            return false
+
+            override public var canBecomeFirstResponder: Bool {
+                isSelectable
+            }
+
+            override public func canPerformAction(
+                _ action: Selector,
+                withSender _: Any?
+            ) -> Bool {
+                if action == #selector(copyMenuItemTapped) {
+                    return selectionRange != nil
+                        && selectionRange!.length > 0
+                }
+                if action == #selector(selectAllTapped) {
+                    return selectionRange != selectAllRange()
+                }
+                if action == #selector(shareMenuItemTapped) {
+                    return (selectedPlainText() ?? "").isEmpty == false
+                }
+                return false
+            }
+
+            private func copyFromSubviewsRecursively() -> Bool {
+                copyFromSubviewsRecursively(in: self)
+            }
+
+            private func copyFromSubviewsRecursively(in view: UIView) -> Bool {
+                for subview in view.subviews {
+                    if let ltxLabel = subview as? LTXLabel {
+                        let copiedText = ltxLabel.copySelectedText()
+                        if copiedText.length > 0 {
+                            return true
+                        }
+                    } else {
+                        if copyFromSubviewsRecursively(in: subview) {
+                            return true
+                        }
+                    }
+                }
+                return false
+            }
         }
-    }
     #endif
 
     extension LTXLabel {

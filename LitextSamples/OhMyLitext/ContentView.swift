@@ -11,38 +11,43 @@ import SwiftUI
 struct ContentView: View {
     @State private var linkTapped: URL?
     @State private var showAlert = false
+    @State private var showSettings = false
+
+    // Appearance settings
+    @State private var fontSize: Double = 16
+    @State private var lineSpacing: Double = 4
+    @State private var isSelectable: Bool = true
+    @State private var textColorIndex: Int = 0
+
+    private let textColors: [(name: String, color: PlatformColor)] = [
+        ("Default", PlatformColor.label),
+        ("Blue", PlatformColor.systemBlue),
+        ("Green", PlatformColor.systemGreen),
+        ("Orange", PlatformColor.systemOrange),
+        ("Purple", PlatformColor.systemPurple),
+    ]
 
     var body: some View {
-        #if os(watchOS)
-            watchOSContent
+        #if os(tvOS)
+            tvOSContent
         #else
             mainContent
         #endif
     }
 
-    #if os(watchOS)
-        var watchOSContent: some View {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Litext Demo")
-                        .font(.headline)
-
-                    LTXLabelView(
-                        attributedText: Self.simpleAttributedText(),
-                        isSelectable: false
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    LTXLabelView(
-                        attributedText: Self.linkAttributedText(),
-                        isSelectable: false
-                    ) { url in
-                        linkTapped = url
-                        showAlert = true
+    #if os(tvOS)
+        var tvOSContent: some View {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 48) {
+                        sectionBasicText
+                        sectionStyledText
+                        sectionLinks
+                        sectionLongText
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(64)
                 }
-                .padding()
+                .navigationTitle("Litext Demo")
             }
             .alert("Link Tapped", isPresented: $showAlert) {
                 Button("OK", role: .cancel) {}
@@ -50,9 +55,7 @@ struct ContentView: View {
                 Text(linkTapped?.absoluteString ?? "")
             }
         }
-    #endif
-
-    #if !os(watchOS)
+    #else
         var mainContent: some View {
             NavigationStack {
                 ScrollView {
@@ -64,16 +67,36 @@ struct ContentView: View {
                         sectionLongText
                     }
                     .padding()
-                    .frame(maxWidth: 600, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity)
                 #if os(iOS) || os(visionOS) || targetEnvironment(macCatalyst)
-                    .navigationTitle("Litext Demo")
-                    .navigationBarTitleDisplayMode(.large)
+                .navigationTitle("Litext Demo")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "textformat.size")
+                        }
+                        .popover(isPresented: $showSettings) {
+                            settingsPopover
+                        }
+                    }
+                }
                 #elseif os(macOS)
-                    .navigationTitle("Litext Demo")
-                #elseif os(tvOS)
-                    .navigationTitle("Litext Demo")
+                .navigationTitle("Litext Demo")
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            showSettings.toggle()
+                        } label: {
+                            Image(systemName: "textformat.size")
+                        }
+                        .popover(isPresented: $showSettings) {
+                            settingsPopover
+                        }
+                    }
+                }
                 #endif
             }
             .alert("Link Tapped", isPresented: $showAlert) {
@@ -83,43 +106,46 @@ struct ContentView: View {
             }
         }
 
-        var sectionBasicText: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionHeader("Basic Text")
+        var settingsPopover: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Text Appearance")
+                    .font(.headline)
 
-                LTXLabelView(
-                    attributedText: Self.simpleAttributedText(),
-                    isSelectable: true
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-
-        var sectionStyledText: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionHeader("Styled Text")
-
-                LTXLabelView(
-                    attributedText: Self.styledAttributedText(),
-                    isSelectable: true
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-
-        var sectionLinks: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionHeader("Links")
-
-                LTXLabelView(
-                    attributedText: Self.linkAttributedText(),
-                    isSelectable: true
-                ) { url in
-                    linkTapped = url
-                    showAlert = true
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Font Size: \(Int(fontSize))pt")
+                        .font(.subheadline)
+                    Slider(value: $fontSize, in: 10 ... 32, step: 1)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Line Spacing: \(Int(lineSpacing))pt")
+                        .font(.subheadline)
+                    Slider(value: $lineSpacing, in: 0 ... 16, step: 1)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Text Color")
+                        .font(.subheadline)
+                    Picker("Color", selection: $textColorIndex) {
+                        ForEach(0 ..< textColors.count, id: \.self) { index in
+                            Text(textColors[index].name).tag(index)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Toggle("Selectable", isOn: $isSelectable)
+
+                Button("Reset to Defaults") {
+                    fontSize = 16
+                    lineSpacing = 4
+                    isSelectable = true
+                    textColorIndex = 0
+                }
+                .buttonStyle(.bordered)
             }
+            .padding()
+            .frame(width: 400)
         }
 
         var sectionMixedContent: some View {
@@ -127,250 +153,309 @@ struct ContentView: View {
                 sectionHeader("Mixed Content")
 
                 LTXLabelView(
-                    attributedText: Self.mixedAttributedText(),
-                    isSelectable: true
+                    attributedText: mixedAttributedText(),
+                    isSelectable: isSelectable
                 ) { url in
                     linkTapped = url
                     showAlert = true
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-        }
-
-        var sectionLongText: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionHeader("Long Selectable Text")
-
-                LTXLabelView(
-                    attributedText: Self.longAttributedText(),
-                    isSelectable: true
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-
-        func sectionHeader(_ title: String) -> some View {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.secondary)
         }
     #endif
+
+    // MARK: - Shared Section Views
+
+    var sectionBasicText: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Basic Text")
+
+            LTXLabelView(
+                attributedText: simpleAttributedText(),
+                isSelectable: isSelectable
+            )
+        }
+    }
+
+    var sectionStyledText: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Styled Text")
+
+            LTXLabelView(
+                attributedText: styledAttributedText(),
+                isSelectable: isSelectable
+            )
+        }
+    }
+
+    var sectionLinks: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Links")
+
+            LTXLabelView(
+                attributedText: linkAttributedText(),
+                isSelectable: isSelectable
+            ) { url in
+                linkTapped = url
+                showAlert = true
+            }
+        }
+    }
+
+    var sectionLongText: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Long Selectable Text")
+
+            LTXLabelView(
+                attributedText: longAttributedText(),
+                isSelectable: isSelectable
+            )
+        }
+    }
+
+    func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.headline)
+            .foregroundStyle(.secondary)
+    }
 }
 
 // MARK: - Sample Attributed Strings
 
 extension ContentView {
-    static func simpleAttributedText() -> NSAttributedString {
+    private var currentTextColor: PlatformColor {
+        textColors[textColorIndex].color
+    }
+
+    private var currentFont: PlatformFont {
+        PlatformFont.systemFont(ofSize: CGFloat(fontSize))
+    }
+
+    private var currentBoldFont: PlatformFont {
+        PlatformFont.boldSystemFont(ofSize: CGFloat(fontSize))
+    }
+
+    private var currentItalicFont: PlatformFont {
+        PlatformFont.italicSystemFont(ofSize: CGFloat(fontSize))
+    }
+
+    private var currentParagraphStyle: NSParagraphStyle {
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = CGFloat(lineSpacing)
+        return style
+    }
+
+    func simpleAttributedText() -> NSAttributedString {
         let text = "Hello, Litext! This is a simple text rendered using LTXLabel with CoreText."
         return NSAttributedString(
             string: text,
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
         )
     }
 
-    static func styledAttributedText() -> NSAttributedString {
+    func styledAttributedText() -> NSAttributedString {
         let result = NSMutableAttributedString()
 
-        let normal = NSAttributedString(
+        result.append(NSAttributedString(
             string: "This text has ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(normal)
+        ))
 
-        let bold = NSAttributedString(
+        result.append(NSAttributedString(
             string: "bold",
             attributes: [
-                .font: PlatformFont.boldSystemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentBoldFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(bold)
+        ))
 
-        let normal2 = NSAttributedString(
+        result.append(NSAttributedString(
             string: ", ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(normal2)
+        ))
 
-        let italic = NSAttributedString(
+        result.append(NSAttributedString(
             string: "italic",
             attributes: [
-                .font: PlatformFont.italicSystemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentItalicFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(italic)
+        ))
 
-        let normal3 = NSAttributedString(
+        result.append(NSAttributedString(
             string: ", ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(normal3)
+        ))
 
-        let colored = NSAttributedString(
+        result.append(NSAttributedString(
             string: "colored",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
+                .font: currentFont,
                 .foregroundColor: PlatformColor.systemRed,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(colored)
+        ))
 
-        let normal4 = NSAttributedString(
+        result.append(NSAttributedString(
             string: ", and ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(normal4)
+        ))
 
-        let underlined = NSAttributedString(
+        result.append(NSAttributedString(
             string: "underlined",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
                 .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(underlined)
+        ))
 
-        let normal5 = NSAttributedString(
+        result.append(NSAttributedString(
             string: " styles.",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(normal5)
+        ))
 
         return result
     }
 
-    static func linkAttributedText() -> NSAttributedString {
+    func linkAttributedText() -> NSAttributedString {
         let result = NSMutableAttributedString()
 
-        let prefix = NSAttributedString(
+        result.append(NSAttributedString(
             string: "Visit ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(prefix)
+        ))
 
-        let link = NSAttributedString(
+        result.append(NSAttributedString(
             string: "GitHub",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
+                .font: currentFont,
                 .foregroundColor: PlatformColor.link,
                 .link: URL(string: "https://github.com")!,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(link)
+        ))
 
-        let middle = NSAttributedString(
+        result.append(NSAttributedString(
             string: " or ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(middle)
+        ))
 
-        let link2 = NSAttributedString(
+        result.append(NSAttributedString(
             string: "Apple Developer",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
+                .font: currentFont,
                 .foregroundColor: PlatformColor.link,
                 .link: URL(string: "https://developer.apple.com")!,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(link2)
+        ))
 
-        let suffix = NSAttributedString(
+        result.append(NSAttributedString(
             string: " for more information.",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(suffix)
+        ))
 
         return result
     }
 
-    static func mixedAttributedText() -> NSAttributedString {
+    func mixedAttributedText() -> NSAttributedString {
         let result = NSMutableAttributedString()
 
-        let intro = NSAttributedString(
+        result.append(NSAttributedString(
             string: "Litext supports ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(intro)
+        ))
 
-        let bold = NSAttributedString(
+        result.append(NSAttributedString(
             string: "rich text",
             attributes: [
-                .font: PlatformFont.boldSystemFont(ofSize: 16),
+                .font: currentBoldFont,
                 .foregroundColor: PlatformColor.systemBlue,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(bold)
+        ))
 
-        let middle = NSAttributedString(
+        result.append(NSAttributedString(
             string: " with ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(middle)
+        ))
 
-        let link = NSAttributedString(
+        result.append(NSAttributedString(
             string: "clickable links",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
+                .font: currentFont,
                 .foregroundColor: PlatformColor.link,
                 .underlineStyle: NSUnderlineStyle.single.rawValue,
                 .link: URL(string: "https://example.com")!,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(link)
+        ))
 
-        let ending = NSAttributedString(
+        result.append(NSAttributedString(
             string: ", text selection, and high-performance CoreText rendering!",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .foregroundColor: PlatformColor.label,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
-        )
-        result.append(ending)
+        ))
 
         return result
     }
 
-    static func longAttributedText() -> NSAttributedString {
+    func longAttributedText() -> NSAttributedString {
         let text = """
         Litext is a high-performance text rendering framework built on CoreText. \
         It provides features like text selection, link handling, and custom attachments. \
         The framework is designed to work seamlessly across all Apple platforms including \
-        iOS, macOS (both native AppKit and Mac Catalyst), tvOS, watchOS, and visionOS.
+        iOS, macOS (both native AppKit and Mac Catalyst), tvOS, and visionOS.
 
         Try selecting this text! On iOS, you can use the selection handles to adjust your \
         selection. On macOS, click and drag to select text. Use Cmd+C to copy selected text \
@@ -380,15 +465,12 @@ extension ContentView {
         documentation, and any other text-heavy interfaces where performance matters.
         """
 
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineSpacing = 4
-
         return NSAttributedString(
             string: text,
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: 15),
-                .foregroundColor: PlatformColor.label,
-                .paragraphStyle: paragraphStyle,
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
             ]
         )
     }
@@ -398,8 +480,13 @@ extension ContentView {
 
 #if canImport(AppKit) && !canImport(UIKit)
     extension NSColor {
-        static var label: NSColor { .labelColor }
-        static var link: NSColor { .linkColor }
+        static var label: NSColor {
+            .labelColor
+        }
+
+        static var link: NSColor {
+            .linkColor
+        }
     }
 
     extension NSFont {
