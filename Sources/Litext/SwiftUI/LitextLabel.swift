@@ -348,7 +348,9 @@ public extension View {
 
 // MARK: - Platform Extensions
 
-#if canImport(AppKit) && !canImport(UIKit)
+#if canImport(UIKit)
+    // UIKit uses UIColor which already has .label
+#elseif canImport(AppKit)
     fileprivate extension NSColor {
         static var label: NSColor {
             .labelColor

@@ -7,7 +7,9 @@
 
 import Foundation
 
-#if canImport(AppKit) && !canImport(UIKit)
+#if canImport(UIKit)
+    // UIKit interaction is handled in LTXLabel+Touches.swift
+#elseif canImport(AppKit)
     import AppKit
 
     public extension LTXLabel {

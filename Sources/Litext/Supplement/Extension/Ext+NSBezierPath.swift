@@ -3,7 +3,9 @@
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 
-#if !canImport(UIKit) && canImport(AppKit)
+#if canImport(UIKit)
+    // UIKit uses UIBezierPath which already has these methods
+#elseif canImport(AppKit)
     import AppKit
 
     extension NSBezierPath {
