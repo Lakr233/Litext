@@ -17,7 +17,7 @@ public extension LTXLabel {
 
 extension LTXLabel {
     func selectWordAtIndex(_ index: Int) {
-        guard isSelectable, let textLayout else { return }
+        guard isSelectable else { return }
         let attributedString = textLayout.attributedString
         guard attributedString.length > 0, index < attributedString.length else { return }
         let nsString = attributedString.string as NSString
@@ -27,7 +27,7 @@ extension LTXLabel {
     }
 
     func selectSentenceAtIndex(_ index: Int) {
-        guard isSelectable, let textLayout else { return }
+        guard isSelectable else { return }
         guard let text = textLayout.attributedString.string as NSString? else { return }
         let sentenceDelimiters = CharacterSet(charactersIn: ".!?")
         var startIndex = index
@@ -54,7 +54,7 @@ extension LTXLabel {
     }
 
     func selectLineAtIndex(_ index: Int) {
-        guard isSelectable, let textLayout else { return }
+        guard isSelectable else { return }
         let attributedString = textLayout.attributedString
         guard attributedString.length > 0,
               index < attributedString.length
@@ -68,7 +68,7 @@ extension LTXLabel {
     }
 
     func selectAllRange() -> NSRange? {
-        guard isSelectable, let textLayout else { return nil }
+        guard isSelectable else { return nil }
         let attributedString = textLayout.attributedString
         guard attributedString.length > 0 else { return nil }
         return NSRange(location: 0, length: attributedString.length)

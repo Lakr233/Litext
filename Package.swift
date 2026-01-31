@@ -10,11 +10,21 @@ let package = Package(
         .iOS(.v13),
         .macCatalyst(.v13),
         .macOS(.v12),
+        .watchOS(.v6),
+        .tvOS(.v13),
+        .visionOS(.v1),
     ],
     products: [
         .library(name: "Litext", targets: ["Litext"]),
     ],
     targets: [
-        .target(name: "Litext"),
+        .target(
+            name: "Litext",
+            resources: [.process("Resources")]
+        ),
+        .testTarget(
+            name: "LitextTests",
+            dependencies: ["Litext"]
+        ),
     ]
 )

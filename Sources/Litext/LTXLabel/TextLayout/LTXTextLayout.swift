@@ -20,70 +20,6 @@ private func _hasHighlightAttributes(_ attributes: [NSAttributedString.Key: Any]
     return false
 }
 
-private func _createTruncatedLine(
-    lastLine: CTLine,
-    attrString: NSAttributedString,
-    width: CGFloat
-) -> CTLine? {
-    let truncationTokenAttributes = extractTruncationAttributes(from: lastLine)
-
-    let truncationTokenString = NSAttributedString(
-        string: kTruncationToken,
-        attributes: truncationTokenAttributes
-    )
-    let truncationLine = CTLineCreateWithAttributedString(
-        truncationTokenString
-    )
-
-    let lastLineStringRange = CTLineGetStringRange(lastLine)
-    let nsRange = NSRange(
-        location: lastLineStringRange.location,
-        length: lastLineStringRange.length
-    )
-
-    let lastLineString = NSMutableAttributedString(
-        attributedString: attrString.attributedSubstring(
-            from: nsRange
-        )
-    )
-    lastLineString.append(truncationTokenString)
-    let newLastLine = CTLineCreateWithAttributedString(
-        lastLineString
-    )
-
-    let truncatedLine = CTLineCreateTruncatedLine(
-        newLastLine,
-        width,
-        .end,
-        truncationLine
-    )
-
-    return truncatedLine
-}
-
-private func extractTruncationAttributes(
-    from line: CTLine
-) -> [NSAttributedString.Key: Any] {
-    var attributes: [NSAttributedString.Key: Any] = [:]
-
-    let lastLineGlyphRuns = CTLineGetGlyphRuns(line) as NSArray
-    if let lastGlyphRun = lastLineGlyphRuns.lastObject as! CTRun? {
-        let lastRunAttributes = CTRunGetAttributes(lastGlyphRun) as! [NSAttributedString.Key: Any]
-
-        if let font = lastRunAttributes[.font] {
-            attributes[.font] = font
-        }
-        if let foregroundColor = lastRunAttributes[.foregroundColor] {
-            attributes[.foregroundColor] = foregroundColor
-        }
-        if let paragraphStyle = lastRunAttributes[.paragraphStyle] {
-            attributes[.paragraphStyle] = paragraphStyle
-        }
-    }
-
-    return attributes
-}
-
 public class LTXTextLayout: NSObject {
     public private(set) var attributedString: NSAttributedString
     public var highlightRegions: [LTXHighlightRegion] {
@@ -101,7 +37,6 @@ public class LTXTextLayout: NSObject {
     private var framesetter: CTFramesetter
     private var lines: [CTLine]?
     private var _highlightRegions: [Int: LTXHighlightRegion]
-    private var lineDrawingActions: Set<LTXLineDrawingAction> = []
 
     public class func textLayout(
         withAttributedString attributedString: NSAttributedString
@@ -136,8 +71,6 @@ public class LTXTextLayout: NSObject {
     }
 
     public func draw(in context: CGContext) {
-        lineDrawingActions.removeAll()
-
         context.saveGState()
 
         context.setAllowsAntialiasing(true)
@@ -163,23 +96,17 @@ public class LTXTextLayout: NSObject {
 
                 let attributes = CTRunGetAttributes(glyphRun) as! [NSAttributedString.Key: Any]
                 if let action = attributes[LTXLineDrawingCallbackName] as? LTXLineDrawingAction {
-                    if self.lineDrawingActions.contains(action) {
-                        continue
-                    }
                     context.saveGState()
                     action.action(context, line, lineOrigin)
                     context.restoreGState()
-                    if action.performOncePerAttribute {
-                        self.lineDrawingActions.insert(action)
-                    }
                 }
             }
         }
     }
 
-    public func updateHighlightRegions(with context: CGContext) {
+    public func updateHighlightRegions() {
         _highlightRegions.removeAll()
-        extractHighlightRegions(with: context)
+        extractHighlightRegions()
     }
 
     public func rects(for range: NSRange) -> [CGRect] {
@@ -308,34 +235,9 @@ public class LTXTextLayout: NSObject {
         if let ctFrame {
             lines = CTFrameGetLines(ctFrame) as? [CTLine]
         }
-
-        processTruncation(in: containerBounds)
     }
 
-    private func processTruncation(in containerBounds: CGRect) {
-        if let lines, let ctFrame {
-            let visibleRange = CTFrameGetVisibleStringRange(
-                ctFrame
-            )
-            if visibleRange.length == attributedString.length || lines.isEmpty {
-                return
-            }
-
-            if let lastLine = lines.last,
-               let truncatedLine = _createTruncatedLine(
-                   lastLine: lastLine,
-                   attrString: attributedString,
-                   width: containerBounds.width
-               )
-            {
-                var newLines = lines
-                newLines[newLines.count - 1] = truncatedLine
-                self.lines = newLines
-            }
-        }
-    }
-
-    private func extractHighlightRegions(with context: CGContext) {
+    private func extractHighlightRegions() {
         enumerateLines { line, _, lineOrigin in
             let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
 
@@ -352,8 +254,7 @@ public class LTXTextLayout: NSObject {
                 processHighlightRegionForRun(
                     glyphRun,
                     attributes: attributes,
-                    lineOrigin: lineOrigin,
-                    with: context
+                    lineOrigin: lineOrigin
                 )
             }
         }
@@ -362,8 +263,7 @@ public class LTXTextLayout: NSObject {
     private func processHighlightRegionForRun(
         _ glyphRun: CTRun,
         attributes: [NSAttributedString.Key: Any],
-        lineOrigin: CGPoint,
-        with context: CGContext
+        lineOrigin: CGPoint
     ) {
         let cfStringRange = CTRunGetStringRange(glyphRun)
         let stringRange = NSRange(
@@ -392,7 +292,7 @@ public class LTXTextLayout: NSObject {
 
         var runBounds = CTRunGetImageBounds(
             glyphRun,
-            context,
+            nil,
             CFRange(location: 0, length: 0)
         )
 

@@ -10,17 +10,9 @@ public class LTXLineDrawingAction: NSObject {
     public typealias ActionHandler = (CGContext, CTLine, CGPoint) -> Void
 
     public var action: ActionHandler
-    public var performOncePerAttribute: Bool
 
     public init(action: @escaping ActionHandler) {
         self.action = action
-        performOncePerAttribute = true
-        super.init()
-    }
-
-    public init(multilineAction action: @escaping ActionHandler) {
-        self.action = action
-        performOncePerAttribute = false
         super.init()
     }
 }

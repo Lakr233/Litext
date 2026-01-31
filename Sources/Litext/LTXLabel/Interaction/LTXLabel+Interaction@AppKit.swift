@@ -7,9 +7,9 @@
 
 import Foundation
 
-#if canImport(UIKit)
+#if canImport(AppKit) && !canImport(UIKit)
+    import AppKit
 
-#elseif canImport(AppKit)
     public extension LTXLabel {
         override var acceptsFirstResponder: Bool {
             isSelectable
@@ -218,7 +218,7 @@ import Foundation
 
             if let index = textIndexAtPoint(point) {
                 let range = NSRange(location: index, length: 1)
-                let rect = textLayout?.rects(for: range).first
+                let rect = textLayout.rects(for: range).first
                 if let rect {
                     let realRect = convertRectFromTextLayout(rect, insetForInteraction: true)
                     if realRect.contains(point) {

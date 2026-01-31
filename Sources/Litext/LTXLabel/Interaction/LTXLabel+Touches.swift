@@ -3,12 +3,13 @@
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 
-import CoreText
-import Foundation
-
-private var menuOwnerIdentifier: UUID = .init()
-
 #if canImport(UIKit)
+
+    import CoreText
+    import Foundation
+
+    private var menuOwnerIdentifier: UUID = .init()
+
     import UIKit
 
     public extension LTXLabel {
@@ -20,11 +21,12 @@ private var menuOwnerIdentifier: UUID = .init()
             var didHandleEvent = false
             for press in presses {
                 guard let key = press.key else { continue }
-                if key.charactersIgnoringModifiers == "c", key.modifierFlags.contains(.command) {
+                // Use keyCode instead of charactersIgnoringModifiers for keyboard layout independence
+                if key.keyCode == .keyboardC, key.modifierFlags.contains(.command) {
                     let copiedText = copySelectedText()
                     didHandleEvent = copiedText.length > 0
                 }
-                if key.charactersIgnoringModifiers == "a", key.modifierFlags.contains(.command) {
+                if key.keyCode == .keyboardA, key.modifierFlags.contains(.command) {
                     selectAllText()
                     didHandleEvent = true
                 }
@@ -37,7 +39,7 @@ private var menuOwnerIdentifier: UUID = .init()
         }
 
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-            #if !targetEnvironment(macCatalyst)
+            #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 for handler in [selectionHandleStart, selectionHandleEnd] {
                     let rect = handler.frame
                         .insetBy(
@@ -93,6 +95,11 @@ private var menuOwnerIdentifier: UUID = .init()
             if !isSelectable { return }
 
             if interactionState.clickCount <= 1 {
+                if isPointerDevice(touch: firstTouch) {
+                    if let index = textIndexAtPoint(location) {
+                        selectionRange = NSRange(location: index, length: 0)
+                    }
+                }
             } else if interactionState.clickCount == 2 {
                 if let index = textIndexAtPoint(location) {
                     selectWordAtIndex(index)
@@ -127,18 +134,15 @@ private var menuOwnerIdentifier: UUID = .init()
             deactivateHighlightRegion()
             performContinuousStateReset()
 
-            #if canImport(UIKit) && !targetEnvironment(macCatalyst)
-                // check if is a pointer device
-
-                // on iOS we block the selection change by touches moved
-                // instead user is required to use those handlers
+            if interactionState.isFirstMove {
                 interactionState.isFirstMove = false
-            #else
-                if interactionState.isFirstMove {
-                    interactionState.isFirstMove = false
-                }
-                if isSelectable { updateSelectinoRange(withLocation: location) }
-            #endif
+            }
+
+            guard isSelectable else { return }
+
+            if isPointerDevice(touch: firstTouch) {
+                updateSelectinoRange(withLocation: location)
+            }
         }
 
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -156,7 +160,7 @@ private var menuOwnerIdentifier: UUID = .init()
                interactionState.clickCount <= 1
             {
                 if isLocationInSelection(location: location) {
-                    #if !targetEnvironment(macCatalyst)
+                    #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                         showSelectionMenuController()
                     #endif
                 } else {
@@ -188,97 +192,25 @@ private var menuOwnerIdentifier: UUID = .init()
             deactivateHighlightRegion()
         }
 
-        // for handling right click on iOS
-        func installContextMenuInteraction() {
-            let interaction = UIContextMenuInteraction(delegate: self)
-            addInteraction(interaction)
-        }
-
-        func installTextPointerInteraction() {
-            if #available(iOS 13.4, macCatalyst 13.4, *) {
-                let pointerInteraction = UIPointerInteraction(delegate: self)
-                self.addInteraction(pointerInteraction)
+        #if !os(tvOS) && !os(watchOS)
+            /// for handling right click on iOS
+            func installContextMenuInteraction() {
+                let interaction = UIContextMenuInteraction(delegate: self)
+                addInteraction(interaction)
             }
-        }
-    }
 
-    extension LTXLabel: LTXSelectionHandleDelegate {
-        func selectionHandleDidMove(_ type: LTXSelectionHandle.HandleType, toLocationInSuperView point: CGPoint) {
-            guard let selectionRange, let textLocation = nearestTextIndexAtPoint(point) else { return }
-            switch type {
-            case .start:
-                let startLocation = min(textLocation, selectionRange.location + selectionRange.length - 1)
-                let length = selectionRange.location + selectionRange.length - startLocation
-                self.selectionRange = .init(
-                    location: startLocation,
-                    length: length
-                )
-            case .end:
-                let startLocation = selectionRange.location
-                let endingLocation = max(textLocation, startLocation + 1)
-                self.selectionRange = .init(
-                    location: startLocation,
-                    length: endingLocation - startLocation
-                )
+            func installTextPointerInteraction() {
+                if #available(iOS 13.4, macCatalyst 13.4, *) {
+                    let pointerInteraction = UIPointerInteraction(delegate: self)
+                    addInteraction(pointerInteraction)
+                }
             }
-        }
+        #endif
     }
-
-    extension LTXLabel: UIContextMenuInteractionDelegate {
-        public func contextMenuInteraction(
-            _: UIContextMenuInteraction,
-            configurationForMenuAtLocation location: CGPoint
-        ) -> UIContextMenuConfiguration? {
-            #if targetEnvironment(macCatalyst)
-                guard selectionRange != nil else { return nil }
-                var menuItems: [UIMenuElement] = [
-                    UIAction(title: LocalizedText.copy, image: nil) { _ in
-                        self.copySelectedText()
-                    },
-                ]
-                if selectionRange != selectAllRange() {
-                    menuItems.append(
-                        UIAction(title: LocalizedText.selectAll, image: nil) { _ in
-                            self.selectAllText()
-                        }
-                    )
-                }
-                return .init(
-                    identifier: nil,
-                    previewProvider: nil
-                ) { _ in
-                    .init(children: menuItems)
-                }
-            #else
-                DispatchQueue.main.async {
-                    guard self.isSelectable else { return }
-                    guard self.isLocationInSelection(location: location) else { return }
-                    self.showSelectionMenuController()
-                }
-                return nil
-            #endif
-        }
-    }
-
-    @available(iOS 13.4, macCatalyst 13.4, *)
-    extension LTXLabel: UIPointerInteractionDelegate {
-        public func pointerInteraction(_: UIPointerInteraction, styleFor _: UIPointerRegion) -> UIPointerStyle? {
-            guard isSelectable else { return nil }
-            guard parentViewController?.presentedViewController == nil else { return nil }
-            return UIPointerStyle(shape: .verticalBeam(length: 1), constrainedAxes: [])
-        }
-    }
-
-#endif
-
-#if canImport(UIKit)
 
     extension LTXLabel {
         func showSelectionMenuController() {
-            guard let range = selectionRange,
-                  range.length > 0,
-                  let textLayout
-            else { return }
+            guard let range = selectionRange, range.length > 0 else { return }
 
             let rects: [CGRect] = textLayout.rects(for: range).map {
                 convertRectFromTextLayout($0, insetForInteraction: true)
@@ -291,18 +223,14 @@ private var menuOwnerIdentifier: UUID = .init()
 
             let menuController = UIMenuController.shared
 
-            var menuItems: [UIMenuItem] = []
-            menuItems.append(UIMenuItem(
-                title: LocalizedText.copy,
-                action: #selector(copyMenuItemTapped)
-            ))
-            if selectionRange != selectAllRange() {
-                menuItems.append(UIMenuItem(
-                    title: LocalizedText.selectAll,
-                    action: #selector(selectAllTapped)
-                ))
-            }
-            menuController.menuItems = menuItems
+            let items = LTXLabelMenuItem
+                .textSelectionMenu()
+                .compactMap { item -> UIMenuItem? in
+                    guard let selector = item.action else { return nil }
+                    guard canPerformAction(selector, withSender: nil) else { return nil }
+                    return UIMenuItem(title: item.title, action: selector)
+                }
+            menuController.menuItems = items
 
             menuOwnerIdentifier = id
             menuController.showMenu(
@@ -316,7 +244,7 @@ private var menuOwnerIdentifier: UUID = .init()
             UIMenuController.shared.hideMenu()
         }
 
-        @objc private func copyMenuItemTapped() {
+        @objc func copyMenuItemTapped() {
             let copiedText = copySelectedText()
             if copiedText.length <= 0 {
                 _ = copyFromSubviewsRecursively()
@@ -324,11 +252,18 @@ private var menuOwnerIdentifier: UUID = .init()
             clearSelection()
         }
 
-        @objc private func selectAllTapped() {
+        @objc func selectAllTapped() {
             selectAllText()
             DispatchQueue.main.async {
                 self.showSelectionMenuController()
             }
+        }
+
+        @objc func shareMenuItemTapped() {
+            guard let text = selectedPlainText(), !text.isEmpty else { return }
+            let activityController = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+            activityController.popoverPresentationController?.sourceView = self
+            parentViewController?.present(activityController, animated: true)
         }
 
         @objc private func copyKeyCommand() {
@@ -344,16 +279,19 @@ private var menuOwnerIdentifier: UUID = .init()
 
         override public func canPerformAction(
             _ action: Selector,
-            withSender sender: Any?
+            withSender _: Any?
         ) -> Bool {
             if action == #selector(copyMenuItemTapped) {
                 return selectionRange != nil
                     && selectionRange!.length > 0
             }
-            return super.canPerformAction(
-                action,
-                withSender: sender
-            )
+            if action == #selector(selectAllTapped) {
+                return selectionRange != selectAllRange()
+            }
+            if action == #selector(shareMenuItemTapped) {
+                return (selectedPlainText() ?? "").isEmpty == false
+            }
+            return false
         }
 
         private func copyFromSubviewsRecursively() -> Bool {
@@ -377,20 +315,19 @@ private var menuOwnerIdentifier: UUID = .init()
         }
     }
 
-#endif
-
-#if canImport(UIKit)
-
-    extension UIView {
-        var parentViewController: UIViewController? {
-            weak var parentResponder: UIResponder? = self
-            while parentResponder != nil {
-                parentResponder = parentResponder!.next
-                if let viewController = parentResponder as? UIViewController {
-                    return viewController
+    extension LTXLabel {
+        func isPointerDevice(touch: UITouch) -> Bool {
+            #if targetEnvironment(macCatalyst)
+                return true // Mac Catalyst is always a pointer device
+            #else
+                switch touch.type {
+                case .indirectPointer, .pencil:
+                    return true
+                default:
+                    return false
                 }
-            }
-            return nil
+            #endif
         }
     }
+
 #endif
