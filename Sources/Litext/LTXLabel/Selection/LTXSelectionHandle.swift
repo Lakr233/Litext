@@ -24,10 +24,17 @@ import Foundation
 
         weak var delegate: LTXSelectionHandleDelegate?
 
-        private let knobView: UIView = {
+        private(set) var handleColor: UIColor = .systemBlue {
+            didSet {
+                knobView.backgroundColor = handleColor
+                stickView.backgroundColor = handleColor
+            }
+        }
+
+        private lazy var knobView: UIView = {
             let view = UIView()
-            view.backgroundColor = .systemBlue
-            view.layer.cornerRadius = knobRadius / 2
+            view.backgroundColor = handleColor
+            view.layer.cornerRadius = Self.knobRadius / 2
             view.layer.shadowColor = UIColor.black.cgColor
             view.layer.shadowOffset = CGSize(width: 0, height: 1)
             view.layer.shadowOpacity = 0.25
@@ -35,11 +42,15 @@ import Foundation
             return view
         }()
 
-        private let stickView: UIView = {
+        private lazy var stickView: UIView = {
             let view = UIView()
-            view.backgroundColor = .systemBlue
+            view.backgroundColor = handleColor
             return view
         }()
+
+        func updateHandleColor(_ color: UIColor?) {
+            handleColor = color ?? .systemBlue
+        }
 
         public init(type: HandleType) {
             self.type = type

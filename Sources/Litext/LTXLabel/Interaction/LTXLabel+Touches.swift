@@ -129,7 +129,6 @@
 
             let location = firstTouch.location(in: self)
             guard isTouchReallyMoved(location) else { return }
-            defer { self.delegate?.ltxLabelDetectedUserEventMovingAtLocation(self, location: location) }
 
             deactivateHighlightRegion()
             performContinuousStateReset()
@@ -142,6 +141,9 @@
 
             if isPointerDevice(touch: firstTouch) {
                 updateSelectinoRange(withLocation: location)
+                if selectionRange != nil {
+                    delegate?.ltxLabelDetectedUserEventMovingAtLocation(self, location: location)
+                }
             }
         }
 

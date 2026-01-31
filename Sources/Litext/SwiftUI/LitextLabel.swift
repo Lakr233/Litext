@@ -15,6 +15,7 @@ import SwiftUI
     public struct LitextLabel: UIViewRepresentable {
         private let content: Content
         private var isSelectable: Bool = false
+        private var selectionBackgroundColor: UIColor?
         private var onTapLink: ((URL) -> Void)?
 
         // MARK: - Initializers
@@ -70,6 +71,7 @@ import SwiftUI
         public func updateUIView(_ uiView: LTXLabel, context: Context) {
             uiView.attributedText = content.resolve(in: context.environment)
             uiView.isSelectable = isSelectable
+            uiView.selectionBackgroundColor = selectionBackgroundColor
             context.coordinator.onTapLink = onTapLink
         }
 
@@ -94,6 +96,15 @@ import SwiftUI
         public func onTapLink(_ action: @escaping (URL) -> Void) -> LitextLabel {
             var copy = self
             copy.onTapLink = action
+            return copy
+        }
+
+        /// Sets the selection background color.
+        /// - Parameter color: The color to use for the selection background. Pass nil to use the default.
+        /// - Returns: A modified label.
+        public func selectionBackgroundColor(_ color: UIColor?) -> LitextLabel {
+            var copy = self
+            copy.selectionBackgroundColor = color
             return copy
         }
 
@@ -137,6 +148,7 @@ import SwiftUI
     public struct LitextLabel: NSViewRepresentable {
         private let content: Content
         private var isSelectable: Bool = false
+        private var selectionBackgroundColor: NSColor?
         private var onTapLink: ((URL) -> Void)?
 
         // MARK: - Initializers
@@ -192,6 +204,7 @@ import SwiftUI
         public func updateNSView(_ nsView: LTXLabel, context: Context) {
             nsView.attributedText = content.resolve(in: context.environment)
             nsView.isSelectable = isSelectable
+            nsView.selectionBackgroundColor = selectionBackgroundColor
             context.coordinator.onTapLink = onTapLink
         }
 
@@ -216,6 +229,15 @@ import SwiftUI
         public func onTapLink(_ action: @escaping (URL) -> Void) -> LitextLabel {
             var copy = self
             copy.onTapLink = action
+            return copy
+        }
+
+        /// Sets the selection background color.
+        /// - Parameter color: The color to use for the selection background. Pass nil to use the default.
+        /// - Returns: A modified label.
+        public func selectionBackgroundColor(_ color: NSColor?) -> LitextLabel {
+            var copy = self
+            copy.selectionBackgroundColor = color
             return copy
         }
 

@@ -38,6 +38,10 @@ public class LTXLabel: LTXPlatformView, Identifiable {
         didSet { if !isSelectable { clearSelection() } }
     }
 
+    public var selectionBackgroundColor: PlatformColor? {
+        didSet { updateSelectionLayer() }
+    }
+
     public internal(set) var isInteractionInProgress = false
 
     public weak var delegate: LTXLabelDelegate?

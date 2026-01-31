@@ -80,7 +80,6 @@ import Foundation
             let location = convert(event.locationInWindow, from: nil)
 
             guard isTouchReallyMoved(location) else { return }
-            defer { self.delegate?.ltxLabelDetectedUserEventMovingAtLocation(self, location: location) }
 
             deactivateHighlightRegion()
 
@@ -89,7 +88,12 @@ import Foundation
                 selectionRange = nil
             }
 
-            if isSelectable { updateSelectinoRange(withLocation: location) }
+            if isSelectable {
+                updateSelectinoRange(withLocation: location)
+                if selectionRange != nil {
+                    delegate?.ltxLabelDetectedUserEventMovingAtLocation(self, location: location)
+                }
+            }
         }
 
         override func mouseUp(with event: NSEvent) {
@@ -97,13 +101,15 @@ import Foundation
             defer { deactivateHighlightRegion() }
             let location = convert(event.locationInWindow, from: nil)
 
+            guard !isTouchReallyMoved(location) else { return }
+
             for region in highlightRegions {
                 let rects = region.rects.map {
                     convertRectFromTextLayout($0.rectValue, insetForInteraction: true)
                 }
                 for rect in rects where rect.contains(location) {
                     self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
-                    break
+                    return
                 }
             }
         }
