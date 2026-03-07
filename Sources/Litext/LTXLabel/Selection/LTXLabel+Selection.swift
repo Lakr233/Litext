@@ -32,7 +32,7 @@ public extension LTXLabel {
 }
 
 extension LTXLabel {
-    func updateSelectinoRange(withLocation location: CGPoint) {
+    func updateSelectionRange(withLocation location: CGPoint) {
         guard let startIndex = textLayout.nearestTextIndex(at: convertPointForTextLayout(interactionState.initialTouchLocation)),
               let endIndex = textLayout.nearestTextIndex(at: convertPointForTextLayout(location))
         else { return }

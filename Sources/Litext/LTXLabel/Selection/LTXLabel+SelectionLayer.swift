@@ -99,14 +99,8 @@ extension LTXLabel {
     private func createSelectionPath(_ selectionPath: LTXPlatformBezierPath, fromRects rects: [CGRect]) {
         for rect in rects {
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
-
-            #if canImport(UIKit)
-                let subpath = LTXPlatformBezierPath(rect: convertedRect)
-                selectionPath.append(subpath)
-            #elseif canImport(AppKit)
-                let subpath = LTXPlatformBezierPath(rect: convertedRect)
-                selectionPath.append(subpath)
-            #endif
+            let subpath = LTXPlatformBezierPath(rect: convertedRect)
+            selectionPath.append(subpath)
         }
     }
 

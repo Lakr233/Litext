@@ -21,7 +21,9 @@ extension LTXLabel {
 
         for highlightRegion in highlightRegions {
             guard let attachment = highlightRegion.attributes[LTXAttachmentAttributeName] as? LTXAttachment,
-                  let view = attachment.view else { continue }
+                  let view = attachment.view,
+                  let firstRect = highlightRegion.rects.first
+            else { continue }
 
             if view.superview == self {
                 newAttachmentViews.insert(view)
@@ -31,9 +33,9 @@ extension LTXLabel {
             }
 
             #if canImport(UIKit)
-                let rect = highlightRegion.rects.first!.cgRectValue
+                let rect = firstRect.cgRectValue
             #elseif canImport(AppKit)
-                let rect = highlightRegion.rects.first!.rectValue
+                let rect = firstRect.rectValue
             #endif
             let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
             view.frame = convertedRect

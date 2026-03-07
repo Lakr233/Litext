@@ -69,7 +69,10 @@ import SwiftUI
         }
 
         public func updateUIView(_ uiView: LTXLabel, context: Context) {
-            uiView.attributedText = content.resolve(in: context.environment)
+            let resolved = content.resolve(in: context.environment)
+            if !uiView.attributedText.isEqual(to: resolved) {
+                uiView.attributedText = resolved
+            }
             uiView.isSelectable = isSelectable
             uiView.selectionBackgroundColor = selectionBackgroundColor
             context.coordinator.onTapLink = onTapLink
@@ -202,7 +205,10 @@ import SwiftUI
         }
 
         public func updateNSView(_ nsView: LTXLabel, context: Context) {
-            nsView.attributedText = content.resolve(in: context.environment)
+            let resolved = content.resolve(in: context.environment)
+            if !nsView.attributedText.isEqual(to: resolved) {
+                nsView.attributedText = resolved
+            }
             nsView.isSelectable = isSelectable
             nsView.selectionBackgroundColor = selectionBackgroundColor
             context.coordinator.onTapLink = onTapLink

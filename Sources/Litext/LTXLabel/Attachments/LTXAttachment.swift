@@ -27,7 +27,9 @@ open class LTXAttachment {
         if _runDelegate == nil {
             var callbacks = CTRunDelegateCallbacks(
                 version: kCTRunDelegateVersion1,
-                dealloc: { _ in },
+                dealloc: { refCon in
+                    Unmanaged<LTXAttachment>.fromOpaque(refCon).release()
+                },
                 getAscent: { refCon in
                     let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
                     return attachment.size.height * 0.9
@@ -42,7 +44,7 @@ open class LTXAttachment {
                 }
             )
 
-            let unmanagedSelf = Unmanaged.passUnretained(self)
+            let unmanagedSelf = Unmanaged.passRetained(self)
             _runDelegate = CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque())
         }
 

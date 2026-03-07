@@ -91,7 +91,7 @@ import Foundation
             }
 
             if isSelectable {
-                updateSelectinoRange(withLocation: location)
+                updateSelectionRange(withLocation: location)
                 if selectionRange != nil {
                     delegate?.ltxLabelDetectedUserEventMovingAtLocation(self, location: location)
                 }
