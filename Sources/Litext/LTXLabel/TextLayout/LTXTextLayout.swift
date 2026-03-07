@@ -54,8 +54,6 @@ public class LTXTextLayout: NSObject {
         super.init()
     }
 
-    deinit {}
-
     public func invalidateLayout() {
         generateLayout()
     }

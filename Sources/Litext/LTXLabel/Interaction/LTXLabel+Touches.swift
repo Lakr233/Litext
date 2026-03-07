@@ -8,11 +8,11 @@
     import CoreText
     import Foundation
 
-    private var menuOwnerIdentifier: UUID = .init()
-
     import UIKit
 
     public extension LTXLabel {
+        fileprivate static var menuOwnerIdentifier: UUID = .init()
+
         override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
             guard isSelectable else {
                 super.pressesBegan(presses, with: event)
@@ -140,7 +140,7 @@
             guard isSelectable else { return }
 
             if isPointerDevice(touch: firstTouch) {
-                updateSelectinoRange(withLocation: location)
+                updateSelectionRange(withLocation: location)
                 if selectionRange != nil {
                     delegate?.ltxLabelDetectedUserEventMovingAtLocation(self, location: location)
                 }
@@ -171,13 +171,13 @@
             }
 
             guard selectionRange == nil, !isTouchReallyMoved(location) else { return }
-            for region in highlightRegions {
+            outer: for region in highlightRegions {
                 let rects = region.rects.map {
                     convertRectFromTextLayout($0.cgRectValue, insetForInteraction: true)
                 }
                 for rect in rects where rect.contains(location) {
                     self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
-                    break
+                    break outer
                 }
             }
         }
@@ -235,7 +235,7 @@
                     }
                 menuController.menuItems = items
 
-                menuOwnerIdentifier = id
+                Self.menuOwnerIdentifier = id
                 menuController.showMenu(
                     from: self,
                     rect: unionRect.insetBy(dx: -8, dy: -8)
@@ -243,7 +243,7 @@
             }
 
             func hideSelectionMenuController() {
-                guard menuOwnerIdentifier == id else { return }
+                guard Self.menuOwnerIdentifier == id else { return }
                 UIMenuController.shared.hideMenu()
             }
 

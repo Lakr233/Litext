@@ -50,6 +50,6 @@ extension LTXLabel {
             point.x - interactionState.initialTouchLocation.x,
             point.y - interactionState.initialTouchLocation.y
         )
-        return distance > 3
+        return distance > kMinimalDistanceToMove
     }
 }

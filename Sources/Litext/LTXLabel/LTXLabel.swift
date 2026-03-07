@@ -129,10 +129,12 @@ public class LTXLabel: LTXPlatformView, Identifiable {
     }
 
     deinit {
-        attributedText = .init()
-        attachmentViews = []
-        clearSelection()
-        deactivateHighlightRegion()
+        selectionLayer?.removeFromSuperlayer()
+        if let activeHighlightRegion,
+           let highlightLayer = activeHighlightRegion.associatedObject as? CALayer
+        {
+            highlightLayer.removeFromSuperlayer()
+        }
         NotificationCenter.default.removeObserver(self)
     }
 
