@@ -20,6 +20,7 @@ private func _hasHighlightAttributes(_ attributes: [NSAttributedString.Key: Any]
     return false
 }
 
+@MainActor
 public class LTXTextLayout: NSObject {
     public private(set) var attributedString: NSAttributedString
     public var highlightRegions: [LTXHighlightRegion] {

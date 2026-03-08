@@ -6,6 +6,7 @@
 import CoreText
 import Foundation
 
+@MainActor
 public class LTXLineDrawingAction: NSObject {
     public typealias ActionHandler = (CGContext, CTLine, CGPoint) -> Void
 

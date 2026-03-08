@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 public protocol LTXLabelDelegate: AnyObject {
     func ltxLabelDidTapOnHighlightContent(
         _ ltxLabel: LTXLabel,

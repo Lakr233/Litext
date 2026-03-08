@@ -8,6 +8,7 @@ import CoreText
 import Foundation
 import QuartzCore
 
+@MainActor
 public class LTXLabel: LTXPlatformView, Identifiable {
     public let id: UUID = .init()
 
@@ -70,7 +71,7 @@ public class LTXLabel: LTXPlatformView, Identifiable {
     }
 
     var selectedLinkForMenuAction: URL?
-    var selectionLayer: CAShapeLayer?
+    nonisolated(unsafe) var selectionLayer: CAShapeLayer?
 
     #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
         var selectionHandleStart: LTXSelectionHandle = .init(type: .start)

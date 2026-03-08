@@ -6,12 +6,13 @@
 import CoreGraphics
 import Foundation
 
+@MainActor
 public class LTXHighlightRegion {
     public private(set) var rects: [NSValue] = []
     public private(set) var attributes: [NSAttributedString.Key: Any]
     public private(set) var stringRange: NSRange
 
-    var associatedObject: AnyObject?
+    nonisolated(unsafe) var associatedObject: AnyObject?
 
     init(attributes: [NSAttributedString.Key: Any], stringRange: NSRange) {
         self.attributes = attributes
