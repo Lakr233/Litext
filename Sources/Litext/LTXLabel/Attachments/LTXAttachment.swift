@@ -6,6 +6,7 @@
 import CoreText
 import Foundation
 
+@MainActor
 open class LTXAttachment {
     open var size: CGSize
     open var view: LTXPlatformView?
