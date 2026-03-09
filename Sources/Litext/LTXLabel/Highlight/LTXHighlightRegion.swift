@@ -9,6 +9,11 @@ import Foundation
 @MainActor
 public class LTXHighlightRegion {
     public private(set) var rects: [NSValue] = []
+
+    #if os(watchOS)
+        private var _cgRects: [CGRect] = []
+    #endif
+
     public private(set) var attributes: [NSAttributedString.Key: Any]
     public private(set) var stringRange: NSRange
 
@@ -20,10 +25,23 @@ public class LTXHighlightRegion {
     }
 
     func addRect(_ rect: CGRect) {
-        #if canImport(UIKit)
+        #if canImport(UIKit) && !os(watchOS)
             rects.append(NSValue(cgRect: rect))
         #elseif canImport(AppKit)
             rects.append(NSValue(rect: rect))
+        #else
+            _cgRects.append(rect)
+        #endif
+    }
+
+    /// Returns all rects as CGRect values. Prefer this over `rects` for cross-platform code.
+    public var cgRects: [CGRect] {
+        #if canImport(UIKit) && !os(watchOS)
+            return rects.map(\.cgRectValue)
+        #elseif canImport(AppKit)
+            return rects.map(\.rectValue)
+        #else
+            return _cgRects
         #endif
     }
 }

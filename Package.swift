@@ -12,6 +12,7 @@ let package = Package(
         .macOS(.v12),
         .tvOS(.v13),
         .visionOS(.v1),
+        .watchOS(.v8),
     ],
     products: [
         .library(name: "Litext", targets: ["Litext"]),

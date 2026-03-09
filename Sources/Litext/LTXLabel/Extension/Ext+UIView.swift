@@ -5,7 +5,7 @@
 //  Created by 秋星桥 on 7/8/25.
 //
 
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(watchOS)
 
     import UIKit
 

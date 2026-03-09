@@ -5,48 +5,52 @@
 
 import Foundation
 
-extension LTXLabel {
-    func isLocationAboveAttachmentView(location: CGPoint) -> Bool {
-        for view in attachmentViews {
-            if view.frame.contains(location) {
-                return true
+#if !os(watchOS)
+
+    extension LTXLabel {
+        func isLocationAboveAttachmentView(location: CGPoint) -> Bool {
+            for view in attachmentViews {
+                if view.frame.contains(location) {
+                    return true
+                }
             }
+            return false
         }
-        return false
+
+        func updateAttachmentViews() {
+            let viewsToRemove = attachmentViews
+            var newAttachmentViews: Set<LTXPlatformView> = []
+
+            for highlightRegion in highlightRegions {
+                guard let attachment = highlightRegion.attributes[LTXAttachmentAttributeName] as? LTXAttachment,
+                      let view = attachment.view,
+                      let firstRect = highlightRegion.rects.first
+                else { continue }
+
+                if view.superview == self {
+                    newAttachmentViews.insert(view)
+                } else {
+                    addSubview(view)
+                    newAttachmentViews.insert(view)
+                }
+
+                #if canImport(UIKit)
+                    let rect = firstRect.cgRectValue
+                #elseif canImport(AppKit)
+                    let rect = firstRect.rectValue
+                #endif
+                let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
+                view.frame = convertedRect
+            }
+
+            for view in viewsToRemove {
+                if !newAttachmentViews.contains(view) {
+                    view.removeFromSuperview()
+                }
+            }
+
+            attachmentViews = newAttachmentViews
+        }
     }
 
-    func updateAttachmentViews() {
-        let viewsToRemove = attachmentViews
-        var newAttachmentViews: Set<LTXPlatformView> = []
-
-        for highlightRegion in highlightRegions {
-            guard let attachment = highlightRegion.attributes[LTXAttachmentAttributeName] as? LTXAttachment,
-                  let view = attachment.view,
-                  let firstRect = highlightRegion.rects.first
-            else { continue }
-
-            if view.superview == self {
-                newAttachmentViews.insert(view)
-            } else {
-                addSubview(view)
-                newAttachmentViews.insert(view)
-            }
-
-            #if canImport(UIKit)
-                let rect = firstRect.cgRectValue
-            #elseif canImport(AppKit)
-                let rect = firstRect.rectValue
-            #endif
-            let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
-            view.frame = convertedRect
-        }
-
-        for view in viewsToRemove {
-            if !newAttachmentViews.contains(view) {
-                view.removeFromSuperview()
-            }
-        }
-
-        attachmentViews = newAttachmentViews
-    }
-}
+#endif // !os(watchOS)

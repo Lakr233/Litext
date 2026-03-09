@@ -6,10 +6,21 @@
 import CoreText
 import Foundation
 
+#if os(watchOS)
+    import SwiftUI
+#endif
+
 @MainActor
 open class LTXAttachment {
     open var size: CGSize
-    open var view: LTXPlatformView?
+
+    #if !os(watchOS)
+        /// The platform view to embed as an inline attachment (iOS/macOS/tvOS/visionOS).
+        open var view: LTXPlatformView?
+    #else
+        /// The SwiftUI view to embed as an inline attachment (watchOS).
+        open var swiftUIView: AnyView?
+    #endif
 
     private var _runDelegate: CTRunDelegate?
 
@@ -18,9 +29,11 @@ open class LTXAttachment {
     }
 
     open func attributedStringRepresentation() -> NSAttributedString {
-        if let view = view as? LTXAttributeStringRepresentable {
-            return view.attributedStringRepresentation()
-        }
+        #if !os(watchOS)
+            if let view = view as? LTXAttributeStringRepresentable {
+                return view.attributedStringRepresentation()
+            }
+        #endif
         return NSAttributedString(string: " ")
     }
 

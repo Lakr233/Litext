@@ -8,129 +8,133 @@ import CoreText
 import Foundation
 import QuartzCore
 
-private let kDeduplicateSelectionNotification = Notification.Name(
-    rawValue: "LTXLabelDeduplicateSelectionNotification"
-)
+#if !os(watchOS)
 
-extension LTXLabel {
-    func updateSelectionLayer() {
-        selectionLayer?.removeFromSuperlayer()
-        selectionLayer = nil
+    private let kDeduplicateSelectionNotification = Notification.Name(
+        rawValue: "LTXLabelDeduplicateSelectionNotification"
+    )
 
-        #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-            selectionHandleStart.isHidden = true
-            selectionHandleEnd.isHidden = true
-        #endif
+    extension LTXLabel {
+        func updateSelectionLayer() {
+            selectionLayer?.removeFromSuperlayer()
+            selectionLayer = nil
 
-        guard let range = selectionRange,
-              range.location != NSNotFound,
-              range.length > 0
-        else {
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                hideSelectionMenuController()
+                selectionHandleStart.isHidden = true
+                selectionHandleEnd.isHidden = true
             #endif
-            return
-        }
 
-        let selectionPath = LTXPlatformBezierPath()
-        let selectionRects = textLayout.rects(for: range)
-        guard !selectionRects.isEmpty else {
-            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                hideSelectionMenuController()
-            #endif
-            return
-        }
-
-        createSelectionPath(selectionPath, fromRects: selectionRects)
-        createSelectionLayer(withPath: selectionPath)
-
-        #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-            showSelectionMenuController()
-        #endif
-
-        #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-            selectionHandleStart.isHidden = false
-            selectionHandleEnd.isHidden = false
-
-            // Update handle colors to match selection color
-            let handleColor = selectionBackgroundColor?.withAlphaComponent(1.0)
-            selectionHandleStart.updateHandleColor(handleColor)
-            selectionHandleEnd.updateHandleColor(handleColor)
-
-            var beginRect = textLayout.rects(
-                for: NSRange(location: range.location, length: 1)
-            ).first ?? .zero
-            beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
-            selectionHandleStart.frame = .init(
-                x: beginRect.minX - LTXSelectionHandle.knobRadius - 1,
-                y: beginRect.minY - LTXSelectionHandle.knobRadius,
-                width: LTXSelectionHandle.knobRadius * 2,
-                height: beginRect.height + LTXSelectionHandle.knobRadius
-            )
-            var endRect = textLayout.rects(
-                for: NSRange(location: range.location + range.length - 1, length: 1)
-            ).first ?? .zero
-            endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
-            selectionHandleEnd.frame = .init(
-                x: endRect.maxX - LTXSelectionHandle.knobRadius + 1,
-                y: endRect.minY,
-                width: LTXSelectionHandle.knobRadius * 2,
-                height: endRect.height + LTXSelectionHandle.knobRadius
-            )
-        #endif
-
-        NotificationCenter.default.post(name: kDeduplicateSelectionNotification, object: self)
-    }
-
-    func registerNotificationCenterForSelectionDeduplicate() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(deduplicateSelection),
-            name: kDeduplicateSelectionNotification,
-            object: nil
-        )
-    }
-
-    @objc private func deduplicateSelection(_ notification: Notification) {
-        guard let object = notification.object as? LTXLabel, object != self else { return }
-        clearSelection()
-    }
-
-    private func createSelectionPath(_ selectionPath: LTXPlatformBezierPath, fromRects rects: [CGRect]) {
-        for rect in rects {
-            let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
-            let subpath = LTXPlatformBezierPath(rect: convertedRect)
-            selectionPath.append(subpath)
-        }
-    }
-
-    private func createSelectionLayer(withPath path: LTXPlatformBezierPath) {
-        let selLayer = CAShapeLayer()
-
-        #if canImport(UIKit)
-            selLayer.path = path.cgPath
-        #elseif canImport(AppKit)
-            if #available(macOS 14.0, *) {
-                selLayer.path = path.cgPath
-            } else {
-                selLayer.path = path.quartzPath
+            guard let range = selectionRange,
+                  range.location != NSNotFound,
+                  range.length > 0
+            else {
+                #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+                    hideSelectionMenuController()
+                #endif
+                return
             }
-        #endif
 
-        #if canImport(UIKit)
-            let defaultColor = UIColor.systemBlue.withAlphaComponent(0.1)
-            selLayer.fillColor = (selectionBackgroundColor ?? defaultColor).cgColor
-        #elseif canImport(AppKit)
-            let defaultColor = NSColor.linkColor.withAlphaComponent(0.1)
-            selLayer.fillColor = (selectionBackgroundColor ?? defaultColor).cgColor
-        #endif
+            let selectionPath = LTXPlatformBezierPath()
+            let selectionRects = textLayout.rects(for: range)
+            guard !selectionRects.isEmpty else {
+                #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+                    hideSelectionMenuController()
+                #endif
+                return
+            }
 
-        #if canImport(UIKit)
-            layer.insertSublayer(selLayer, at: 0)
-        #elseif canImport(AppKit)
-            layer?.insertSublayer(selLayer, at: 0)
-        #endif
+            createSelectionPath(selectionPath, fromRects: selectionRects)
+            createSelectionLayer(withPath: selectionPath)
 
-        selectionLayer = selLayer
+            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+                showSelectionMenuController()
+            #endif
+
+            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+                selectionHandleStart.isHidden = false
+                selectionHandleEnd.isHidden = false
+
+                // Update handle colors to match selection color
+                let handleColor = selectionBackgroundColor?.withAlphaComponent(1.0)
+                selectionHandleStart.updateHandleColor(handleColor)
+                selectionHandleEnd.updateHandleColor(handleColor)
+
+                var beginRect = textLayout.rects(
+                    for: NSRange(location: range.location, length: 1)
+                ).first ?? .zero
+                beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
+                selectionHandleStart.frame = .init(
+                    x: beginRect.minX - LTXSelectionHandle.knobRadius - 1,
+                    y: beginRect.minY - LTXSelectionHandle.knobRadius,
+                    width: LTXSelectionHandle.knobRadius * 2,
+                    height: beginRect.height + LTXSelectionHandle.knobRadius
+                )
+                var endRect = textLayout.rects(
+                    for: NSRange(location: range.location + range.length - 1, length: 1)
+                ).first ?? .zero
+                endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
+                selectionHandleEnd.frame = .init(
+                    x: endRect.maxX - LTXSelectionHandle.knobRadius + 1,
+                    y: endRect.minY,
+                    width: LTXSelectionHandle.knobRadius * 2,
+                    height: endRect.height + LTXSelectionHandle.knobRadius
+                )
+            #endif
+
+            NotificationCenter.default.post(name: kDeduplicateSelectionNotification, object: self)
+        }
+
+        func registerNotificationCenterForSelectionDeduplicate() {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(deduplicateSelection),
+                name: kDeduplicateSelectionNotification,
+                object: nil
+            )
+        }
+
+        @objc private func deduplicateSelection(_ notification: Notification) {
+            guard let object = notification.object as? LTXLabel, object != self else { return }
+            clearSelection()
+        }
+
+        private func createSelectionPath(_ selectionPath: LTXPlatformBezierPath, fromRects rects: [CGRect]) {
+            for rect in rects {
+                let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
+                let subpath = LTXPlatformBezierPath(rect: convertedRect)
+                selectionPath.append(subpath)
+            }
+        }
+
+        private func createSelectionLayer(withPath path: LTXPlatformBezierPath) {
+            let selLayer = CAShapeLayer()
+
+            #if canImport(UIKit)
+                selLayer.path = path.cgPath
+            #elseif canImport(AppKit)
+                if #available(macOS 14.0, *) {
+                    selLayer.path = path.cgPath
+                } else {
+                    selLayer.path = path.quartzPath
+                }
+            #endif
+
+            #if canImport(UIKit)
+                let defaultColor = UIColor.systemBlue.withAlphaComponent(0.1)
+                selLayer.fillColor = (selectionBackgroundColor ?? defaultColor).cgColor
+            #elseif canImport(AppKit)
+                let defaultColor = NSColor.linkColor.withAlphaComponent(0.1)
+                selLayer.fillColor = (selectionBackgroundColor ?? defaultColor).cgColor
+            #endif
+
+            #if canImport(UIKit)
+                layer.insertSublayer(selLayer, at: 0)
+            #elseif canImport(AppKit)
+                layer?.insertSublayer(selLayer, at: 0)
+            #endif
+
+            selectionLayer = selLayer
+        }
     }
-}
+
+#endif // \!os(watchOS)

@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - LitextLabel
 
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(watchOS)
     import UIKit
 
     public struct LitextLabel: UIViewRepresentable {
@@ -278,6 +278,154 @@ import SwiftUI
     }
 #endif
 
+// MARK: - LitextLabel (watchOS)
+
+#if os(watchOS)
+    import SwiftUI
+
+    /// A read-only rich text label for watchOS.
+    /// Renders attributed text (including highlight regions and attachment views) using an
+    /// off-screen CGContext so the CoreText pipeline is identical to other platforms.
+    public struct LitextLabel: View {
+        private let content: Content
+
+        public init(
+            _ key: LocalizedStringKey,
+            attributes: [NSAttributedString.Key: Any] = [:]
+        ) {
+            content = .localizedKey(key, attributes: attributes)
+        }
+
+        @_disfavoredOverload
+        public init(
+            _ string: String,
+            attributes: [NSAttributedString.Key: Any] = [:]
+        ) {
+            content = .string(string, attributes: attributes)
+        }
+
+        public init(attributedString: NSAttributedString) {
+            content = .attributedString(attributedString)
+        }
+
+        public init(attributedString: AttributedString) {
+            content = .attributedString(NSAttributedString(attributedString))
+        }
+
+        public var body: some View {
+            _LTXWatchBody(content: content)
+        }
+    }
+
+    @MainActor
+    private struct _LTXWatchBody: View {
+        let content: Content
+
+        @Environment(\.litextBundle) private var litextBundle
+        @Environment(\.displayScale) private var displayScale
+        @State private var layout: LTXTextLayout = .init(attributedString: .init())
+        @State private var layoutSize: CGSize = .init(width: 1, height: 1)
+        @State private var renderedImage: CGImage?
+
+        private struct AttachmentItem: Identifiable {
+            let id: Int
+            let view: AnyView
+            let viewRect: CGRect
+        }
+
+        private func makeAttachmentItems() -> [AttachmentItem] {
+            layout.highlightRegions.compactMap { region -> AttachmentItem? in
+                guard
+                    let attachment = region.attributes[LTXAttachmentAttributeName] as? LTXAttachment,
+                    let swiftUIView = attachment.swiftUIView,
+                    let ctRect = region.cgRects.first
+                else { return nil }
+                // CoreText origin is bottom-left; SwiftUI origin is top-left
+                let viewRect = CGRect(
+                    x: ctRect.origin.x,
+                    y: layoutSize.height - ctRect.origin.y - ctRect.height,
+                    width: ctRect.width,
+                    height: ctRect.height
+                )
+                return AttachmentItem(id: region.stringRange.location, view: swiftUIView, viewRect: viewRect)
+            }
+        }
+
+        var body: some View {
+            let items = makeAttachmentItems()
+            ZStack(alignment: .topLeading) {
+                if let img = renderedImage {
+                    Image(decorative: img, scale: displayScale)
+                }
+                ForEach(items) { item in
+                    item.view
+                        .frame(width: item.viewRect.width, height: item.viewRect.height)
+                        .offset(x: item.viewRect.minX, y: item.viewRect.minY)
+                }
+            }
+            .frame(height: max(1, layoutSize.height))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { updateLayout(width: geo.size.width) }
+                        .onChange(of: geo.size.width) { newWidth in
+                            updateLayout(width: newWidth)
+                        }
+                }
+            }
+        }
+
+        private func updateLayout(width: CGFloat) {
+            guard width > 0 else { return }
+            var env = EnvironmentValues()
+            env.litextBundle = litextBundle
+            let attrString = content.resolve(in: env)
+            let newLayout = LTXTextLayout(attributedString: attrString)
+            let suggested = newLayout.suggestContainerSize(
+                withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
+            )
+            let size = CGSize(width: width, height: max(1, suggested.height))
+            newLayout.containerSize = size
+            newLayout.updateHighlightRegions()
+            layout = newLayout
+            layoutSize = size
+            renderedImage = renderToImage(layout: newLayout, size: size, scale: displayScale)
+        }
+
+        private func renderToImage(
+            layout: LTXTextLayout,
+            size: CGSize,
+            scale: CGFloat
+        ) -> CGImage? {
+            let pw = Int(size.width * scale)
+            let ph = Int(size.height * scale)
+            guard pw > 0, ph > 0 else { return nil }
+
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            guard let ctx = CGContext(
+                data: nil,
+                width: pw,
+                height: ph,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+                    | CGBitmapInfo.byteOrder32Little.rawValue
+            ) else { return nil }
+
+            ctx.scaleBy(x: scale, y: scale)
+            // LTXTextLayout.draw(in:) expects a UIKit-style context (origin top-left).
+            // A raw CGContext has origin bottom-left, so pre-flip here to cancel
+            // the flip that draw(in:) will apply internally.
+            ctx.translateBy(x: 0, y: size.height)
+            ctx.scaleBy(x: 1, y: -1)
+            layout.draw(in: ctx)
+            return ctx.makeImage()
+        }
+    }
+#endif
+
 // MARK: - Content
 
 private enum Content {
@@ -294,34 +442,48 @@ private enum Content {
             let resolvedString = key.resolve(in: environment)
             return NSAttributedString(
                 string: resolvedString,
-                attributes: Self.mergeWithDefaults(attributes)
+                attributes: Self.withDefaults(attributes)
             )
 
         case let .string(string, attributes):
             return NSAttributedString(
                 string: string,
-                attributes: Self.mergeWithDefaults(attributes)
+                attributes: Self.withDefaults(attributes)
             )
         }
     }
 
-    private static func mergeWithDefaults(
+    private static func withDefaults(
         _ attributes: [NSAttributedString.Key: Any]
     ) -> [NSAttributedString.Key: Any] {
-        #if os(tvOS)
-            let defaultFont = PlatformFont.preferredFont(forTextStyle: .body)
+        #if !os(watchOS)
+            return mergeWithDefaults(attributes)
         #else
-            let defaultFont = PlatformFont.systemFont(ofSize: PlatformFont.systemFontSize)
+            // On watchOS, PlatformFont/PlatformColor are not available.
+            // Users are expected to supply fully-attributed NSAttributedString.
+            return attributes
         #endif
-        var result: [NSAttributedString.Key: Any] = [
-            .font: defaultFont,
-            .foregroundColor: PlatformColor.label,
-        ]
-        for (key, value) in attributes {
-            result[key] = value
-        }
-        return result
     }
+
+    #if canImport(UIKit) && !os(watchOS) || canImport(AppKit)
+        private static func mergeWithDefaults(
+            _ attributes: [NSAttributedString.Key: Any]
+        ) -> [NSAttributedString.Key: Any] {
+            #if os(tvOS)
+                let defaultFont = PlatformFont.preferredFont(forTextStyle: .body)
+            #else
+                let defaultFont = PlatformFont.systemFont(ofSize: PlatformFont.systemFontSize)
+            #endif
+            var result: [NSAttributedString.Key: Any] = [
+                .font: defaultFont,
+                .foregroundColor: PlatformColor.label,
+            ]
+            for (key, value) in attributes {
+                result[key] = value
+            }
+            return result
+        }
+    #endif
 }
 
 // MARK: - LocalizedStringKey Resolution
@@ -355,7 +517,7 @@ public extension View {
 // MARK: - Platform Extensions
 
 #if canImport(UIKit)
-    // UIKit uses UIColor which already has .label
+// UIKit uses UIColor which already has .label
 #elseif canImport(AppKit)
     fileprivate extension NSColor {
         static var label: NSColor {

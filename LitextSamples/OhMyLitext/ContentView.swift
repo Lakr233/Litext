@@ -552,7 +552,7 @@ extension ContentView {
 // MARK: - Platform Extensions
 
 #if canImport(UIKit)
-    // UIKit uses UIColor which already has .label and .link
+// UIKit uses UIColor which already has .label and .link
 #elseif canImport(AppKit)
     extension NSColor {
         static var label: NSColor {
