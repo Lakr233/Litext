@@ -7,7 +7,7 @@
 @_exported import CoreText
 @_exported import Foundation
 
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(watchOS)
     @_exported import UIKit
 
     public typealias LTXPlatformView = UIView
@@ -26,3 +26,5 @@
     public typealias PlatformFont = NSFont
     public typealias PlatformApplication = NSApplication
 #endif
+// watchOS: canImport(UIKit) is true but UIView/UIApplication etc. are unavailable.
+// None of the above platform types are defined on watchOS - this is intentional.

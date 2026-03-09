@@ -8,7 +8,7 @@
 import Foundation
 
 #if canImport(UIKit)
-    // UIKit interaction is handled in LTXLabel+Touches.swift
+// UIKit interaction is handled in LTXLabel+Touches.swift
 #elseif canImport(AppKit)
     import AppKit
 

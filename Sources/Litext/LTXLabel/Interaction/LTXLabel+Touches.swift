@@ -3,11 +3,10 @@
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(watchOS)
 
     import CoreText
     import Foundation
-
     import UIKit
 
     public extension LTXLabel {

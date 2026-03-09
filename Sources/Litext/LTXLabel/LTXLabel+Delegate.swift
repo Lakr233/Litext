@@ -7,22 +7,26 @@
 
 import Foundation
 
-@MainActor
-public protocol LTXLabelDelegate: AnyObject {
-    func ltxLabelDidTapOnHighlightContent(
-        _ ltxLabel: LTXLabel,
-        region: LTXHighlightRegion?,
-        location: CGPoint
-    )
+#if !os(watchOS)
 
-    func ltxLabelSelectionDidChange(
-        _ ltxLabel: LTXLabel,
-        selection: NSRange?
-    )
+    @MainActor
+    public protocol LTXLabelDelegate: AnyObject {
+        func ltxLabelDidTapOnHighlightContent(
+            _ ltxLabel: LTXLabel,
+            region: LTXHighlightRegion?,
+            location: CGPoint
+        )
 
-    /// useful for moving scrollview accordingly to handle selection
-    func ltxLabelDetectedUserEventMovingAtLocation(
-        _ ltxLabel: LTXLabel,
-        location: CGPoint
-    )
-}
+        func ltxLabelSelectionDidChange(
+            _ ltxLabel: LTXLabel,
+            selection: NSRange?
+        )
+
+        /// useful for moving scrollview accordingly to handle selection
+        func ltxLabelDetectedUserEventMovingAtLocation(
+            _ ltxLabel: LTXLabel,
+            location: CGPoint
+        )
+    }
+
+#endif // !os(watchOS)

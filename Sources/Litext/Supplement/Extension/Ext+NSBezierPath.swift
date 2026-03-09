@@ -4,7 +4,7 @@
 //
 
 #if canImport(UIKit)
-    // UIKit uses UIBezierPath which already has these methods
+// UIKit uses UIBezierPath which already has these methods
 #elseif canImport(AppKit)
     import AppKit
 
