@@ -214,6 +214,10 @@
             func showSelectionMenuController() {
                 guard let range = selectionRange, range.length > 0 else { return }
 
+                // Don't show the menu if another view controller is presented above ours
+                // (e.g. UIActivityViewController from shareMenuItemTapped)
+                if parentViewController?.presentedViewController != nil { return }
+
                 let rects: [CGRect] = textLayout.rects(for: range).map {
                     convertRectFromTextLayout($0, insetForInteraction: true)
                 }
