@@ -12,15 +12,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        destination:
-          - platform=macOS
-          - platform=macOS,variant=Mac Catalyst
-          - platform=iOS
-          - platform=iOS Simulator
-          - platform=tvOS
-          - platform=tvOS Simulator
-          - platform=xrOS
-          - platform=xrOS Simulator
+        include:
+          - scheme: OhMyLitext
+            destination: platform=macOS
+          - scheme: OhMyLitext
+            destination: "platform=macOS,variant=Mac Catalyst"
+          - scheme: OhMyLitext
+            destination: platform=iOS
+          - scheme: OhMyLitext
+            destination: platform=iOS Simulator
+          - scheme: OhMyLitext
+            destination: platform=tvOS
+          - scheme: OhMyLitext
+            destination: platform=tvOS Simulator
+          - scheme: OhMyLitext
+            destination: platform=xrOS
+          - scheme: OhMyLitext
+            destination: platform=xrOS Simulator
+          - scheme: OhMyLitextWatch Watch App
+            destination: platform=watchOS
+          - scheme: OhMyLitextWatch Watch App
+            destination: platform=watchOS Simulator
 
     steps:
       - name: Checkout
@@ -32,7 +44,7 @@ jobs:
       - name: Build
         run: |
           set -o pipefail
-          xcodebuild -scheme OhMyLitext \
+          xcodebuild -scheme "${{ matrix.scheme }}" \
             -workspace Litext.xcworkspace \
             -destination "generic/${{ matrix.destination }}" \
             CODE_SIGN_IDENTITY="" \
