@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		506D77E82F5ED142008A1A6C /* OhMyLitextWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 506D77E72F5ED142008A1A6C /* OhMyLitextWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		508316D52F2E5C810061E34E /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = 508316D42F2E5C810061E34E /* Litext */; };
+		A10000012F6A000100000015 /* Litext in Frameworks (tests) */ = {isa = PBXBuildFile; productRef = A10000012F6A000100000014 /* Litext */; };
 		A46DCE6B89854A7DB45AA063 /* Litext in Frameworks (watch) */ = {isa = PBXBuildFile; productRef = 270FC1BDBB3940ECB286CB3C /* Litext */; };
 /* End PBXBuildFile section */
 
@@ -19,6 +20,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 506D77E62F5ED142008A1A6C;
 			remoteInfo = "OhMyLitextWatch Watch App";
+		};
+		A10000012F6A000100000016 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EDD2ECE32D64B75B006C1403 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 508316992F2E5A7D0061E34E;
+			remoteInfo = OhMyLitext;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -50,6 +58,8 @@
 		506D77E22F5ED142008A1A6C /* OhMyLitextWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OhMyLitextWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		506D77E72F5ED142008A1A6C /* OhMyLitextWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "OhMyLitextWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5083169A2F2E5A7D0061E34E /* OhMyLitext.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OhMyLitext.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000012F6A000100000002 /* OhMyLitextTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OhMyLitextTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000012F6A000100000003 /* OhMyLitextUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OhMyLitextUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -61,6 +71,16 @@
 		5083169B2F2E5A7D0061E34E /* OhMyLitext */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = OhMyLitext;
+			sourceTree = "<group>";
+		};
+		A10000012F6A000100000004 /* OhMyLitextTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OhMyLitextTests;
+			sourceTree = "<group>";
+		};
+		A10000012F6A000100000005 /* OhMyLitextUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OhMyLitextUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -82,6 +102,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000012F6A000100000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000012F6A000100000015 /* Litext in Frameworks (tests) */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000012F6A000100000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -97,6 +132,8 @@
 			children = (
 				5083169B2F2E5A7D0061E34E /* OhMyLitext */,
 				506D77EB2F5ED142008A1A6C /* OhMyLitextWatch Watch App */,
+				A10000012F6A000100000004 /* OhMyLitextTests */,
+				A10000012F6A000100000005 /* OhMyLitextUITests */,
 				EDD2ECEC2D64B75B006C1403 /* Products */,
 				508316D32F2E5C810061E34E /* Frameworks */,
 			);
@@ -108,6 +145,8 @@
 				5083169A2F2E5A7D0061E34E /* OhMyLitext.app */,
 				506D77E22F5ED142008A1A6C /* OhMyLitextWatch.app */,
 				506D77E72F5ED142008A1A6C /* OhMyLitextWatch Watch App.app */,
+				A10000012F6A000100000002 /* OhMyLitextTests.xctest */,
+				A10000012F6A000100000003 /* OhMyLitextUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -181,6 +220,52 @@
 			productReference = 5083169A2F2E5A7D0061E34E /* OhMyLitext.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A10000012F6A00010000000C /* OhMyLitextTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000012F6A00010000000E /* Build configuration list for PBXNativeTarget "OhMyLitextTests" */;
+			buildPhases = (
+				A10000012F6A000100000007 /* Sources */,
+				A10000012F6A000100000006 /* Frameworks */,
+				A10000012F6A000100000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A10000012F6A000100000004 /* OhMyLitextTests */,
+			);
+			name = OhMyLitextTests;
+			packageProductDependencies = (
+				A10000012F6A000100000014 /* Litext */,
+			);
+			productName = OhMyLitextTests;
+			productReference = A10000012F6A000100000002 /* OhMyLitextTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A10000012F6A00010000000D /* OhMyLitextUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000012F6A000100000011 /* Build configuration list for PBXNativeTarget "OhMyLitextUITests" */;
+			buildPhases = (
+				A10000012F6A00010000000A /* Sources */,
+				A10000012F6A000100000009 /* Frameworks */,
+				A10000012F6A00010000000B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000012F6A000100000017 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10000012F6A000100000005 /* OhMyLitextUITests */,
+			);
+			name = OhMyLitextUITests;
+			packageProductDependencies = (
+			);
+			productName = OhMyLitextUITests;
+			productReference = A10000012F6A000100000003 /* OhMyLitextUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -199,6 +284,14 @@
 					};
 					508316992F2E5A7D0061E34E = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					A10000012F6A00010000000C = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 508316992F2E5A7D0061E34E;
+					};
+					A10000012F6A00010000000D = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 508316992F2E5A7D0061E34E;
 					};
 				};
 			};
@@ -221,6 +314,8 @@
 				508316992F2E5A7D0061E34E /* OhMyLitext */,
 				506D77E12F5ED142008A1A6C /* OhMyLitextWatch */,
 				506D77E62F5ED142008A1A6C /* OhMyLitextWatch Watch App */,
+				A10000012F6A00010000000C /* OhMyLitextTests */,
+				A10000012F6A00010000000D /* OhMyLitextUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -247,6 +342,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000012F6A000100000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000012F6A00010000000B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -264,6 +373,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000012F6A000100000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000012F6A00010000000A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -271,6 +394,11 @@
 			isa = PBXTargetDependency;
 			target = 506D77E62F5ED142008A1A6C /* OhMyLitextWatch Watch App */;
 			targetProxy = 506D77E92F5ED142008A1A6C /* PBXContainerItemProxy */;
+		};
+		A10000012F6A000100000017 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 508316992F2E5A7D0061E34E /* OhMyLitext */;
+			targetProxy = A10000012F6A000100000016 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -287,7 +415,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -303,7 +431,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -334,9 +462,9 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 8.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Debug;
 		};
@@ -367,9 +495,9 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 8.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Release;
 		};
@@ -414,7 +542,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,3,7";
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
@@ -461,9 +589,123 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,3,7";
 				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		A10000012F6A00010000000F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitextTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A10000012F6A000100000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitextTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A10000012F6A000100000012 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitextUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = OhMyLitext;
+			};
+			name = Debug;
+		};
+		A10000012F6A000100000013 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.OhMyLitextUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = OhMyLitext;
 			};
 			name = Release;
 		};
@@ -618,6 +860,24 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A10000012F6A00010000000E /* Build configuration list for PBXNativeTarget "OhMyLitextTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000012F6A00010000000F /* Debug */,
+				A10000012F6A000100000010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000012F6A000100000011 /* Build configuration list for PBXNativeTarget "OhMyLitextUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000012F6A000100000012 /* Debug */,
+				A10000012F6A000100000013 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		EDD2ECE62D64B75B006C1403 /* Build configuration list for PBXProject "LitextSamples" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -642,6 +902,10 @@
 			productName = Litext;
 		};
 		270FC1BDBB3940ECB286CB3C /* Litext */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Litext;
+		};
+		A10000012F6A000100000014 /* Litext */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Litext;
 		};

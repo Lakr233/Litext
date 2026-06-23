@@ -8,6 +8,11 @@ import Foundation
 
 @MainActor
 public class LTXHighlightRegion {
+    enum Kind {
+        case link
+        case attachment
+    }
+
     public private(set) var rects: [NSValue] = []
 
     #if os(watchOS)
@@ -16,10 +21,12 @@ public class LTXHighlightRegion {
 
     public private(set) var attributes: [NSAttributedString.Key: Any]
     public private(set) var stringRange: NSRange
+    let kind: Kind
 
     nonisolated(unsafe) var associatedObject: AnyObject?
 
-    init(attributes: [NSAttributedString.Key: Any], stringRange: NSRange) {
+    init(kind: Kind, attributes: [NSAttributedString.Key: Any], stringRange: NSRange) {
+        self.kind = kind
         self.attributes = attributes
         self.stringRange = stringRange
     }

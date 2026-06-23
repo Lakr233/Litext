@@ -11,9 +11,7 @@ import QuartzCore
 
     public extension LTXLabel {
         func invalidateTextLayout() {
-            if let selectionRange,
-               attributedText.length >= selectionRange.location + selectionRange.length
-            { /* pass */ } else {
+            if selectionRange != NSRange.sanitized(selectionRange, within: attributedText.length) {
                 clearSelection()
             }
 
@@ -49,10 +47,12 @@ import QuartzCore
                 performLayout()
             }
 
-            override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-                super.traitCollectionDidChange(previousTraitCollection)
-                invalidateTextLayout()
-            }
+            #if !os(visionOS)
+                override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+                    super.traitCollectionDidChange(previousTraitCollection)
+                    invalidateTextLayout()
+                }
+            #endif
 
         #elseif canImport(AppKit)
             override func layout() {

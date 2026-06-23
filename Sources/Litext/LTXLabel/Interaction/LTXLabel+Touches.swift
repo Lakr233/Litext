@@ -84,7 +84,6 @@
                 super.touchesBegan(touches, with: event)
                 return
             }
-            interactionState.isFirstMove = true
 
             if activateHighlightRegionAtPoint(location) {
                 return
@@ -100,7 +99,7 @@
                     }
                 }
             } else if interactionState.clickCount == 2 {
-                if let index = textIndexAtPoint(location) {
+                if let index = nearestTextIndexAtPoint(location) {
                     selectWordAtIndex(index)
                     // prevent touches did end discard the changes
                     DispatchQueue.main.asyncAfter(deadline: .now()) {
@@ -108,7 +107,7 @@
                     }
                 }
             } else {
-                if let index = textIndexAtPoint(location) {
+                if let index = nearestTextIndexAtPoint(location) {
                     selectLineAtIndex(index)
                     // prevent touches did end discard the changes
                     DispatchQueue.main.asyncAfter(deadline: .now()) {
@@ -131,10 +130,6 @@
 
             deactivateHighlightRegion()
             performContinuousStateReset()
-
-            if interactionState.isFirstMove {
-                interactionState.isFirstMove = false
-            }
 
             guard isSelectable else { return }
 
@@ -171,8 +166,8 @@
 
             guard selectionRange == nil, !isTouchReallyMoved(location) else { return }
             outer: for region in highlightRegions {
-                let rects = region.rects.map {
-                    convertRectFromTextLayout($0.cgRectValue, insetForInteraction: true)
+                let rects = region.cgRects.map {
+                    convertRectFromTextLayout($0, insetForInteraction: true)
                 }
                 for rect in rects where rect.contains(location) {
                     self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
@@ -183,13 +178,10 @@
 
         override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
             isInteractionInProgress = false
-            guard touches.count == 1,
-                  let firstTouch = touches.first
-            else {
+            guard touches.count == 1 else {
                 super.touchesCancelled(touches, with: event)
                 return
             }
-            _ = firstTouch
             deactivateHighlightRegion()
         }
 
@@ -227,13 +219,21 @@
                     unionRect = unionRect.union(rect)
                 }
 
+                let availableItems = availableTextSelectionMenuItems()
+                guard !availableItems.isEmpty else { return }
+
+                #if !targetEnvironment(macCatalyst)
+                    if #available(iOS 16.0, visionOS 1.0, *) {
+                        showEditMenuController(from: unionRect)
+                        return
+                    }
+                #endif
+
                 let menuController = UIMenuController.shared
 
-                let items = LTXLabelMenuItem
-                    .textSelectionMenu()
+                let items = availableItems
                     .compactMap { item -> UIMenuItem? in
                         guard let selector = item.action else { return nil }
-                        guard canPerformAction(selector, withSender: nil) else { return nil }
                         return UIMenuItem(title: item.title, action: selector)
                     }
                 menuController.menuItems = items
@@ -247,6 +247,14 @@
 
             func hideSelectionMenuController() {
                 guard Self.menuOwnerIdentifier == id else { return }
+                #if !targetEnvironment(macCatalyst)
+                    if #available(iOS 16.0, visionOS 1.0, *),
+                       let editMenuInteraction = editMenuInteractionStorage as? UIEditMenuInteraction
+                    {
+                        editMenuInteraction.dismissMenu()
+                        return
+                    }
+                #endif
                 UIMenuController.shared.hideMenu()
             }
 
@@ -270,13 +278,6 @@
                 let activityController = UIActivityViewController(activityItems: [text], applicationActivities: nil)
                 activityController.popoverPresentationController?.sourceView = self
                 parentViewController?.present(activityController, animated: true)
-            }
-
-            @objc private func copyKeyCommand() {
-                let copiedText = copySelectedText()
-                if copiedText.length <= 0 {
-                    _ = copyFromSubviewsRecursively()
-                }
             }
 
             override public var canBecomeFirstResponder: Bool {
@@ -318,6 +319,80 @@
                     }
                 }
                 return false
+            }
+
+            fileprivate func availableTextSelectionMenuItems() -> [LTXLabelMenuItem] {
+                LTXLabelMenuItem.textSelectionMenu().filter { item in
+                    guard let selector = item.action else { return false }
+                    return canPerformAction(selector, withSender: nil)
+                }
+            }
+
+            #if !targetEnvironment(macCatalyst)
+                @available(iOS 16.0, visionOS 1.0, *)
+                private func ensureEditMenuInteraction() -> UIEditMenuInteraction {
+                    if let editMenuInteraction = editMenuInteractionStorage as? UIEditMenuInteraction {
+                        return editMenuInteraction
+                    }
+
+                    let editMenuInteraction = UIEditMenuInteraction(delegate: self)
+                    editMenuInteractionStorage = editMenuInteraction
+                    addInteraction(editMenuInteraction)
+                    return editMenuInteraction
+                }
+
+                @available(iOS 16.0, visionOS 1.0, *)
+                private func showEditMenuController(from unionRect: CGRect) {
+                    // UIEditMenuInteraction presentation is unsupported on Mac Catalyst.
+                    let editMenuInteraction = ensureEditMenuInteraction()
+                    editMenuTargetRect = unionRect
+                    Self.menuOwnerIdentifier = id
+
+                    if isEditMenuVisible {
+                        editMenuInteraction.updateVisibleMenuPosition(animated: false)
+                        return
+                    }
+
+                    isEditMenuVisible = true
+                    let sourcePoint = CGPoint(x: unionRect.midX, y: unionRect.midY)
+                    let configuration = UIEditMenuConfiguration(identifier: nil, sourcePoint: sourcePoint)
+                    editMenuInteraction.presentEditMenu(with: configuration)
+                }
+            #endif
+        }
+    #endif
+
+    #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+        @available(iOS 16.0, visionOS 1.0, *)
+        extension LTXLabel: @preconcurrency UIEditMenuInteractionDelegate {
+            public func editMenuInteraction(
+                _: UIEditMenuInteraction,
+                menuFor _: UIEditMenuConfiguration,
+                suggestedActions _: [UIMenuElement]
+            ) -> UIMenu? {
+                let actions = availableTextSelectionMenuItems().compactMap { item -> UIAction? in
+                    guard let selector = item.action else { return nil }
+                    return UIAction(title: item.title, image: item.image) { [weak self] _ in
+                        self?.perform(selector)
+                    }
+                }
+                guard !actions.isEmpty else { return nil }
+                return UIMenu(children: actions)
+            }
+
+            public func editMenuInteraction(
+                _: UIEditMenuInteraction,
+                targetRectFor _: UIEditMenuConfiguration
+            ) -> CGRect {
+                editMenuTargetRect
+            }
+
+            public func editMenuInteraction(
+                _: UIEditMenuInteraction,
+                willDismissMenuFor _: UIEditMenuConfiguration,
+                animator _: UIEditMenuInteractionAnimating
+            ) {
+                isEditMenuVisible = false
             }
         }
     #endif
