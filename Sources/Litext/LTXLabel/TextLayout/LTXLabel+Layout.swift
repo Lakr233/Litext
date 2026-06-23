@@ -88,12 +88,20 @@ import QuartzCore
 
             if layoutUpdateWasMade {
                 updateSelectionLayer()
-                #if canImport(UIKit)
-                    setNeedsDisplay()
-                #elseif canImport(AppKit)
-                    needsDisplay = true
-                #endif
+                setNeedsTextDisplay()
             }
+
+            #if canImport(UIKit) && !os(watchOS)
+                updateVisibleRenderingObservation()
+            #endif
+        }
+
+        func setNeedsTextDisplay() {
+            #if canImport(UIKit)
+                setNeedsDisplay()
+            #elseif canImport(AppKit)
+                needsDisplay = true
+            #endif
         }
     }
 

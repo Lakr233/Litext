@@ -11,10 +11,11 @@ import Foundation
     import UIKit
 
     public extension LTXLabel {
-        override func draw(_: CGRect) {
+        override func draw(_ rect: CGRect) {
             guard let context = UIGraphicsGetCurrentContext() else { return }
+            guard let visibleRect = visibleTextDrawingRect(for: rect) else { return }
             UIGraphicsPushContext(context)
-            textLayout.draw(in: context)
+            textLayout.draw(in: context, visibleRect: visibleRect)
             UIGraphicsPopContext()
         }
     }
@@ -26,7 +27,8 @@ import Foundation
         override func draw(_ dirtyRect: NSRect) {
             super.draw(dirtyRect)
             guard let context = NSGraphicsContext.current?.cgContext else { return }
-            textLayout.draw(in: context)
+            guard let visibleRect = visibleTextDrawingRect(for: dirtyRect) else { return }
+            textLayout.draw(in: context, visibleRect: visibleRect)
         }
 
         override var isFlipped: Bool {

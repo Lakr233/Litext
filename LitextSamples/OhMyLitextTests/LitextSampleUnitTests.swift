@@ -140,4 +140,87 @@ final class LitextSampleUnitTests: XCTestCase {
 
         XCTAssertNil(weakAttachment)
     }
+
+    @MainActor
+    func testVisibleRectDrawingSkipsOffscreenLineActionsWithoutChangingLayoutHeight() throws {
+        let width: CGFloat = 260
+        let attributedText = Self.lineDrawingProbeText(lineCount: 80)
+        let layout = LTXTextLayout(attributedString: attributedText)
+        let suggestedSize = layout.suggestContainerSize(
+            withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
+        )
+        layout.containerSize = CGSize(width: width, height: suggestedSize.height)
+
+        let fullLineCount = layout.visibleLineCount(in: nil)
+        let visibleRect = CGRect(x: 0, y: 0, width: width, height: 90)
+        let visibleLineCount = layout.visibleLineCount(in: visibleRect)
+
+        XCTAssertGreaterThan(fullLineCount, visibleLineCount)
+        XCTAssertGreaterThan(visibleLineCount, 0)
+        XCTAssertEqual(
+            layout.suggestContainerSize(withSize: CGSize(width: width, height: .greatestFiniteMagnitude)),
+            suggestedSize
+        )
+
+        Self.lineDrawingProbeInvocationCount = 0
+        let context = try XCTUnwrap(Self.makeBitmapContext(size: layout.containerSize))
+        layout.draw(in: context, visibleRect: visibleRect)
+
+        XCTAssertEqual(Self.lineDrawingProbeInvocationCount, visibleLineCount)
+    }
+
+    @MainActor
+    func testVisibleRectDrawingPerformance() throws {
+        let width: CGFloat = 320
+        let attributedText = Self.lineDrawingProbeText(lineCount: 500)
+        let layout = LTXTextLayout(attributedString: attributedText)
+        let suggestedSize = layout.suggestContainerSize(
+            withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
+        )
+        layout.containerSize = CGSize(width: width, height: suggestedSize.height)
+        let visibleRect = CGRect(x: 0, y: suggestedSize.height / 2, width: width, height: 900)
+        let fullContext = try XCTUnwrap(Self.makeBitmapContext(size: layout.containerSize))
+        let visibleContext = try XCTUnwrap(Self.makeBitmapContext(size: layout.containerSize))
+
+        measure(metrics: [XCTClockMetric(), XCTCPUMetric(), XCTMemoryMetric()]) {
+            layout.draw(in: fullContext)
+            layout.draw(in: visibleContext, visibleRect: visibleRect)
+        }
+    }
+
+    @MainActor
+    private static var lineDrawingProbeInvocationCount = 0
+
+    @MainActor
+    private static func lineDrawingProbeText(lineCount: Int) -> NSAttributedString {
+        let action = LTXLineDrawingAction { _, _, _ in
+            lineDrawingProbeInvocationCount += 1
+        }
+        let text = NSMutableAttributedString()
+        for index in 0 ..< lineCount {
+            text.append(NSAttributedString(
+                string: "Probe line \(index) keeps layout stable while drawing is clipped.\n",
+                attributes: [
+                    .font: PlatformFont.systemFont(ofSize: 16),
+                    .ltxLineDrawingCallback: action,
+                ]
+            ))
+        }
+        return text
+    }
+
+    private static func makeBitmapContext(size: CGSize) -> CGContext? {
+        let width = max(1, Int(size.width.rounded(.up)))
+        let height = max(1, Int(size.height.rounded(.up)))
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        return CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+    }
 }
