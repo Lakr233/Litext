@@ -39,7 +39,20 @@ function test_scheme() {
 }
 
 function first_available_ios_simulator_id() {
-	xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }'
+	SCHEME=${1:-OhMyLitext}
+	xcodebuild -scheme "$SCHEME" -workspace "$WORKSPACE" -showdestinations 2>/dev/null \
+		| awk -F '[{},]' '
+			/platform:iOS Simulator/ && /name:iPhone/ {
+				for (field = 1; field <= NF; field++) {
+					gsub(/^ +| +$/, "", $field)
+					if ($field ~ /^id:/) {
+						sub(/^id:/, "", $field)
+						print $field
+						exit
+					}
+				}
+			}
+		'
 }
 
 # to reset all cache
@@ -63,7 +76,7 @@ test_build "OhMyLitextWatch Watch App" "generic/platform=watchOS Simulator"
 
 test_scheme "OhMyLitext" "platform=macOS" "-only-testing:OhMyLitextTests"
 
-IOS_SIMULATOR_ID=$(first_available_ios_simulator_id)
+IOS_SIMULATOR_ID=$(first_available_ios_simulator_id "OhMyLitext")
 if [ -z "$IOS_SIMULATOR_ID" ]; then
 	echo "[!] failed to locate an available iPhone simulator"
 	exit 1

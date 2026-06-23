@@ -7,6 +7,10 @@ import CoreText
 @testable import Litext
 import Testing
 
+#if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    import AppKit
+#endif
+
 @MainActor
 @Test func invalidRangesDoNotProduceRects() {
     let layout = LTXTextLayout(attributedString: NSAttributedString(string: "Hello Litext"))
@@ -32,6 +36,39 @@ import Testing
         label.selectionRange = NSRange(location: 0, length: 0)
         #expect(label.selectionRange == nil)
     }
+
+    @MainActor
+    @Test func visibleTextDrawingRectKeepsGuardBandDuringPartialDirtyRedraw() throws {
+        let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+        label.frame = CGRect(x: 0, y: 0, width: 320, height: 600)
+
+        let dirtyStrip = CGRect(x: 0, y: 280, width: 320, height: 2)
+        let clippedDirtyRect = try #require(label.visibleTextDrawingRect(for: dirtyStrip))
+
+        #expect(clippedDirtyRect.height > dirtyStrip.height)
+        #expect(clippedDirtyRect.minY <= dirtyStrip.minY)
+        #expect(clippedDirtyRect.maxY >= dirtyStrip.maxY)
+        #expect(clippedDirtyRect.maxY <= label.bounds.maxY)
+
+        label.drawsOnlyVisibleText = false
+        #expect(label.visibleTextDrawingRect(for: dirtyStrip) == dirtyStrip)
+    }
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+        @MainActor
+        @Test func appKitVisibleRenderingObservesScrollClipBounds() {
+            let scrollView = NSScrollView(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
+            let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+            label.frame = CGRect(x: 0, y: 0, width: 320, height: 600)
+
+            scrollView.documentView = label
+            label.updateVisibleRenderingObservation()
+
+            #expect(label.visibleRenderingClipView === scrollView.contentView)
+            #expect(label.visibleRenderingBoundsObserver != nil)
+            #expect(scrollView.contentView.postsBoundsChangedNotifications)
+        }
+    #endif
 #endif
 
 @MainActor

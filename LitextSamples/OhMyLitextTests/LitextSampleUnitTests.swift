@@ -7,6 +7,10 @@ import CoreText
 @testable import Litext
 import XCTest
 
+#if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    import AppKit
+#endif
+
 final class LitextSampleUnitTests: XCTestCase {
     @MainActor
     func testInvalidRangesAndSelectionRangeAreSanitized() {
@@ -31,6 +35,39 @@ final class LitextSampleUnitTests: XCTestCase {
             XCTAssertNil(label.selectionRange)
         #endif
     }
+
+    @MainActor
+    func testVisibleTextDrawingRectKeepsGuardBandDuringPartialDirtyRedraw() throws {
+        let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+        label.frame = CGRect(x: 0, y: 0, width: 320, height: 600)
+
+        let dirtyStrip = CGRect(x: 0, y: 280, width: 320, height: 2)
+        let clippedDirtyRect = try XCTUnwrap(label.visibleTextDrawingRect(for: dirtyStrip))
+
+        XCTAssertGreaterThan(clippedDirtyRect.height, dirtyStrip.height)
+        XCTAssertLessThanOrEqual(clippedDirtyRect.minY, dirtyStrip.minY)
+        XCTAssertGreaterThanOrEqual(clippedDirtyRect.maxY, dirtyStrip.maxY)
+        XCTAssertLessThanOrEqual(clippedDirtyRect.maxY, label.bounds.maxY)
+
+        label.drawsOnlyVisibleText = false
+        XCTAssertEqual(label.visibleTextDrawingRect(for: dirtyStrip), dirtyStrip)
+    }
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+        @MainActor
+        func testAppKitVisibleRenderingObservesScrollClipBounds() {
+            let scrollView = NSScrollView(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
+            let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+            label.frame = CGRect(x: 0, y: 0, width: 320, height: 600)
+
+            scrollView.documentView = label
+            label.updateVisibleRenderingObservation()
+
+            XCTAssertTrue(label.visibleRenderingClipView === scrollView.contentView)
+            XCTAssertNotNil(label.visibleRenderingBoundsObserver)
+            XCTAssertTrue(scrollView.contentView.postsBoundsChangedNotifications)
+        }
+    #endif
 
     @MainActor
     func testNativeHitTestingReturnsIndicesForBidiOverflowPoints() throws {

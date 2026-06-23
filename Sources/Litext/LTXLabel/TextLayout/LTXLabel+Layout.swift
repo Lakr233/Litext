@@ -60,9 +60,32 @@ import QuartzCore
                 performLayout()
             }
 
+            override func viewDidMoveToSuperview() {
+                super.viewDidMoveToSuperview()
+                updateVisibleRenderingObservation()
+                setNeedsTextDisplay()
+            }
+
+            override func setFrameSize(_ newSize: NSSize) {
+                let oldSize = frame.size
+                super.setFrameSize(newSize)
+                guard oldSize != newSize else { return }
+                invalidateTextLayout()
+                setNeedsTextDisplay()
+            }
+
+            override func setBoundsSize(_ newSize: NSSize) {
+                let oldSize = bounds.size
+                super.setBoundsSize(newSize)
+                guard oldSize != newSize else { return }
+                invalidateTextLayout()
+                setNeedsTextDisplay()
+            }
+
             override func viewDidEndLiveResize() {
                 super.viewDidEndLiveResize()
                 invalidateTextLayout()
+                setNeedsTextDisplay()
             }
         #endif
 
@@ -91,7 +114,7 @@ import QuartzCore
                 setNeedsTextDisplay()
             }
 
-            #if canImport(UIKit) && !os(watchOS)
+            #if (canImport(UIKit) && !os(watchOS)) || (canImport(AppKit) && !targetEnvironment(macCatalyst))
                 updateVisibleRenderingObservation()
             #endif
         }

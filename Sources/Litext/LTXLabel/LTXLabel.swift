@@ -12,6 +12,10 @@ import QuartzCore
     import UIKit
 #endif
 
+#if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    import AppKit
+#endif
+
 #if !os(watchOS)
 
     @MainActor
@@ -55,6 +59,9 @@ import QuartzCore
         public var drawsOnlyVisibleText: Bool = true {
             didSet {
                 guard drawsOnlyVisibleText != oldValue else { return }
+                #if (canImport(UIKit) && !os(watchOS)) || (canImport(AppKit) && !targetEnvironment(macCatalyst))
+                    updateVisibleRenderingObservation()
+                #endif
                 setNeedsTextDisplay()
             }
         }
@@ -107,6 +114,11 @@ import QuartzCore
             weak var visibleRenderingScrollView: UIScrollView?
             var visibleRenderingBoundsObservation: NSKeyValueObservation?
             var visibleRenderingContentOffsetObservation: NSKeyValueObservation?
+        #endif
+
+        #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+            weak var visibleRenderingClipView: NSClipView?
+            nonisolated(unsafe) var visibleRenderingBoundsObserver: NSObjectProtocol?
         #endif
 
         var interactionState = InteractionState()
@@ -171,6 +183,11 @@ import QuartzCore
                 visibleRenderingBoundsObservation?.invalidate()
                 visibleRenderingContentOffsetObservation?.invalidate()
             #endif
+            #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+                if let visibleRenderingBoundsObserver {
+                    NotificationCenter.default.removeObserver(visibleRenderingBoundsObserver)
+                }
+            #endif
             selectionLayer?.removeFromSuperlayer()
             if let activeHighlightRegion,
                let highlightLayer = activeHighlightRegion.associatedObject as? CALayer
@@ -192,7 +209,9 @@ import QuartzCore
             override public func viewDidMoveToWindow() {
                 super.viewDidMoveToWindow()
                 clearSelection()
+                updateVisibleRenderingObservation()
                 invalidateTextLayout()
+                setNeedsTextDisplay()
             }
 
             public var backgroundColor: NSColor? {
