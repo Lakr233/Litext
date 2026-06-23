@@ -90,10 +90,11 @@ import Testing
     weakAttachment = attachment
 
     var string: NSMutableAttributedString? = NSMutableAttributedString(string: LTXReplacementText)
+    var delegate: CTRunDelegate? = try #require(attachment?.runDelegate)
     let range = NSRange(location: 0, length: string?.length ?? 0)
     try string?.addAttribute(
         kCTRunDelegateAttributeName as NSAttributedString.Key,
-        value: #require(attachment?.runDelegate),
+        value: #require(delegate),
         range: range
     )
 
@@ -101,6 +102,7 @@ import Testing
     #expect(weakAttachment != nil)
 
     string = nil
+    delegate = nil
 
     #expect(weakAttachment == nil)
 }

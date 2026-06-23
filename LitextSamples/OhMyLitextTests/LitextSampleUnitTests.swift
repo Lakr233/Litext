@@ -129,10 +129,11 @@ final class LitextSampleUnitTests: XCTestCase {
         weakAttachment = attachment
 
         var string: NSMutableAttributedString? = NSMutableAttributedString(string: LTXReplacementText)
+        var delegate: CTRunDelegate? = try XCTUnwrap(attachment?.runDelegate)
         let range = NSRange(location: 0, length: string?.length ?? 0)
         try string?.addAttribute(
             kCTRunDelegateAttributeName as NSAttributedString.Key,
-            value: XCTUnwrap(attachment?.runDelegate),
+            value: XCTUnwrap(delegate),
             range: range
         )
 
@@ -140,6 +141,7 @@ final class LitextSampleUnitTests: XCTestCase {
         XCTAssertNotNil(weakAttachment)
 
         string = nil
+        delegate = nil
 
         XCTAssertNil(weakAttachment)
     }
