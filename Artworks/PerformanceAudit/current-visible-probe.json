@@ -1,0 +1,15 @@
+{
+  "containerHeight" : 71999,
+  "containerWidth" : 360,
+  "fullDrawMS" : 14.68,
+  "hasVisibleRectAPI" : true,
+  "highlightMS" : 20.587,
+  "iterations" : 20,
+  "layoutMS" : 16.093,
+  "lineCount" : 1200,
+  "repo" : "\/Users\/qaq\/Documents\/GitHub\/Litext",
+  "totalLineCount" : 3600,
+  "visibleDrawMS" : 0.20599999999999999,
+  "visibleLineCount" : 46,
+  "warmups" : 5
+}

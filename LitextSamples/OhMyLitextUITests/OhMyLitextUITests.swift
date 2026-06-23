@@ -86,6 +86,29 @@ final class OhMyLitextUITests: XCTestCase {
     }
 
     @MainActor
+    func testVisibleTextClippingSurvivesDeepScrollAndInteraction() {
+        launchApp()
+
+        let longText = app.descendants(matching: .any)["fixture.long-text"]
+        scrollToElement(longText)
+        XCTAssertTrue(longText.waitForExistence(timeout: 4))
+        XCTAssertTrue(longText.isHittable)
+
+        let scrollView = app.scrollViews.firstMatch
+        for _ in 0 ..< 4 {
+            scrollView.swipeDown()
+        }
+
+        let linkFixture = app.descendants(matching: .any)["fixture.link.multistyle"]
+        scrollToElement(linkFixture)
+        XCTAssertTrue(linkFixture.waitForExistence(timeout: 4))
+        linkFixture.coordinate(withNormalizedOffset: CGVector(dx: 0.32, dy: 0.5)).tap()
+
+        XCTAssertTrue(waitForState("state.lastTappedURL", containing: "multi-style"))
+        dismissAlertIfNeeded()
+    }
+
+    @MainActor
     private func launchApp() {
         continueAfterFailure = false
         let application = XCUIApplication()

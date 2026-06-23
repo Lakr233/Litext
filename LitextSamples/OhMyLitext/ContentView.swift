@@ -340,6 +340,7 @@ struct ContentView: View {
                 .selectable(isSelectable)
                 .selectionBackgroundColor(currentSelectionColor)
                 .onSelectionChange(recordSelection)
+                .accessibilityIdentifier("fixture.long-text")
         }
     }
 

@@ -1,0 +1,15 @@
+{
+  "containerHeight" : 71999,
+  "containerWidth" : 360,
+  "fullDrawMS" : 15.69,
+  "hasVisibleRectAPI" : false,
+  "highlightMS" : 20.920000000000002,
+  "iterations" : 20,
+  "layoutMS" : 15.648999999999999,
+  "lineCount" : 1200,
+  "repo" : "\/tmp\/litext-perf-before-visible",
+  "totalLineCount" : null,
+  "visibleDrawMS" : null,
+  "visibleLineCount" : null,
+  "warmups" : 5
+}

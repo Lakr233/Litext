@@ -49,6 +49,16 @@ import QuartzCore
             didSet { updateSelectionLayer() }
         }
 
+        /// When enabled, drawing is clipped to the portion of the label currently visible
+        /// through its window and nearest scrolling ancestors. Layout, hit-testing, selection,
+        /// and highlight regions still use the full text container.
+        public var drawsOnlyVisibleText: Bool = true {
+            didSet {
+                guard drawsOnlyVisibleText != oldValue else { return }
+                setNeedsTextDisplay()
+            }
+        }
+
         public internal(set) var isInteractionInProgress = false
 
         public weak var delegate: LTXLabelDelegate?
@@ -91,6 +101,12 @@ import QuartzCore
             var editMenuInteractionStorage: UIInteraction?
             var isEditMenuVisible = false
             var editMenuTargetRect: CGRect = .zero
+        #endif
+
+        #if canImport(UIKit) && !os(watchOS)
+            weak var visibleRenderingScrollView: UIScrollView?
+            var visibleRenderingBoundsObservation: NSKeyValueObservation?
+            var visibleRenderingContentOffsetObservation: NSKeyValueObservation?
         #endif
 
         var interactionState = InteractionState()
@@ -151,6 +167,10 @@ import QuartzCore
         }
 
         deinit {
+            #if canImport(UIKit) && !os(watchOS)
+                visibleRenderingBoundsObservation?.invalidate()
+                visibleRenderingContentOffsetObservation?.invalidate()
+            #endif
             selectionLayer?.removeFromSuperlayer()
             if let activeHighlightRegion,
                let highlightLayer = activeHighlightRegion.associatedObject as? CALayer
@@ -164,6 +184,7 @@ import QuartzCore
             override public func didMoveToWindow() {
                 super.didMoveToWindow()
                 clearSelection()
+                updateVisibleRenderingObservation()
                 invalidateTextLayout()
             }
 
