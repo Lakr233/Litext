@@ -82,12 +82,9 @@ import Testing
 }
 
 @MainActor
-@Test func attachmentRunDelegateDoesNotRetainAfterAttributedStringDrops() throws {
+@Test func attachmentRunDelegateUsesRetainedMetricsAfterOriginalAttachmentDrops() throws {
     var attachment: LTXAttachment? = LTXAttachment()
-    weak var weakAttachment: LTXAttachment?
-
     attachment?.size = CGSize(width: 24, height: 16)
-    weakAttachment = attachment
 
     var string: NSMutableAttributedString? = NSMutableAttributedString(string: LTXReplacementText)
     var delegate: CTRunDelegate? = try #require(attachment?.runDelegate)
@@ -99,12 +96,13 @@ import Testing
     )
 
     attachment = nil
-    #expect(weakAttachment != nil)
+    var line: CTLine? = try CTLineCreateWithAttributedString(#require(string))
+    let width = try CTLineGetTypographicBounds(#require(line), nil, nil, nil)
+    #expect(width == 24)
 
+    line = nil
     string = nil
     delegate = nil
-
-    #expect(weakAttachment == nil)
 }
 
 @MainActor
