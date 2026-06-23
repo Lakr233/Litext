@@ -9,10 +9,6 @@
     import AppKit
 
     extension NSBezierPath {
-        func appendPath(_ path: NSBezierPath) {
-            append(path)
-        }
-
         var quartzPath: CGPath {
             if #available(macOS 14.0, *) {
                 return cgPath
@@ -43,10 +39,6 @@
             }
 
             return path
-        }
-
-        static func bezierPath(withRoundedRect rect: CGRect, cornerRadius: CGFloat) -> NSBezierPath {
-            NSBezierPath(roundedRect: rect, xRadius: cornerRadius, yRadius: cornerRadius)
         }
     }
 #endif

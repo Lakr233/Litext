@@ -19,6 +19,22 @@ struct ContentView: View {
 
                 sectionLabel("Mixed Rich Text")
                 LitextLabel(attributedString: mixedText())
+
+                sectionLabel("Linked Attachment")
+                LitextLabel(attributedString: linkedAttachmentText())
+                    .accessibilityIdentifier("fixture.attachment.linked")
+
+                sectionLabel("RTL / Bidi")
+                LitextLabel(attributedString: rtlBidiText())
+                    .accessibilityIdentifier("fixture.rtl")
+
+                sectionLabel("Line Drawing")
+                LitextLabel(attributedString: lineDrawingText())
+                    .accessibilityIdentifier("fixture.line-drawing")
+
+                sectionLabel("Empty")
+                LitextLabel(attributedString: NSAttributedString(string: ""))
+                    .accessibilityIdentifier("fixture.empty")
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 12)
@@ -111,6 +127,57 @@ extension ContentView {
         s.append(attr("colors", font: body14, color: pink))
         s.append(attr(", attachments, and more.", font: body14, color: .white))
         return s
+    }
+
+    func linkedAttachmentText() -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        result.append(attr("Tap-style linked view: ", font: body14, color: .white))
+
+        let attachment = LTXAttachment()
+        attachment.size = CGSize(width: 120, height: 28)
+        attachment.swiftUIView = AnyView(
+            Text("LINKED VIEW")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 120, height: 28)
+                .background(.blue)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        )
+
+        let attachmentString = NSMutableAttributedString(string: LTXReplacementText)
+        let attachmentRange = NSRange(location: 0, length: attachmentString.length)
+        attachmentString.addAttribute(.ltxAttachment, value: attachment, range: attachmentRange)
+        attachmentString.addAttribute(
+            kCTRunDelegateAttributeName as NSAttributedString.Key,
+            value: attachment.runDelegate,
+            range: attachmentRange
+        )
+        attachmentString.addAttribute(
+            .link,
+            value: URL(string: "https://example.com/watch-linked-attachment")!,
+            range: attachmentRange
+        )
+        result.append(attachmentString)
+        return result
+    }
+
+    func rtlBidiText() -> NSAttributedString {
+        attr("RTL / bidi: English שלום عربى 123 mixed.", font: body14, color: .white)
+    }
+
+    func lineDrawingText() -> NSAttributedString {
+        let action = LTXLineDrawingAction { context, line, origin in
+            var descent: CGFloat = 0
+            let width = CTLineGetTypographicBounds(line, nil, &descent, nil)
+            context.setStrokeColor(UIColor.green.cgColor)
+            context.setLineWidth(1)
+            context.move(to: CGPoint(x: origin.x, y: origin.y - descent - 2))
+            context.addLine(to: CGPoint(x: origin.x + width, y: origin.y - descent - 2))
+            context.strokePath()
+        }
+        let text = NSMutableAttributedString(attributedString: attr("Line callback underline.", font: body14, color: .white))
+        text.addAttribute(.ltxLineDrawingCallback, value: action, range: NSRange(location: 0, length: text.length))
+        return text
     }
 
     private func attr(

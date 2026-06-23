@@ -17,44 +17,7 @@ import SwiftUI
         private var isSelectable: Bool = false
         private var selectionBackgroundColor: UIColor?
         private var onTapLink: ((URL) -> Void)?
-
-        // MARK: - Initializers
-
-        /// Creates a label with a localized string key.
-        /// - Parameters:
-        ///   - key: The localized string key.
-        ///   - attributes: Text attributes to apply.
-        public init(
-            _ key: LocalizedStringKey,
-            attributes: [NSAttributedString.Key: Any] = [:]
-        ) {
-            content = .localizedKey(key, attributes: attributes)
-        }
-
-        /// Creates a label with a plain string.
-        /// - Parameters:
-        ///   - string: The string to display.
-        ///   - attributes: Text attributes to apply.
-        @_disfavoredOverload
-        public init(
-            _ string: String,
-            attributes: [NSAttributedString.Key: Any] = [:]
-        ) {
-            content = .string(string, attributes: attributes)
-        }
-
-        /// Creates a label with an NSAttributedString.
-        /// - Parameter attributedString: The attributed string to display.
-        public init(attributedString: NSAttributedString) {
-            content = .attributedString(attributedString)
-        }
-
-        /// Creates a label with an AttributedString.
-        /// - Parameter attributedString: The attributed string to display.
-        @available(iOS 15.0, macCatalyst 15.0, tvOS 15.0, visionOS 1.0, *)
-        public init(attributedString: AttributedString) {
-            content = .attributedString(NSAttributedString(attributedString))
-        }
+        private var onSelectionChange: ((String?) -> Void)?
 
         // MARK: - UIViewRepresentable
 
@@ -76,10 +39,11 @@ import SwiftUI
             uiView.isSelectable = isSelectable
             uiView.selectionBackgroundColor = selectionBackgroundColor
             context.coordinator.onTapLink = onTapLink
+            context.coordinator.onSelectionChange = onSelectionChange
         }
 
         public func makeCoordinator() -> Coordinator {
-            Coordinator(onTapLink: onTapLink)
+            Coordinator(onTapLink: onTapLink, onSelectionChange: onSelectionChange)
         }
 
         // MARK: - Modifiers
@@ -102,6 +66,15 @@ import SwiftUI
             return copy
         }
 
+        /// Sets a handler for selection changes.
+        /// - Parameter action: The action to perform when selected plain text changes.
+        /// - Returns: A modified label.
+        public func onSelectionChange(_ action: @escaping (String?) -> Void) -> LitextLabel {
+            var copy = self
+            copy.onSelectionChange = action
+            return copy
+        }
+
         /// Sets the selection background color.
         /// - Parameter color: The color to use for the selection background. Pass nil to use the default.
         /// - Returns: A modified label.
@@ -115,9 +88,11 @@ import SwiftUI
 
         public class Coordinator: NSObject, LTXLabelDelegate {
             var onTapLink: ((URL) -> Void)?
+            var onSelectionChange: ((String?) -> Void)?
 
-            init(onTapLink: ((URL) -> Void)?) {
+            init(onTapLink: ((URL) -> Void)?, onSelectionChange: ((String?) -> Void)?) {
                 self.onTapLink = onTapLink
+                self.onSelectionChange = onSelectionChange
             }
 
             public func ltxLabelDidTapOnHighlightContent(
@@ -139,7 +114,9 @@ import SwiftUI
                 }
             }
 
-            public func ltxLabelSelectionDidChange(_: LTXLabel, selection _: NSRange?) {}
+            public func ltxLabelSelectionDidChange(_ label: LTXLabel, selection _: NSRange?) {
+                onSelectionChange?(label.selectedPlainText())
+            }
 
             public func ltxLabelDetectedUserEventMovingAtLocation(_: LTXLabel, location _: CGPoint) {}
         }
@@ -153,44 +130,7 @@ import SwiftUI
         private var isSelectable: Bool = false
         private var selectionBackgroundColor: NSColor?
         private var onTapLink: ((URL) -> Void)?
-
-        // MARK: - Initializers
-
-        /// Creates a label with a localized string key.
-        /// - Parameters:
-        ///   - key: The localized string key.
-        ///   - attributes: Text attributes to apply.
-        public init(
-            _ key: LocalizedStringKey,
-            attributes: [NSAttributedString.Key: Any] = [:]
-        ) {
-            content = .localizedKey(key, attributes: attributes)
-        }
-
-        /// Creates a label with a plain string.
-        /// - Parameters:
-        ///   - string: The string to display.
-        ///   - attributes: Text attributes to apply.
-        @_disfavoredOverload
-        public init(
-            _ string: String,
-            attributes: [NSAttributedString.Key: Any] = [:]
-        ) {
-            content = .string(string, attributes: attributes)
-        }
-
-        /// Creates a label with an NSAttributedString.
-        /// - Parameter attributedString: The attributed string to display.
-        public init(attributedString: NSAttributedString) {
-            content = .attributedString(attributedString)
-        }
-
-        /// Creates a label with an AttributedString.
-        /// - Parameter attributedString: The attributed string to display.
-        @available(macOS 12.0, *)
-        public init(attributedString: AttributedString) {
-            content = .attributedString(NSAttributedString(attributedString))
-        }
+        private var onSelectionChange: ((String?) -> Void)?
 
         // MARK: - NSViewRepresentable
 
@@ -212,10 +152,11 @@ import SwiftUI
             nsView.isSelectable = isSelectable
             nsView.selectionBackgroundColor = selectionBackgroundColor
             context.coordinator.onTapLink = onTapLink
+            context.coordinator.onSelectionChange = onSelectionChange
         }
 
         public func makeCoordinator() -> Coordinator {
-            Coordinator(onTapLink: onTapLink)
+            Coordinator(onTapLink: onTapLink, onSelectionChange: onSelectionChange)
         }
 
         // MARK: - Modifiers
@@ -238,6 +179,15 @@ import SwiftUI
             return copy
         }
 
+        /// Sets a handler for selection changes.
+        /// - Parameter action: The action to perform when selected plain text changes.
+        /// - Returns: A modified label.
+        public func onSelectionChange(_ action: @escaping (String?) -> Void) -> LitextLabel {
+            var copy = self
+            copy.onSelectionChange = action
+            return copy
+        }
+
         /// Sets the selection background color.
         /// - Parameter color: The color to use for the selection background. Pass nil to use the default.
         /// - Returns: A modified label.
@@ -251,9 +201,11 @@ import SwiftUI
 
         public class Coordinator: NSObject, LTXLabelDelegate {
             var onTapLink: ((URL) -> Void)?
+            var onSelectionChange: ((String?) -> Void)?
 
-            init(onTapLink: ((URL) -> Void)?) {
+            init(onTapLink: ((URL) -> Void)?, onSelectionChange: ((String?) -> Void)?) {
                 self.onTapLink = onTapLink
+                self.onSelectionChange = onSelectionChange
             }
 
             public func ltxLabelDidTapOnHighlightContent(
@@ -271,7 +223,9 @@ import SwiftUI
                 }
             }
 
-            public func ltxLabelSelectionDidChange(_: LTXLabel, selection _: NSRange?) {}
+            public func ltxLabelSelectionDidChange(_ label: LTXLabel, selection _: NSRange?) {
+                onSelectionChange?(label.selectedPlainText())
+            }
 
             public func ltxLabelDetectedUserEventMovingAtLocation(_: LTXLabel, location _: CGPoint) {}
         }
@@ -288,29 +242,6 @@ import SwiftUI
     /// off-screen CGContext so the CoreText pipeline is identical to other platforms.
     public struct LitextLabel: View {
         private let content: Content
-
-        public init(
-            _ key: LocalizedStringKey,
-            attributes: [NSAttributedString.Key: Any] = [:]
-        ) {
-            content = .localizedKey(key, attributes: attributes)
-        }
-
-        @_disfavoredOverload
-        public init(
-            _ string: String,
-            attributes: [NSAttributedString.Key: Any] = [:]
-        ) {
-            content = .string(string, attributes: attributes)
-        }
-
-        public init(attributedString: NSAttributedString) {
-            content = .attributedString(attributedString)
-        }
-
-        public init(attributedString: AttributedString) {
-            content = .attributedString(NSAttributedString(attributedString))
-        }
 
         public var body: some View {
             _LTXWatchBody(content: content)
@@ -336,19 +267,23 @@ import SwiftUI
         private func makeAttachmentItems() -> [AttachmentItem] {
             layout.highlightRegions.compactMap { region -> AttachmentItem? in
                 guard
+                    region.kind == .attachment,
                     let attachment = region.attributes[LTXAttachmentAttributeName] as? LTXAttachment,
                     let swiftUIView = attachment.swiftUIView,
                     let ctRect = region.cgRects.first
                 else { return nil }
-                // CoreText origin is bottom-left; SwiftUI origin is top-left
-                let viewRect = CGRect(
-                    x: ctRect.origin.x,
-                    y: layoutSize.height - ctRect.origin.y - ctRect.height,
-                    width: ctRect.width,
-                    height: ctRect.height
-                )
+                let viewRect = ctRectToTopLeft(ctRect, in: layoutSize.height)
                 return AttachmentItem(id: region.stringRange.location, view: swiftUIView, viewRect: viewRect)
             }
+        }
+
+        private func ctRectToTopLeft(_ ctRect: CGRect, in height: CGFloat) -> CGRect {
+            CGRect(
+                x: ctRect.origin.x,
+                y: height - ctRect.origin.y - ctRect.height,
+                width: ctRect.width,
+                height: ctRect.height
+            )
         }
 
         var body: some View {
@@ -426,6 +361,72 @@ import SwiftUI
     }
 #endif
 
+// MARK: - Shared Initializers
+
+#if canImport(UIKit) || canImport(AppKit)
+    public extension LitextLabel {
+        /// Creates a label with a localized string key.
+        /// - Parameters:
+        ///   - key: The localized string key.
+        ///   - attributes: Text attributes to apply.
+        init(
+            _ key: LocalizedStringKey,
+            attributes: [NSAttributedString.Key: Any] = [:]
+        ) {
+            content = .localizedKey(key, attributes: attributes)
+        }
+
+        /// Creates a label with a plain string.
+        /// - Parameters:
+        ///   - string: The string to display.
+        ///   - attributes: Text attributes to apply.
+        @_disfavoredOverload
+        init(
+            _ string: String,
+            attributes: [NSAttributedString.Key: Any] = [:]
+        ) {
+            content = .string(string, attributes: attributes)
+        }
+
+        /// Creates a label with an NSAttributedString.
+        /// - Parameter attributedString: The attributed string to display.
+        init(attributedString: NSAttributedString) {
+            content = .attributedString(attributedString)
+        }
+    }
+#endif
+
+#if canImport(UIKit) && !os(watchOS)
+    public extension LitextLabel {
+        /// Creates a label with an AttributedString.
+        /// - Parameter attributedString: The attributed string to display.
+        @available(iOS 15.0, macCatalyst 15.0, tvOS 15.0, visionOS 1.0, *)
+        init(attributedString: AttributedString) {
+            content = .attributedString(NSAttributedString(attributedString))
+        }
+    }
+
+#elseif canImport(AppKit)
+    public extension LitextLabel {
+        /// Creates a label with an AttributedString.
+        /// - Parameter attributedString: The attributed string to display.
+        @available(macOS 12.0, *)
+        init(attributedString: AttributedString) {
+            content = .attributedString(NSAttributedString(attributedString))
+        }
+    }
+
+#elseif os(watchOS)
+    public extension LitextLabel {
+        /// Creates a label with an AttributedString.
+        /// - Parameter attributedString: The attributed string to display.
+        @available(watchOS 8.0, *)
+        init(attributedString: AttributedString) {
+            content = .attributedString(NSAttributedString(attributedString))
+        }
+    }
+#endif
+
 // MARK: - Content
 
 private enum Content {
@@ -489,6 +490,8 @@ private enum Content {
 // MARK: - LocalizedStringKey Resolution
 
 extension LocalizedStringKey {
+    /// Resolves plain localized keys only. Interpolation and locale-specific
+    /// formatting embedded in `LocalizedStringKey` are not preserved.
     func resolve(in environment: EnvironmentValues) -> String {
         let mirror = Mirror(reflecting: self)
         for child in mirror.children {
@@ -513,15 +516,3 @@ public extension View {
         environment(\.litextBundle, bundle)
     }
 }
-
-// MARK: - Platform Extensions
-
-#if canImport(UIKit)
-// UIKit uses UIColor which already has .label
-#elseif canImport(AppKit)
-    fileprivate extension NSColor {
-        static var label: NSColor {
-            .labelColor
-        }
-    }
-#endif

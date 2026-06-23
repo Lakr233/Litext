@@ -22,9 +22,10 @@ import Foundation
             var newAttachmentViews: Set<LTXPlatformView> = []
 
             for highlightRegion in highlightRegions {
-                guard let attachment = highlightRegion.attributes[LTXAttachmentAttributeName] as? LTXAttachment,
+                guard highlightRegion.kind == .attachment,
+                      let attachment = highlightRegion.attributes[LTXAttachmentAttributeName] as? LTXAttachment,
                       let view = attachment.view,
-                      let firstRect = highlightRegion.rects.first
+                      let firstRect = highlightRegion.cgRects.first
                 else { continue }
 
                 if view.superview == self {
@@ -34,12 +35,7 @@ import Foundation
                     newAttachmentViews.insert(view)
                 }
 
-                #if canImport(UIKit)
-                    let rect = firstRect.cgRectValue
-                #elseif canImport(AppKit)
-                    let rect = firstRect.rectValue
-                #endif
-                let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
+                let convertedRect = convertRectFromTextLayout(firstRect, insetForInteraction: false)
                 view.frame = convertedRect
             }
 

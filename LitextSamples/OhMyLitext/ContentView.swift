@@ -5,6 +5,7 @@
 //  Created by Litext Team.
 //
 
+import CoreText
 import Litext
 import SwiftUI
 
@@ -14,6 +15,8 @@ struct ContentView: View {
     #endif
 
     @State private var linkTapped: URL?
+    @State private var lastTappedURL = ""
+    @State private var lastSelectedText = ""
     @State private var showAlert = false
     @State private var showSettings = false
 
@@ -57,7 +60,9 @@ struct ContentView: View {
                         sectionBasicText
                         sectionStyledText
                         sectionLinks
+                        sectionAuditFixtures
                         sectionLongText
+                        observableState
                     }
                     .padding(64)
                 }
@@ -79,7 +84,9 @@ struct ContentView: View {
                         sectionStyledText
                         sectionLinks
                         sectionMixedContent
+                        sectionAuditFixtures
                         sectionLongText
+                        observableState
                     }
                     .padding()
                 }
@@ -209,8 +216,7 @@ struct ContentView: View {
                     .selectable(isSelectable)
                     .selectionBackgroundColor(currentSelectionColor)
                     .onTapLink { url in
-                        linkTapped = url
-                        showAlert = true
+                        recordLinkTap(url)
                     }
             }
         }
@@ -265,9 +271,64 @@ struct ContentView: View {
                 .selectable(isSelectable)
                 .selectionBackgroundColor(currentSelectionColor)
                 .onTapLink { url in
-                    linkTapped = url
-                    showAlert = true
+                    recordLinkTap(url)
                 }
+        }
+    }
+
+    var sectionAuditFixtures: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Audit Fixtures")
+
+            LitextLabel(attributedString: multiStyleLinkAttributedText())
+                .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
+                .onSelectionChange(recordSelection)
+                .onTapLink { url in
+                    recordLinkTap(url)
+                }
+                .accessibilityIdentifier("fixture.link.multistyle")
+
+            LitextLabel(attributedString: inlineAttachmentText(linked: false))
+                .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
+                .onSelectionChange(recordSelection)
+                .accessibilityIdentifier("fixture.attachment.inline")
+
+            LitextLabel(attributedString: inlineAttachmentText(linked: true))
+                .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
+                .onSelectionChange(recordSelection)
+                .onTapLink { url in
+                    recordLinkTap(url)
+                }
+                .accessibilityIdentifier("fixture.attachment.linked")
+
+            LitextLabel(attributedString: rtlBidiAttributedText())
+                .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
+                .onSelectionChange(recordSelection)
+                .accessibilityIdentifier("fixture.rtl")
+
+            LitextLabel(attributedString: lineDrawingAttributedText())
+                .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
+                .onSelectionChange(recordSelection)
+                .accessibilityIdentifier("fixture.line-drawing")
+
+            LitextLabel(attributedString: truncationAttributedText())
+                .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
+                .onSelectionChange(recordSelection)
+                .frame(maxWidth: 240, alignment: .leading)
+                .clipped()
+                .accessibilityIdentifier("fixture.truncation")
+
+            LitextLabel(attributedString: emptyAttributedText())
+                .selectable(isSelectable)
+                .selectionBackgroundColor(currentSelectionColor)
+                .onSelectionChange(recordSelection)
+                .accessibilityIdentifier("fixture.empty")
         }
     }
 
@@ -278,6 +339,7 @@ struct ContentView: View {
             LitextLabel(attributedString: longAttributedText())
                 .selectable(isSelectable)
                 .selectionBackgroundColor(currentSelectionColor)
+                .onSelectionChange(recordSelection)
         }
     }
 
@@ -285,6 +347,29 @@ struct ContentView: View {
         Text(title)
             .font(.headline)
             .foregroundStyle(.secondary)
+    }
+
+    var observableState: some View {
+        VStack {
+            Text(lastTappedURL.isEmpty ? "none" : lastTappedURL)
+                .accessibilityIdentifier("state.lastTappedURL")
+            Text(lastSelectedText.isEmpty ? "none" : lastSelectedText)
+                .accessibilityIdentifier("state.selectedText")
+        }
+        .font(.caption2)
+        .foregroundStyle(.clear)
+        .frame(width: 1, height: 1)
+        .accessibilityHidden(false)
+    }
+
+    func recordLinkTap(_ url: URL) {
+        linkTapped = url
+        lastTappedURL = url.absoluteString
+        showAlert = true
+    }
+
+    func recordSelection(_ text: String?) {
+        lastSelectedText = text ?? ""
     }
 }
 
@@ -546,6 +631,157 @@ extension ContentView {
                 .paragraphStyle: currentParagraphStyle,
             ]
         )
+    }
+
+    func multiStyleLinkAttributedText() -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        let url = URL(string: "https://example.com/multi-style")!
+
+        result.append(baseString("Tap the "))
+        result.append(NSAttributedString(
+            string: "multi-style ",
+            attributes: [
+                .font: currentBoldFont,
+                .foregroundColor: PlatformColor.systemBlue,
+                .link: url,
+                .paragraphStyle: currentParagraphStyle,
+            ]
+        ))
+        result.append(NSAttributedString(
+            string: "link",
+            attributes: [
+                .font: currentItalicFont,
+                .foregroundColor: PlatformColor.systemPurple,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .link: url,
+                .paragraphStyle: currentParagraphStyle,
+            ]
+        ))
+        result.append(baseString(" to verify one region spans styled runs."))
+        return result
+    }
+
+    func inlineAttachmentText(linked: Bool) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        result.append(baseString(linked ? "Linked attachment: " : "Inline attachment: "))
+
+        let attachment = LTXAttachment()
+        attachment.size = CGSize(width: linked ? 120 : 96, height: 28)
+        attachment.view = makeAttachmentView(title: linked ? "LINKED VIEW" : "INLINE VIEW")
+
+        let attachmentString = NSMutableAttributedString(string: LTXReplacementText)
+        let attachmentRange = NSRange(location: 0, length: attachmentString.length)
+        attachmentString.addAttribute(.ltxAttachment, value: attachment, range: attachmentRange)
+        attachmentString.addAttribute(
+            kCTRunDelegateAttributeName as NSAttributedString.Key,
+            value: attachment.runDelegate,
+            range: attachmentRange
+        )
+        if linked {
+            attachmentString.addAttributes(
+                [
+                    .link: URL(string: "https://example.com/linked-attachment")!,
+                    .foregroundColor: PlatformColor.link,
+                ],
+                range: attachmentRange
+            )
+        }
+
+        result.append(attachmentString)
+        result.append(baseString(linked ? " should show and open as a link." : " should align to the baseline."))
+        return result
+    }
+
+    func rtlBidiAttributedText() -> NSAttributedString {
+        NSAttributedString(
+            string: "RTL / bidi: English שלום عربى 123 mixed direction hit testing.",
+            attributes: [
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
+            ]
+        )
+    }
+
+    func lineDrawingAttributedText() -> NSAttributedString {
+        let action = LTXLineDrawingAction { context, line, origin in
+            var descent: CGFloat = 0
+            let width = CTLineGetTypographicBounds(line, nil, &descent, nil)
+            context.setStrokeColor(PlatformColor.systemGreen.cgColor)
+            context.setLineWidth(1)
+            context.move(to: CGPoint(x: origin.x, y: origin.y - descent - 2))
+            context.addLine(to: CGPoint(x: origin.x + width, y: origin.y - descent - 2))
+            context.strokePath()
+        }
+
+        return NSAttributedString(
+            string: "Line drawing callback underlines this CoreText line.",
+            attributes: [
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .ltxLineDrawingCallback: action,
+                .paragraphStyle: currentParagraphStyle,
+            ]
+        )
+    }
+
+    func truncationAttributedText() -> NSAttributedString {
+        NSAttributedString(
+            string: "This intentionally long single-line fixture is clipped by its SwiftUI frame to catch layout regressions.",
+            attributes: [
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
+            ]
+        )
+    }
+
+    func emptyAttributedText() -> NSAttributedString {
+        NSAttributedString(string: "", attributes: [
+            .font: currentFont,
+            .foregroundColor: currentTextColor,
+        ])
+    }
+
+    private func baseString(_ string: String) -> NSAttributedString {
+        NSAttributedString(
+            string: string,
+            attributes: [
+                .font: currentFont,
+                .foregroundColor: currentTextColor,
+                .paragraphStyle: currentParagraphStyle,
+            ]
+        )
+    }
+
+    private func makeAttachmentView(title: String) -> LTXPlatformView {
+        #if canImport(UIKit)
+            let label = UILabel()
+            label.text = title
+            label.textAlignment = .center
+            label.font = .boldSystemFont(ofSize: 11)
+            label.textColor = .white
+            label.backgroundColor = .systemBlue
+            label.layer.cornerRadius = 6
+            label.clipsToBounds = true
+            label.isAccessibilityElement = true
+            label.accessibilityIdentifier = title == "LINKED VIEW"
+                ? "fixture.attachment.linked.view"
+                : "fixture.attachment.inline.view"
+            return label
+        #elseif canImport(AppKit)
+            let label = NSTextField(labelWithString: title)
+            label.alignment = .center
+            label.font = .boldSystemFont(ofSize: 11)
+            label.textColor = .white
+            label.wantsLayer = true
+            label.layer?.backgroundColor = NSColor.systemBlue.cgColor
+            label.layer?.cornerRadius = 6
+            label.setAccessibilityIdentifier(title == "LINKED VIEW"
+                ? "fixture.attachment.linked.view"
+                : "fixture.attachment.inline.view")
+            return label
+        #endif
     }
 }
 

@@ -12,6 +12,8 @@ import Foundation
 
 @MainActor
 open class LTXAttachment {
+    static let descentFraction: CGFloat = 0.1
+
     open var size: CGSize
 
     #if !os(watchOS)
@@ -21,8 +23,6 @@ open class LTXAttachment {
         /// The SwiftUI view to embed as an inline attachment (watchOS).
         open var swiftUIView: AnyView?
     #endif
-
-    private var _runDelegate: CTRunDelegate?
 
     public init() {
         size = .zero
@@ -38,30 +38,30 @@ open class LTXAttachment {
     }
 
     open var runDelegate: CTRunDelegate {
-        if _runDelegate == nil {
-            var callbacks = CTRunDelegateCallbacks(
-                version: kCTRunDelegateVersion1,
-                dealloc: { refCon in
-                    Unmanaged<LTXAttachment>.fromOpaque(refCon).release()
-                },
-                getAscent: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.height * 0.9
-                },
-                getDescent: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.height * 0.1
-                },
-                getWidth: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.width
-                }
-            )
+        var callbacks = CTRunDelegateCallbacks(
+            version: kCTRunDelegateVersion1,
+            dealloc: { refCon in
+                Unmanaged<LTXAttachment>.fromOpaque(refCon).release()
+            },
+            getAscent: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                return attachment.size.height * (1 - LTXAttachment.descentFraction)
+            },
+            getDescent: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                return attachment.size.height * LTXAttachment.descentFraction
+            },
+            getWidth: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                return attachment.size.width
+            }
+        )
 
-            let unmanagedSelf = Unmanaged.passRetained(self)
-            _runDelegate = CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque())
+        let unmanagedSelf = Unmanaged.passRetained(self)
+        guard let delegate = CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque()) else {
+            unmanagedSelf.release()
+            fatalError("Unable to create CTRunDelegate for LTXAttachment")
         }
-
-        return _runDelegate!
+        return delegate
     }
 }

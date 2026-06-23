@@ -25,7 +25,7 @@ import Foundation
 
         weak var delegate: LTXSelectionHandleDelegate?
 
-        private(set) var handleColor: UIColor = .systemBlue {
+        private(set) var handleColor: UIColor = LTXDefaultSelectionHandleTint {
             didSet {
                 knobView.backgroundColor = handleColor
                 stickView.backgroundColor = handleColor
@@ -50,7 +50,7 @@ import Foundation
         }()
 
         func updateHandleColor(_ color: UIColor?) {
-            handleColor = color ?? .systemBlue
+            handleColor = color ?? LTXDefaultSelectionHandleTint
         }
 
         public init(type: HandleType) {

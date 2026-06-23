@@ -25,6 +25,13 @@ let package = Package(
                 .swiftLanguageMode(.v6),
             ]
         ),
+        .testTarget(
+            name: "LitextTests",
+            dependencies: ["Litext"],
+            swiftSettings: [
+                .swiftLanguageMode(.v6),
+            ]
+        ),
     ],
     swiftLanguageModes: [.v6]
 )

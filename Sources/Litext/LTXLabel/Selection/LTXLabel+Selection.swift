@@ -64,21 +64,13 @@ import QuartzCore
             }.contains { $0.contains(location) }
         }
 
-        func selectedAttributedText() -> NSAttributedString? {
-            guard let range = selectionRange,
-                  range.location != NSNotFound,
-                  range.length > 0,
-                  textLayout.attributedString.length > 0,
-                  range.location < textLayout.attributedString.length
-            else {
+        public func selectedAttributedText() -> NSAttributedString? {
+            guard let safeRange = NSRange.sanitized(
+                selectionRange,
+                within: textLayout.attributedString.length
+            ) else {
                 return nil
             }
-            let maxLen = textLayout.attributedString.length - range.location
-
-            let safeRange = NSRange(
-                location: range.location,
-                length: min(range.length, maxLen)
-            )
 
             let selectedText = textLayout
                 .attributedString
@@ -101,9 +93,9 @@ import QuartzCore
             return mutableResult
         }
 
-        func selectedPlainText() -> String? {
+        public func selectedPlainText() -> String? {
             selectedAttributedText()?.string
         }
     }
 
-#endif // \!os(watchOS)
+#endif // !os(watchOS)

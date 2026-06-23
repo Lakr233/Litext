@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import QuartzCore
 
 #if !os(watchOS)
 
@@ -15,6 +16,26 @@ import Foundation
             result.origin.y = bounds.height - result.origin.y - result.size.height
             if useInset { result = result.insetBy(dx: -4, dy: -4) }
             return result
+        }
+
+        var ltxBackingLayer: CALayer? {
+            #if canImport(UIKit)
+                return layer
+            #elseif canImport(AppKit)
+                wantsLayer = true
+                return layer
+            #endif
+        }
+
+        func cgPath(from path: LTXPlatformBezierPath) -> CGPath {
+            #if canImport(UIKit)
+                return path.cgPath
+            #elseif canImport(AppKit)
+                if #available(macOS 14.0, *) {
+                    return path.cgPath
+                }
+                return path.quartzPath
+            #endif
         }
     }
 
