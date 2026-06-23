@@ -99,7 +99,17 @@ jobs:
           LITEXT_SCREENSHOT_DIR: ${{ github.workspace }}/Artworks/RenderingAudit
         run: |
           set -o pipefail
-          IOS_SIMULATOR_ID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          IOS_SIMULATOR_ID=$(xcodebuild -scheme OhMyLitext -workspace Litext.xcworkspace -showdestinations 2>/dev/null \
+            | awk -F '[{},]' '/platform:iOS Simulator/ && /name:iPhone/ {
+                for (field = 1; field <= NF; field++) {
+                  gsub(/^ +| +$/, "", $field)
+                  if ($field ~ /^id:/) {
+                    sub(/^id:/, "", $field)
+                    print $field
+                    exit
+                  }
+                }
+              }')
           if [ -z "$IOS_SIMULATOR_ID" ]; then
             echo "No available iPhone simulator found"
             exit 1

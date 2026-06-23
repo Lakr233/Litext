@@ -10,17 +10,21 @@ import QuartzCore
 
 #if !os(watchOS)
 
+    private let visibleTextDrawingOverscan: CGFloat = 96
+
     extension LTXLabel {
         func visibleTextDrawingRect(for dirtyRect: CGRect) -> CGRect? {
             let labelBounds = bounds.standardized
             guard !labelBounds.isEmpty else { return nil }
 
             let dirtyBounds = dirtyRect.isEmpty ? labelBounds : dirtyRect.standardized
-            var visibleRect = dirtyBounds.intersection(labelBounds)
-            guard !visibleRect.isNull, !visibleRect.isEmpty else { return nil }
+            guard drawsOnlyVisibleText else {
+                let dirtyVisibleRect = dirtyBounds.intersection(labelBounds)
+                guard !dirtyVisibleRect.isNull, !dirtyVisibleRect.isEmpty else { return nil }
+                return dirtyVisibleRect
+            }
 
-            guard drawsOnlyVisibleText else { return visibleRect }
-
+            var visibleRect = labelBounds
             #if canImport(UIKit)
                 guard let window else { return visibleRect }
                 guard !isHidden, alpha > 0.01 else { return nil }
@@ -45,7 +49,10 @@ import QuartzCore
             #endif
 
             guard !visibleRect.isNull, !visibleRect.isEmpty else { return nil }
-            return visibleRect
+            return visibleRect.insetBy(
+                dx: -1,
+                dy: -visibleTextDrawingOverscan
+            ).intersection(labelBounds)
         }
 
         #if canImport(UIKit) && !os(watchOS)
@@ -92,6 +99,49 @@ import QuartzCore
         #endif
 
         #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+            func updateVisibleRenderingObservation() {
+                guard drawsOnlyVisibleText else {
+                    visibleRenderingClipView = nil
+                    if let visibleRenderingBoundsObserver {
+                        NotificationCenter.default.removeObserver(visibleRenderingBoundsObserver)
+                    }
+                    visibleRenderingBoundsObserver = nil
+                    return
+                }
+
+                let clipView = nearestClipViewAncestor()
+                guard clipView !== visibleRenderingClipView else { return }
+
+                if let visibleRenderingBoundsObserver {
+                    NotificationCenter.default.removeObserver(visibleRenderingBoundsObserver)
+                }
+                visibleRenderingClipView = clipView
+                visibleRenderingBoundsObserver = nil
+
+                guard let clipView else { return }
+                clipView.postsBoundsChangedNotifications = true
+                visibleRenderingBoundsObserver = NotificationCenter.default.addObserver(
+                    forName: NSView.boundsDidChangeNotification,
+                    object: clipView,
+                    queue: .main
+                ) { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        self?.setNeedsTextDisplay()
+                    }
+                }
+            }
+
+            private func nearestClipViewAncestor() -> NSClipView? {
+                var ancestor = superview
+                while let view = ancestor {
+                    if let clipView = view as? NSClipView {
+                        return clipView
+                    }
+                    ancestor = view.superview
+                }
+                return enclosingScrollView?.contentView
+            }
+
             private var visibleRectInOwnCoordinates: CGRect {
                 visibleRect.intersection(bounds)
             }
