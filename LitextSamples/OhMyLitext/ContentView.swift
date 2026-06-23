@@ -707,11 +707,12 @@ extension ContentView {
     func lineDrawingAttributedText() -> NSAttributedString {
         let action = LTXLineDrawingAction { context, line, origin in
             var descent: CGFloat = 0
-            let width = CTLineGetTypographicBounds(line, nil, &descent, nil)
+            let width = CGFloat(CTLineGetTypographicBounds(line, nil, &descent, nil))
+            let underlineY = origin.y - descent - CGFloat(2)
             context.setStrokeColor(PlatformColor.systemGreen.cgColor)
             context.setLineWidth(1)
-            context.move(to: CGPoint(x: origin.x, y: origin.y - descent - 2))
-            context.addLine(to: CGPoint(x: origin.x + width, y: origin.y - descent - 2))
+            context.move(to: CGPoint(x: origin.x, y: underlineY))
+            context.addLine(to: CGPoint(x: origin.x + width, y: underlineY))
             context.strokePath()
         }
 

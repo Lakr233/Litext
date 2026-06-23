@@ -121,22 +121,25 @@ final class LitextSampleUnitTests: XCTestCase {
     }
 
     @MainActor
-    func testAttachmentRunDelegateDoesNotRetainAfterAttributedStringDrops() {
+    func testAttachmentRunDelegateDoesNotRetainAfterAttributedStringDrops() throws {
+        var attachment: LTXAttachment? = LTXAttachment()
         weak var weakAttachment: LTXAttachment?
 
-        do {
-            let attachment = LTXAttachment()
-            attachment.size = CGSize(width: 24, height: 16)
-            weakAttachment = attachment
+        attachment?.size = CGSize(width: 24, height: 16)
+        weakAttachment = attachment
 
-            let string = NSMutableAttributedString(string: LTXReplacementText)
-            string.addAttribute(
-                kCTRunDelegateAttributeName as NSAttributedString.Key,
-                value: attachment.runDelegate,
-                range: NSRange(location: 0, length: string.length)
-            )
-            _ = string
-        }
+        var string: NSMutableAttributedString? = NSMutableAttributedString(string: LTXReplacementText)
+        let range = NSRange(location: 0, length: string?.length ?? 0)
+        try string?.addAttribute(
+            kCTRunDelegateAttributeName as NSAttributedString.Key,
+            value: XCTUnwrap(attachment?.runDelegate),
+            range: range
+        )
+
+        attachment = nil
+        XCTAssertNotNil(weakAttachment)
+
+        string = nil
 
         XCTAssertNil(weakAttachment)
     }
