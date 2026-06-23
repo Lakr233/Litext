@@ -29,4 +29,22 @@ import Foundation
         )
     }
 
+    public extension LTXLabelDelegate {
+        func ltxLabelDidTapOnHighlightContent(
+            _: LTXLabel,
+            region _: LTXHighlightRegion?,
+            location _: CGPoint
+        ) {}
+
+        func ltxLabelSelectionDidChange(
+            _: LTXLabel,
+            selection _: NSRange?
+        ) {}
+
+        func ltxLabelDetectedUserEventMovingAtLocation(
+            _: LTXLabel,
+            location _: CGPoint
+        ) {}
+    }
+
 #endif // !os(watchOS)

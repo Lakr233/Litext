@@ -81,6 +81,7 @@ import QuartzCore
             textLayout.highlightRegions
         }
 
+        nonisolated(unsafe) var pendingHighlightRemovalLayers: [CALayer] = []
         var activeHighlightRegion: LTXHighlightRegion?
         var lastContainerSize: CGSize = .zero
 
@@ -189,15 +190,23 @@ import QuartzCore
                 }
             #endif
             selectionLayer?.removeFromSuperlayer()
+            pendingHighlightRemovalLayers.forEach { $0.removeFromSuperlayer() }
             if let activeHighlightRegion,
                let highlightLayer = activeHighlightRegion.associatedObject as? CALayer
             {
                 highlightLayer.removeFromSuperlayer()
             }
             NotificationCenter.default.removeObserver(self)
+            NSObject.cancelPreviousPerformRequests(withTarget: self)
         }
 
         #if canImport(UIKit)
+            override public func didMoveToSuperview() {
+                super.didMoveToSuperview()
+                updateVisibleRenderingObservation()
+                setNeedsTextDisplay()
+            }
+
             override public func didMoveToWindow() {
                 super.didMoveToWindow()
                 clearSelection()
@@ -232,12 +241,12 @@ import QuartzCore
             var initialTouchLocation: CGPoint = .zero
             var clickCount: Int = 1
             var lastClickTime: TimeInterval = 0
+            /// AppKit uses this to clear a pre-existing selection on the first drag event.
             var isFirstMove: Bool = false
         }
 
         struct Flags {
             var layoutIsDirty: Bool = false
-            var needsUpdateHighlightRegions: Bool = false
         }
     }
 

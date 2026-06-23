@@ -97,15 +97,9 @@ import QuartzCore
                 invalidateIntrinsicContentSize()
                 lastContainerSize = containerSize
                 textLayout.containerSize = containerSize
-                flags.needsUpdateHighlightRegions = true
-                flags.layoutIsDirty = false
-                layoutUpdateWasMade = true
-            }
-
-            if flags.needsUpdateHighlightRegions {
                 textLayout.updateHighlightRegions()
                 updateAttachmentViews()
-                flags.needsUpdateHighlightRegions = false
+                flags.layoutIsDirty = false
                 layoutUpdateWasMade = true
             }
 

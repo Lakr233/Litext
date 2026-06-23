@@ -31,6 +31,16 @@ import QuartzCore
             return nil
         }
 
+        func highlightRegionForTap(at point: CGPoint) -> LTXHighlightRegion? {
+            if let attachmentRegion = highlightRegions.first(where: {
+                $0.kind == .attachment && isHighlightRegion($0, containsPoint: point)
+            }) {
+                return attachmentRegion
+            }
+
+            return highlightRegions.first { isHighlightRegion($0, containsPoint: point) }
+        }
+
         func isHighlightRegion(_ highlightRegion: LTXHighlightRegion, containsPoint point: CGPoint) -> Bool {
             for rect in highlightRegion.cgRects {
                 let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
@@ -43,6 +53,7 @@ import QuartzCore
 
         func addActiveHighlightRegion(_ highlightRegion: LTXHighlightRegion) {
             removeActiveHighlightRegion()
+            removePendingHighlightLayers()
 
             activeHighlightRegion = highlightRegion
 
@@ -77,14 +88,22 @@ import QuartzCore
             guard let activeHighlightRegion else { return }
 
             if let highlightLayer = activeHighlightRegion.associatedObject as? CALayer {
+                pendingHighlightRemovalLayers.append(highlightLayer)
                 highlightLayer.opacity = 0
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self, weak highlightLayer] in
+                    guard let highlightLayer else { return }
                     highlightLayer.removeFromSuperlayer()
+                    self?.pendingHighlightRemovalLayers.removeAll { $0 === highlightLayer }
                 }
             }
 
             activeHighlightRegion.associatedObject = nil
             self.activeHighlightRegion = nil
+        }
+
+        private func removePendingHighlightLayers() {
+            pendingHighlightRemovalLayers.forEach { $0.removeFromSuperlayer() }
+            pendingHighlightRemovalLayers.removeAll()
         }
     }
 

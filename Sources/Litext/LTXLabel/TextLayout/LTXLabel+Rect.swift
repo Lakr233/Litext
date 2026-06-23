@@ -72,17 +72,13 @@ import QuartzCore
                     \.bounds,
                     options: [.new]
                 ) { [weak self] _, _ in
-                    Task { @MainActor [weak self] in
-                        self?.setNeedsTextDisplay()
-                    }
+                    self?.setNeedsTextDisplayFromVisibleRenderingObservation()
                 }
                 visibleRenderingContentOffsetObservation = scrollView?.observe(
                     \.contentOffset,
                     options: [.new]
                 ) { [weak self] _, _ in
-                    Task { @MainActor [weak self] in
-                        self?.setNeedsTextDisplay()
-                    }
+                    self?.setNeedsTextDisplayFromVisibleRenderingObservation()
                 }
             }
 
@@ -125,9 +121,7 @@ import QuartzCore
                     object: clipView,
                     queue: .main
                 ) { [weak self] _ in
-                    Task { @MainActor [weak self] in
-                        self?.setNeedsTextDisplay()
-                    }
+                    self?.setNeedsTextDisplayFromVisibleRenderingObservation()
                 }
             }
 
@@ -152,6 +146,19 @@ import QuartzCore
             result.origin.y = bounds.height - result.origin.y - result.size.height
             if useInset { result = result.insetBy(dx: -4, dy: -4) }
             return result
+        }
+
+        nonisolated func setNeedsTextDisplayFromVisibleRenderingObservation() {
+            guard Thread.isMainThread else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.setNeedsTextDisplayFromVisibleRenderingObservation()
+                }
+                return
+            }
+
+            MainActor.assumeIsolated {
+                setNeedsTextDisplay()
+            }
         }
 
         var ltxBackingLayer: CALayer? {

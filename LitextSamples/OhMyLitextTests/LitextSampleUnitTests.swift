@@ -5,6 +5,7 @@
 
 import CoreText
 @testable import Litext
+import QuartzCore
 import XCTest
 
 #if canImport(AppKit) && !targetEnvironment(macCatalyst)
@@ -34,6 +35,16 @@ final class LitextSampleUnitTests: XCTestCase {
             label.selectionRange = NSRange(location: 0, length: 0)
             XCTAssertNil(label.selectionRange)
         #endif
+    }
+
+    @MainActor
+    func testClearSelectionRemovesStaleSelectionLayerEvenWhenRangeIsNil() {
+        let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+        label.selectionLayer = CAShapeLayer()
+
+        label.clearSelection()
+
+        XCTAssertNil(label.selectionLayer)
     }
 
     @MainActor
@@ -68,6 +79,51 @@ final class LitextSampleUnitTests: XCTestCase {
             XCTAssertTrue(scrollView.contentView.postsBoundsChangedNotifications)
         }
     #endif
+
+    @MainActor
+    func testHighlightRegionForTapPrioritizesLinkedAttachments() throws {
+        let url = try XCTUnwrap(URL(string: "https://example.com/attachment"))
+        let text = NSMutableAttributedString(string: "Start ")
+        text.append(NSAttributedString(
+            string: "link",
+            attributes: [
+                .font: PlatformFont.systemFont(ofSize: 16),
+                .link: url,
+            ]
+        ))
+        text.append(NSAttributedString(string: " "))
+
+        let attachment = LTXAttachment()
+        attachment.size = CGSize(width: 30, height: 20)
+        let attachmentString = NSMutableAttributedString(string: LTXReplacementText)
+        let attachmentRange = NSRange(location: 0, length: attachmentString.length)
+        attachmentString.addAttributes(
+            [
+                .font: PlatformFont.systemFont(ofSize: 16),
+                .ltxAttachment: attachment,
+                .link: url,
+                kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate,
+            ],
+            range: attachmentRange
+        )
+        text.append(attachmentString)
+
+        let label = LTXLabel(attributedText: text)
+        label.frame = CGRect(x: 0, y: 0, width: 180, height: 40)
+        let layout = LTXTextLayout(attributedString: text)
+        layout.containerSize = label.bounds.size
+        layout.updateHighlightRegions()
+        label.textLayout = layout
+
+        let attachmentRegion = try XCTUnwrap(label.highlightRegions.first { $0.kind == .attachment })
+        let rect = try XCTUnwrap(attachmentRegion.cgRects.first)
+        let tapRect = label.convertRectFromTextLayout(rect, insetForInteraction: true)
+        let tapPoint = CGPoint(x: tapRect.midX, y: tapRect.midY)
+
+        XCTAssertEqual(label.highlightRegionAtPoint(tapPoint)?.kind, .link)
+        let tappedRegion = try XCTUnwrap(label.highlightRegionForTap(at: tapPoint))
+        XCTAssertEqual(ObjectIdentifier(tappedRegion), ObjectIdentifier(attachmentRegion))
+    }
 
     @MainActor
     func testNativeHitTestingReturnsIndicesForBidiOverflowPoints() throws {
@@ -161,6 +217,9 @@ final class LitextSampleUnitTests: XCTestCase {
     func testAttachmentRunDelegateUsesRetainedMetricsAfterOriginalAttachmentDrops() throws {
         var attachment: LTXAttachment? = LTXAttachment()
         attachment?.size = CGSize(width: 24, height: 16)
+        let cachedDelegate = try XCTUnwrap(attachment?.runDelegate) as AnyObject
+        let repeatedDelegate = try XCTUnwrap(attachment?.runDelegate) as AnyObject
+        XCTAssertEqual(ObjectIdentifier(cachedDelegate), ObjectIdentifier(repeatedDelegate))
 
         var string: NSMutableAttributedString? = NSMutableAttributedString(string: LTXReplacementText)
         var delegate: CTRunDelegate? = try XCTUnwrap(attachment?.runDelegate)

@@ -21,8 +21,8 @@
                     .compactMap { item -> UIAction? in
                         guard let selector = item.action else { return nil }
                         guard self.canPerformAction(selector, withSender: nil) else { return nil }
-                        return UIAction(title: item.title, image: item.image) { _ in
-                            self.perform(selector)
+                        return UIAction(title: item.title, image: item.image) { [weak self] _ in
+                            self?.perform(selector)
                         }
                     }
                 return .init(
