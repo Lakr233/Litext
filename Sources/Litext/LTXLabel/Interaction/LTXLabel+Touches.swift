@@ -23,7 +23,7 @@
                 // Use keyCode instead of charactersIgnoringModifiers for keyboard layout independence
                 if key.keyCode == .keyboardC, key.modifierFlags.contains(.command) {
                     let copiedText = copySelectedText()
-                    didHandleEvent = copiedText.length > 0
+                    didHandleEvent = copiedText.length > 0 || copyFromSubviewsRecursively()
                 }
                 if key.keyCode == .keyboardA, key.modifierFlags.contains(.command) {
                     selectAllText()
@@ -40,6 +40,7 @@
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 for handler in [selectionHandleStart, selectionHandleEnd] {
+                    guard !handler.isHidden else { continue }
                     let rect = handler.frame
                         .insetBy(
                             dx: -LTXSelectionHandle.knobExtraResponsiveArea,
@@ -102,16 +103,16 @@
                 if let index = nearestTextIndexAtPoint(location) {
                     selectWordAtIndex(index)
                     // prevent touches did end discard the changes
-                    DispatchQueue.main.asyncAfter(deadline: .now()) {
-                        self.selectWordAtIndex(index)
+                    DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
+                        self?.selectWordAtIndex(index)
                     }
                 }
             } else {
                 if let index = nearestTextIndexAtPoint(location) {
                     selectLineAtIndex(index)
                     // prevent touches did end discard the changes
-                    DispatchQueue.main.asyncAfter(deadline: .now()) {
-                        self.selectLineAtIndex(index)
+                    DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
+                        self?.selectLineAtIndex(index)
                     }
                 }
             }
@@ -165,14 +166,8 @@
             }
 
             guard selectionRange == nil, !isTouchReallyMoved(location) else { return }
-            outer: for region in highlightRegions {
-                let rects = region.cgRects.map {
-                    convertRectFromTextLayout($0, insetForInteraction: true)
-                }
-                for rect in rects where rect.contains(location) {
-                    self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
-                    break outer
-                }
+            if let region = highlightRegionForTap(at: location) {
+                delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
             }
         }
 
@@ -182,6 +177,12 @@
                 super.touchesCancelled(touches, with: event)
                 return
             }
+            NSObject.cancelPreviousPerformRequests(
+                withTarget: self,
+                selector: #selector(performContinuousStateReset),
+                object: nil
+            )
+            performContinuousStateReset()
             deactivateHighlightRegion()
         }
 
@@ -297,26 +298,6 @@
                 }
                 if action == #selector(shareMenuItemTapped) {
                     return (selectedPlainText() ?? "").isEmpty == false
-                }
-                return false
-            }
-
-            private func copyFromSubviewsRecursively() -> Bool {
-                copyFromSubviewsRecursively(in: self)
-            }
-
-            private func copyFromSubviewsRecursively(in view: UIView) -> Bool {
-                for subview in view.subviews {
-                    if let ltxLabel = subview as? LTXLabel {
-                        let copiedText = ltxLabel.copySelectedText()
-                        if copiedText.length > 0 {
-                            return true
-                        }
-                    } else {
-                        if copyFromSubviewsRecursively(in: subview) {
-                            return true
-                        }
-                    }
                 }
                 return false
             }

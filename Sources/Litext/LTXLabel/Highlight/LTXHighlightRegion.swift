@@ -8,7 +8,7 @@ import Foundation
 
 @MainActor
 public class LTXHighlightRegion {
-    enum Kind {
+    public enum Kind {
         case link
         case attachment
     }
@@ -21,7 +21,7 @@ public class LTXHighlightRegion {
 
     public private(set) var attributes: [NSAttributedString.Key: Any]
     public private(set) var stringRange: NSRange
-    let kind: Kind
+    public let kind: Kind
 
     nonisolated(unsafe) var associatedObject: AnyObject?
 

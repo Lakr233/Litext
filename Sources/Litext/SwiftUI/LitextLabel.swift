@@ -466,7 +466,7 @@ private enum Content {
         #endif
     }
 
-    #if canImport(UIKit) && !os(watchOS) || canImport(AppKit)
+    #if (canImport(UIKit) && !os(watchOS)) || canImport(AppKit)
         private static func mergeWithDefaults(
             _ attributes: [NSAttributedString.Key: Any]
         ) -> [NSAttributedString.Key: Any] {

@@ -15,6 +15,7 @@ open class LTXAttachment {
     static let descentFraction: CGFloat = 0.1
 
     open var size: CGSize
+    private var cachedRunDelegate: CTRunDelegate?
 
     #if !os(watchOS)
         /// The platform view to embed as an inline attachment (iOS/macOS/tvOS/visionOS).
@@ -37,7 +38,15 @@ open class LTXAttachment {
         return NSAttributedString(string: " ")
     }
 
+    /// A CoreText run delegate that retains this attachment for as long as CoreText needs metrics.
+    ///
+    /// The delegate is cached so repeated reads do not allocate additional delegates or retain
+    /// the attachment more than once.
     open var runDelegate: CTRunDelegate {
+        if let cachedRunDelegate {
+            return cachedRunDelegate
+        }
+
         var callbacks = CTRunDelegateCallbacks(
             version: kCTRunDelegateVersion1,
             dealloc: { refCon in
@@ -62,6 +71,7 @@ open class LTXAttachment {
             unmanagedSelf.release()
             fatalError("Unable to create CTRunDelegate for LTXAttachment")
         }
+        cachedRunDelegate = delegate
         return delegate
     }
 }

@@ -39,6 +39,7 @@ public class LTXTextLayout: NSObject {
     private var ctFrame: CTFrame?
 
     private var framesetter: CTFramesetter
+    private var hasLineDrawingActions = false
     private var lines: [CTLine]?
     private var lineOrigins: [CGPoint]?
     private var _highlightRegions: [RegionKey: LTXHighlightRegion]
@@ -55,6 +56,10 @@ public class LTXTextLayout: NSObject {
         super.init()
     }
 
+    /// Regenerates CoreText lines for the current `containerSize`.
+    ///
+    /// `containerSize` already triggers layout regeneration when assigned. Call this only after
+    /// external state referenced by run delegates or custom drawing callbacks changes.
     public func invalidateLayout() {
         generateLayout()
     }
@@ -123,14 +128,10 @@ public class LTXTextLayout: NSObject {
     }
 
     private func processLineDrawingActions(in context: CGContext, visibleTextRect: CGRect?) {
+        guard hasLineDrawingActions else { return }
+
         let block: (CTLine, Int, CGPoint) -> Void = { line, _, lineOrigin in
-            let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
-
-            for i in 0 ..< glyphRuns.count {
-                guard let glyphRun = glyphRuns[i] as! CTRun?
-                else { continue }
-
-                let attributes = CTRunGetAttributes(glyphRun) as! [NSAttributedString.Key: Any]
+            self.enumerateRuns(in: line) { _, attributes in
                 if let action = attributes[LTXLineDrawingCallbackName] as? LTXLineDrawingAction {
                     context.saveGState()
                     action.action(context, line, lineOrigin)
@@ -258,6 +259,7 @@ public class LTXTextLayout: NSObject {
     private func generateLayout() {
         lines = nil
         lineOrigins = nil
+        hasLineDrawingActions = attributedStringHasLineDrawingActions()
 
         let containerBounds = CGRect(
             origin: .zero,
@@ -287,17 +289,8 @@ public class LTXTextLayout: NSObject {
 
     private func extractHighlightRegions() {
         enumerateLines { line, _, lineOrigin in
-            let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
-
-            for i in 0 ..< glyphRuns.count {
-                guard let glyphRun = glyphRuns[i] as! CTRun? else { continue }
-
-                let attributes = CTRunGetAttributes(
-                    glyphRun
-                ) as! [NSAttributedString.Key: Any]
-                if !_hasHighlightAttributes(attributes) {
-                    continue
-                }
+            enumerateRuns(in: line) { glyphRun, attributes in
+                guard _hasHighlightAttributes(attributes) else { return }
 
                 processHighlightRegionForRun(
                     glyphRun,
@@ -306,6 +299,36 @@ public class LTXTextLayout: NSObject {
                 )
             }
         }
+    }
+
+    private func enumerateRuns(
+        in line: CTLine,
+        using block: (CTRun, [NSAttributedString.Key: Any]) -> Void
+    ) {
+        let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
+
+        for index in 0 ..< glyphRuns.count {
+            let glyphRun = glyphRuns[index] as! CTRun
+            let attributes = CTRunGetAttributes(glyphRun) as? [NSAttributedString.Key: Any] ?? [:]
+            block(glyphRun, attributes)
+        }
+    }
+
+    private func attributedStringHasLineDrawingActions() -> Bool {
+        guard attributedString.length > 0 else { return false }
+
+        var hasAction = false
+        attributedString.enumerateAttribute(
+            LTXLineDrawingCallbackName,
+            in: NSRange(location: 0, length: attributedString.length),
+            options: []
+        ) { value, _, stop in
+            if value is LTXLineDrawingAction {
+                hasAction = true
+                stop.pointee = true
+            }
+        }
+        return hasAction
     }
 
     private func processHighlightRegionForRun(
@@ -422,7 +445,7 @@ public class LTXTextLayout: NSObject {
             y: containerSize.height - rect.maxY,
             width: rect.width,
             height: rect.height
-        ).insetBy(dx: 0, dy: -1)
+        ).insetBy(dx: -1, dy: -1)
     }
 
     private func lineRect(for line: CTLine, origin: CGPoint) -> CGRect {

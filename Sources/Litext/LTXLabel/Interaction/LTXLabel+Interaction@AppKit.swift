@@ -104,14 +104,8 @@ import Foundation
 
             guard !isTouchReallyMoved(location) else { return }
 
-            for region in highlightRegions {
-                let rects = region.cgRects.map {
-                    convertRectFromTextLayout($0, insetForInteraction: true)
-                }
-                for rect in rects where rect.contains(location) {
-                    self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
-                    return
-                }
+            if let region = highlightRegionForTap(at: location) {
+                delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
             }
         }
 
@@ -260,26 +254,6 @@ import Foundation
             if copiedText.length <= 0 {
                 _ = copyFromSubviewsRecursively()
             }
-        }
-
-        private func copyFromSubviewsRecursively() -> Bool {
-            copyFromSubviewsRecursively(in: self)
-        }
-
-        private func copyFromSubviewsRecursively(in view: NSView) -> Bool {
-            for subview in view.subviews {
-                if let ltxLabel = subview as? LTXLabel {
-                    let copiedText = ltxLabel.copySelectedText()
-                    if copiedText.length > 0 {
-                        return true
-                    }
-                } else {
-                    if copyFromSubviewsRecursively(in: subview) {
-                        return true
-                    }
-                }
-            }
-            return false
         }
     }
 #endif

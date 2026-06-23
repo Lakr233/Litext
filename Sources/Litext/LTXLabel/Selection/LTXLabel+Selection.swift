@@ -13,6 +13,7 @@ import QuartzCore
     public extension LTXLabel {
         @objc func clearSelection() {
             selectionRange = nil
+            updateSelectionLayer()
         }
 
         @discardableResult
@@ -95,6 +96,27 @@ import QuartzCore
 
         public func selectedPlainText() -> String? {
             selectedAttributedText()?.string
+        }
+
+        func copyFromSubviewsRecursively() -> Bool {
+            copyFromSubviewsRecursively(in: self)
+        }
+
+        private func copyFromSubviewsRecursively(in view: LTXPlatformView) -> Bool {
+            for subview in view.subviews {
+                if let ltxLabel = subview as? LTXLabel {
+                    let copiedText = ltxLabel.copySelectedText()
+                    if copiedText.length > 0 {
+                        return true
+                    }
+                    continue
+                }
+
+                if copyFromSubviewsRecursively(in: subview) {
+                    return true
+                }
+            }
+            return false
         }
     }
 
