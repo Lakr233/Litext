@@ -36,7 +36,7 @@ import Foundation
                 }
 
                 let convertedRect = convertRectFromTextLayout(firstRect, insetForInteraction: false)
-                view.frame = convertedRect
+                view.frame = pixelAlign(convertedRect)
             }
 
             for view in viewsToRemove {

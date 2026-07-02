@@ -50,6 +50,10 @@ import Foundation
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
 
+            if isSelectable || highlightRegionAtPoint(location) != nil {
+                window?.makeFirstResponder(self)
+            }
+
             if isLocationAboveAttachmentView(location: location) {
                 super.mouseDown(with: event)
                 return
@@ -119,7 +123,6 @@ import Foundation
             }
 
             if isSelectable || highlightRegionAtPoint(point) != nil {
-                window?.makeFirstResponder(self)
                 return self
             }
             return super.hitTest(point)
@@ -132,26 +135,41 @@ import Foundation
                 removeTrackingArea(trackingArea)
             }
 
-            let options: NSTrackingArea.Options = [.mouseEnteredAndExited, .mouseMoved, .activeInKeyWindow]
+            // .cursorUpdate lets this view own cursor changes; without it AppKit
+            // resets the cursor to arrow between our mouseMoved updates, which
+            // reads as flickering between the arrow and the I-beam.
+            let options: NSTrackingArea.Options = [
+                .mouseEnteredAndExited,
+                .mouseMoved,
+                .cursorUpdate,
+                .activeInKeyWindow,
+            ]
             let trackingArea = NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil)
             addTrackingArea(trackingArea)
+        }
+
+        override func cursorUpdate(with event: NSEvent) {
+            // Intentionally not calling super: it would reset to the arrow cursor.
+            let point = convert(event.locationInWindow, from: nil)
+            applyCursor(desiredCursor(at: point))
         }
 
         override func mouseEntered(with event: NSEvent) {
             super.mouseEntered(with: event)
             let point = convert(event.locationInWindow, from: nil)
-            updateCursorForPoint(point)
+            applyCursor(desiredCursor(at: point))
         }
 
         override func mouseExited(with event: NSEvent) {
             super.mouseExited(with: event)
-            resetCursor()
+            applyCursor(.arrow)
+            activeCursor = nil
         }
 
         override func mouseMoved(with event: NSEvent) {
             super.mouseMoved(with: event)
             let point = convert(event.locationInWindow, from: nil)
-            updateCursorForPoint(point)
+            applyCursor(desiredCursor(at: point))
         }
 
         private func handleRightClick(with event: NSEvent) -> Bool {
@@ -206,34 +224,27 @@ import Foundation
             }
         }
 
-        private func updateCursorForPoint(_ point: CGPoint) {
-            if !isSelectable {
-                NSCursor.arrow.set()
-                return
+        /// Resolves which cursor the point deserves. The whole label surface is
+        /// treated as text (like NSTextView) instead of hit-testing individual
+        /// glyph rects — per-glyph tests alternate between hit and miss while the
+        /// pointer moves, which flickered between the arrow and the I-beam.
+        private func desiredCursor(at point: CGPoint) -> NSCursor {
+            if isLocationAboveAttachmentView(location: point) {
+                return .arrow
             }
-
             if highlightRegionAtPoint(point) != nil {
-                NSCursor.pointingHand.set()
-                return
+                return .pointingHand
             }
-
-            if let index = textIndexAtPoint(point) {
-                let range = NSRange(location: index, length: 1)
-                let rect = textLayout.rects(for: range).first
-                if let rect {
-                    let realRect = convertRectFromTextLayout(rect, insetForInteraction: true)
-                    if realRect.contains(point) {
-                        NSCursor.iBeam.set()
-                        return
-                    }
-                }
+            if isSelectable {
+                return .iBeam
             }
-
-            resetCursor()
+            return .arrow
         }
 
-        private func resetCursor() {
-            NSCursor.arrow.set()
+        private func applyCursor(_ cursor: NSCursor) {
+            guard activeCursor !== cursor else { return }
+            activeCursor = cursor
+            cursor.set()
         }
 
         @objc private func copyLink(_: Any) {

@@ -16,7 +16,7 @@ A lightweight, high-performance rich-text library for all Apple platforms — UI
 - 📐 Auto layout integration (experimental)
 - 🖥️ SwiftUI support on all platforms, including watchOS
 
-![Screenshot](./Artworks/screenshot.png)
+![Screenshot](./Artworks/screenshot.jpeg)
 
 ## Supported Platforms
 

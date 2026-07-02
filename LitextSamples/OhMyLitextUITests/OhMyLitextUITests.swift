@@ -6,61 +6,71 @@
 import Foundation
 import XCTest
 
+/// E2E tests for the single-document demo.
+///
+/// The demo renders every rendering kind (styled runs, multi-style links,
+/// inline/linked attachments, RTL, custom line drawing, long selectable text)
+/// inside one LTXLabel with the accessibility identifier `demo.document`.
 final class OhMyLitextUITests: XCTestCase {
     private var app: XCUIApplication!
 
+    /// Offset (in points, from the document's top-left corner) of the
+    /// repository link line — the second line of the document, kept at a
+    /// deterministic position for tap tests at the default theme.
+    private let repoLinkOffset = CGVector(dx: 80, dy: 70)
+
     @MainActor
-    func testAuditFixturesAreReachableAndCaptured() throws {
+    func testDocumentRendersAndIsCaptured() throws {
         launchApp()
 
-        let fixtureIDs = [
-            "fixture.link.multistyle",
-            "fixture.attachment.inline",
-            "fixture.attachment.linked",
-            "fixture.rtl",
-            "fixture.line-drawing",
-            "fixture.truncation",
-            "fixture.empty",
-        ]
+        let document = documentElement()
+        XCTAssertTrue(document.waitForExistence(timeout: 4), "demo.document should exist")
+        try captureScreenshot(named: "document-top")
 
-        for fixtureID in fixtureIDs {
-            let element = app.descendants(matching: .any)[fixtureID]
-            scrollToElement(element)
-            XCTAssertTrue(element.waitForExistence(timeout: 4), "\(fixtureID) should exist")
+        let scrollView = app.scrollViews.firstMatch
+        for _ in 0 ..< 6 {
+            scrollView.swipeUp()
         }
-
-        try captureScreenshot(named: "audit-fixtures")
+        try captureScreenshot(named: "document-bottom")
     }
 
     @MainActor
-    func testMultiStyleLinkTapUpdatesObservableURL() throws {
+    func testAttachmentViewsExistInsideDocument() throws {
         launchApp()
 
-        let linkFixture = app.descendants(matching: .any)["fixture.link.multistyle"]
-        scrollToElement(linkFixture)
-        XCTAssertTrue(linkFixture.waitForExistence(timeout: 4))
+        let inline = app.descendants(matching: .any)["demo.attachment.inline.view"]
+        let linked = app.descendants(matching: .any)["demo.attachment.linked.view"]
 
-        linkFixture.coordinate(withNormalizedOffset: CGVector(dx: 0.32, dy: 0.5)).tap()
+        scrollToElement(inline)
+        XCTAssertTrue(inline.waitForExistence(timeout: 4), "inline attachment view should exist")
+        XCTAssertTrue(linked.waitForExistence(timeout: 4), "linked attachment view should exist")
+        try captureScreenshot(named: "attachments")
+    }
 
-        XCTAssertTrue(waitForState("state.lastTappedURL", containing: "multi-style"))
+    @MainActor
+    func testRepoLinkTapUpdatesObservableURL() throws {
+        launchApp()
+
+        let document = documentElement()
+        XCTAssertTrue(document.waitForExistence(timeout: 4))
+
+        document.coordinate(withNormalizedOffset: .zero)
+            .withOffset(repoLinkOffset)
+            .tap()
+
+        XCTAssertTrue(waitForState("state.lastTappedURL", containing: "Lakr233/Litext"))
         dismissAlertIfNeeded()
-        try captureScreenshot(named: "multi-style-link")
+        try captureScreenshot(named: "link-tap")
     }
 
     @MainActor
     func testLinkedAttachmentTapUpdatesObservableURL() throws {
         launchApp()
 
-        let attachmentView = app.descendants(matching: .any)["fixture.attachment.linked.view"]
-        let fallbackFixture = app.descendants(matching: .any)["fixture.attachment.linked"]
-        scrollToElement(fallbackFixture)
-        XCTAssertTrue(fallbackFixture.waitForExistence(timeout: 4))
-
-        if attachmentView.waitForExistence(timeout: 1), attachmentView.isHittable {
-            attachmentView.tap()
-        } else {
-            fallbackFixture.coordinate(withNormalizedOffset: CGVector(dx: 0.42, dy: 0.5)).tap()
-        }
+        let attachmentView = app.descendants(matching: .any)["demo.attachment.linked.view"]
+        scrollToElement(attachmentView)
+        XCTAssertTrue(attachmentView.waitForExistence(timeout: 4))
+        attachmentView.tap()
 
         XCTAssertTrue(waitForState("state.lastTappedURL", containing: "linked-attachment"))
         dismissAlertIfNeeded()
@@ -71,41 +81,43 @@ final class OhMyLitextUITests: XCTestCase {
     func testDoubleTapSelectionUpdatesObservableSelectedText() throws {
         launchApp()
 
-        let rtlFixture = app.descendants(matching: .any)["fixture.rtl"]
-        scrollToElement(rtlFixture)
-        XCTAssertTrue(rtlFixture.waitForExistence(timeout: 4))
+        let document = documentElement()
+        XCTAssertTrue(document.waitForExistence(timeout: 4))
 
-        rtlFixture.tap()
-        app.typeKey("a", modifierFlags: .command)
-        if !waitForState("state.selectedText", notEqualTo: "none") {
-            rtlFixture.doubleTap()
-        }
+        document.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).doubleTap()
 
         XCTAssertTrue(waitForState("state.selectedText", notEqualTo: "none"))
         try captureScreenshot(named: "selection-state")
     }
 
     @MainActor
-    func testVisibleTextClippingSurvivesDeepScrollAndInteraction() {
+    func testDeepScrollKeepsDocumentInteractive() {
         launchApp()
 
-        let longText = app.descendants(matching: .any)["fixture.long-text"]
-        scrollToElement(longText)
-        XCTAssertTrue(longText.waitForExistence(timeout: 4))
-        XCTAssertTrue(longText.isHittable)
+        let document = documentElement()
+        XCTAssertTrue(document.waitForExistence(timeout: 4))
 
         let scrollView = app.scrollViews.firstMatch
-        for _ in 0 ..< 4 {
+        for _ in 0 ..< 6 {
+            scrollView.swipeUp()
+        }
+        for _ in 0 ..< 8 {
             scrollView.swipeDown()
         }
 
-        let linkFixture = app.descendants(matching: .any)["fixture.link.multistyle"]
-        scrollToElement(linkFixture)
-        XCTAssertTrue(linkFixture.waitForExistence(timeout: 4))
-        linkFixture.coordinate(withNormalizedOffset: CGVector(dx: 0.32, dy: 0.5)).tap()
+        document.coordinate(withNormalizedOffset: .zero)
+            .withOffset(repoLinkOffset)
+            .tap()
 
-        XCTAssertTrue(waitForState("state.lastTappedURL", containing: "multi-style"))
+        XCTAssertTrue(waitForState("state.lastTappedURL", containing: "Lakr233/Litext"))
         dismissAlertIfNeeded()
+    }
+
+    // MARK: - Helpers
+
+    @MainActor
+    private func documentElement() -> XCUIElement {
+        app.descendants(matching: .any)["demo.document"]
     }
 
     @MainActor

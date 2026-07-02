@@ -54,7 +54,9 @@ import QuartzCore
         }
 
         func convertPointForTextLayout(_ point: CGPoint) -> CGPoint {
-            CGPoint(x: point.x, y: bounds.height - point.y)
+            // Must mirror convertRectFromTextLayout: flip against the layout
+            // container height, not the live view bounds.
+            CGPoint(x: point.x, y: textLayout.containerSize.height - point.y)
         }
 
         public func isLocationInSelection(location: CGPoint) -> Bool {

@@ -36,8 +36,14 @@ import QuartzCore
                 constraintSize.width = lastContainerSize.width
             }
 
-            return textLayout.suggestContainerSize(
+            let suggested = textLayout.suggestContainerSize(
                 withSize: constraintSize
+            )
+            // Round up to the pixel grid so the host layout system never sizes the
+            // view fractionally smaller than the measured text.
+            return CGSize(
+                width: pixelCeil(suggested.width),
+                height: pixelCeil(suggested.height)
             )
         }
 
