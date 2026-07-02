@@ -161,11 +161,14 @@ extension TextLabel {
         ///
         /// The rect uses a top-left origin in the same space as `containerSize`, matching the
         /// dirty rect handed to a view's `draw(_:)`. Passing `nil` draws every line.
+        ///
+        /// Line drawing actions are always invoked for every laid-out line. They may synchronize
+        /// external views with text layout, so dirty-rect culling must not skip them.
         open func draw(in context: CGContext, visibleRect: CGRect?) {
             guard let lines, let lineOrigins, !lines.isEmpty else { return }
 
-            let indices = lineIndices(intersecting: visibleRect)
-            guard !indices.isEmpty else { return }
+            let textLineIndices = lineIndices(intersecting: visibleRect)
+            guard !textLineIndices.isEmpty || hasLineDrawingActions else { return }
 
             context.saveGState()
 
@@ -175,11 +178,11 @@ extension TextLabel {
             context.translateBy(x: 0, y: containerSize.height)
             context.scaleBy(x: 1, y: -1)
 
-            for index in indices {
+            for index in textLineIndices {
                 context.textPosition = lineOrigins[index]
                 CTLineDraw(lines[index], context)
             }
-            processLineDrawingActions(in: context, lineIndices: indices)
+            processLineDrawingActions(in: context, lineIndices: 0 ..< lines.count)
 
             context.restoreGState()
         }

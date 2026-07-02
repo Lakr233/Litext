@@ -196,7 +196,7 @@ import Testing
 }
 
 @MainActor
-@Test func drawingWithVisibleRectSkipsOffscreenLines() throws {
+@Test func drawingWithVisibleRectStillInvokesAllLineDrawingActions() throws {
     let width: CGFloat = 260
     let lineCount = 12
     let attributedText = lineDrawingProbeText(lineCount: lineCount)
@@ -213,10 +213,10 @@ import Testing
     let context = try #require(makeBitmapContext(size: layout.containerSize))
     layout.draw(in: context, visibleRect: visibleRect)
 
-    // The two intersecting lines plus at most one overhang line on each side.
-    #expect(lineDrawingProbeInvocationCount >= 2)
-    #expect(lineDrawingProbeInvocationCount <= 4)
-    #expect(layout.visibleLineCount(in: visibleRect) == lineDrawingProbeInvocationCount)
+    // Text drawing is still dirty-rect clipped, but line drawing actions can own
+    // external layout side effects and must run for every laid-out line.
+    #expect(layout.visibleLineCount(in: visibleRect) < layout.visibleLineCount(in: nil))
+    #expect(lineDrawingProbeInvocationCount >= lineCount)
 }
 
 @MainActor
