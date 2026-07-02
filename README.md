@@ -198,3 +198,5 @@ For inline attachments on watchOS, provide a SwiftUI view via `swiftUIView` inst
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](./LICENSE) file for details.
+
+<img src="./Artworks/fable5.jpg" alt="Fable 5 Verified" width="240">
