@@ -12,7 +12,7 @@ PROBE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/litext-perf-probe.XXXXXX")"
 trap 'rm -rf "$PROBE_DIR"' EXIT
 
 HAS_VISIBLE_RECT_API=0
-if grep -q "visibleRect:" "$REPO_PATH/Sources/Litext/LTXLabel/TextLayout/LTXTextLayout.swift"; then
+if grep -q "visibleRect:" "$REPO_PATH/Sources/Litext/TextLabelView/Layout/TextLabel+Layout.swift"; then
 	HAS_VISIBLE_RECT_API=1
 fi
 
@@ -82,10 +82,10 @@ private func makeAttributedText(lineCount: Int) -> NSAttributedString {
 }
 
 @MainActor
-private func makeLayout(text: NSAttributedString, width: CGFloat) -> LTXTextLayout {
-    let layout = LTXTextLayout(attributedString: text)
-    let suggested = layout.suggestContainerSize(
-        withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
+private func makeLayout(text: NSAttributedString, width: CGFloat) -> TextLabel.Layout {
+    let layout = TextLabel.Layout(attributedString: text)
+    let suggested = layout.sizeThatFits(
+        CGSize(width: width, height: .greatestFiniteMagnitude)
     )
     layout.containerSize = CGSize(width: width, height: max(1, suggested.height.rounded(.up)))
     return layout

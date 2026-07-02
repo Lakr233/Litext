@@ -7,11 +7,7 @@
 
 import Foundation
 
-public let LTXReplacementText = "\u{FFFC}"
-public let LTXAttachmentAttributeName = NSAttributedString.Key("LTXAttachment")
-public let LTXLineDrawingCallbackName = NSAttributedString.Key("LTXLineDrawingCallback")
-
 public extension NSAttributedString.Key {
-    @inline(__always) static let ltxAttachment = LTXAttachmentAttributeName
-    @inline(__always) static let ltxLineDrawingCallback = LTXLineDrawingCallbackName
+    @inline(__always) static let litextAttachment = NSAttributedString.Key("LTXAttachment")
+    @inline(__always) static let litextLineDrawingAction = NSAttributedString.Key("LTXLineDrawingCallback")
 }

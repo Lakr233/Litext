@@ -15,7 +15,7 @@ import XCTest
 final class LitextSampleUnitTests: XCTestCase {
     @MainActor
     func testInvalidRangesAndSelectionRangeAreSanitized() {
-        let layout = LTXTextLayout(attributedString: NSAttributedString(string: "Hello Litext"))
+        let layout = TextLabel.Layout(attributedString: NSAttributedString(string: "Hello Litext"))
         layout.containerSize = CGSize(width: 200, height: 60)
 
         XCTAssertTrue(layout.rects(for: NSRange(location: NSNotFound, length: 1)).isEmpty)
@@ -24,7 +24,7 @@ final class LitextSampleUnitTests: XCTestCase {
         XCTAssertTrue(layout.rects(for: NSRange(location: 500, length: 5)).isEmpty)
 
         #if !os(watchOS)
-            let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+            let label = TextLabelView(attributedText: NSAttributedString(string: "Hello"))
 
             label.selectionRange = NSRange(location: 1, length: 100)
             XCTAssertEqual(label.selectionRange, NSRange(location: 1, length: 4))
@@ -39,7 +39,7 @@ final class LitextSampleUnitTests: XCTestCase {
 
     @MainActor
     func testClearSelectionRemovesStaleSelectionLayerEvenWhenRangeIsNil() {
-        let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+        let label = TextLabelView(attributedText: NSAttributedString(string: "Hello"))
         label.selectionLayer = CAShapeLayer()
 
         label.clearSelection()
@@ -60,30 +60,22 @@ final class LitextSampleUnitTests: XCTestCase {
         ))
         text.append(NSAttributedString(string: " "))
 
-        let attachment = LTXAttachment()
+        let attachment = TextLabel.Attachment()
         attachment.size = CGSize(width: 30, height: 20)
-        let attachmentString = NSMutableAttributedString(string: LTXReplacementText)
-        let attachmentRange = NSRange(location: 0, length: attachmentString.length)
-        attachmentString.addAttributes(
-            [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .ltxAttachment: attachment,
-                .link: url,
-                kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate,
-            ],
-            range: attachmentRange
-        )
-        text.append(attachmentString)
+        text.append(attachment.attributedString(attributes: [
+            .font: PlatformFont.systemFont(ofSize: 16),
+            .link: url,
+        ]))
 
-        let label = LTXLabel(attributedText: text)
+        let label = TextLabelView(attributedText: text)
         label.frame = CGRect(x: 0, y: 0, width: 180, height: 40)
-        let layout = LTXTextLayout(attributedString: text)
+        let layout = TextLabel.Layout(attributedString: text)
         layout.containerSize = label.bounds.size
         layout.updateHighlightRegions()
         label.textLayout = layout
 
         let attachmentRegion = try XCTUnwrap(label.highlightRegions.first { $0.kind == .attachment })
-        let rect = try XCTUnwrap(attachmentRegion.cgRects.first)
+        let rect = try XCTUnwrap(attachmentRegion.rects.first)
         let tapRect = label.convertRectFromTextLayout(rect, insetForInteraction: true)
         let tapPoint = CGPoint(x: tapRect.midX, y: tapRect.midY)
 
@@ -98,7 +90,7 @@ final class LitextSampleUnitTests: XCTestCase {
             string: "LTR שלום عربى 123",
             attributes: [.font: PlatformFont.systemFont(ofSize: 18)]
         )
-        let layout = LTXTextLayout(attributedString: text)
+        let layout = TextLabel.Layout(attributedString: text)
         layout.containerSize = CGSize(width: 320, height: 80)
 
         let textRect = try XCTUnwrap(layout.rects(for: NSRange(location: 0, length: text.length)).first)
@@ -117,7 +109,7 @@ final class LitextSampleUnitTests: XCTestCase {
             attributes: [.font: PlatformFont.systemFont(ofSize: 18)]
         )
         let secondLineStart = (text.string as NSString).range(of: "Second").location
-        let layout = LTXTextLayout(attributedString: text)
+        let layout = TextLabel.Layout(attributedString: text)
         layout.containerSize = CGSize(width: 220, height: 120)
 
         let secondLineRect = try XCTUnwrap(layout.rects(
@@ -152,21 +144,13 @@ final class LitextSampleUnitTests: XCTestCase {
         ))
         text.append(NSAttributedString(string: " "))
 
-        let attachment = LTXAttachment()
+        let attachment = TextLabel.Attachment()
         attachment.size = CGSize(width: 30, height: 20)
-        let attachmentString = NSMutableAttributedString(string: LTXReplacementText)
-        let attachmentRange = NSRange(location: 0, length: attachmentString.length)
-        attachmentString.addAttributes(
-            [
-                .ltxAttachment: attachment,
-                .link: url,
-                kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate,
-            ],
-            range: attachmentRange
-        )
-        text.append(attachmentString)
+        text.append(attachment.attributedString(attributes: [
+            .link: url,
+        ]))
 
-        let layout = LTXTextLayout(attributedString: text)
+        let layout = TextLabel.Layout(attributedString: text)
         layout.containerSize = CGSize(width: 240, height: 80)
         layout.updateHighlightRegions()
 
@@ -177,18 +161,18 @@ final class LitextSampleUnitTests: XCTestCase {
         XCTAssertEqual(attachmentRegions.count, 1)
         XCTAssertTrue(linkRegions.contains { $0.stringRange == NSRange(location: 6, length: 11) })
         XCTAssertEqual(attachmentRegions.first?.stringRange.location, 18)
-        XCTAssertFalse(attachmentRegions.first?.cgRects.isEmpty ?? true)
+        XCTAssertFalse(attachmentRegions.first?.rects.isEmpty ?? true)
     }
 
     @MainActor
     func testAttachmentRunDelegateUsesRetainedMetricsAfterOriginalAttachmentDrops() throws {
-        var attachment: LTXAttachment? = LTXAttachment()
+        var attachment: TextLabel.Attachment? = TextLabel.Attachment()
         attachment?.size = CGSize(width: 24, height: 16)
         let cachedDelegate = try XCTUnwrap(attachment?.runDelegate) as AnyObject
         let repeatedDelegate = try XCTUnwrap(attachment?.runDelegate) as AnyObject
         XCTAssertEqual(ObjectIdentifier(cachedDelegate), ObjectIdentifier(repeatedDelegate))
 
-        var string: NSMutableAttributedString? = NSMutableAttributedString(string: LTXReplacementText)
+        var string: NSMutableAttributedString? = NSMutableAttributedString(string: TextLabel.Attachment.replacementText)
         var delegate: CTRunDelegate? = try XCTUnwrap(attachment?.runDelegate)
         let range = NSRange(location: 0, length: string?.length ?? 0)
         try string?.addAttribute(
@@ -212,9 +196,9 @@ final class LitextSampleUnitTests: XCTestCase {
         let width: CGFloat = 260
         let lineCount = 12
         let attributedText = Self.lineDrawingProbeText(lineCount: lineCount)
-        let layout = LTXTextLayout(attributedString: attributedText)
-        let suggestedSize = layout.suggestContainerSize(
-            withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
+        let layout = TextLabel.Layout(attributedString: attributedText)
+        let suggestedSize = layout.sizeThatFits(
+            CGSize(width: width, height: .greatestFiniteMagnitude)
         )
         layout.containerSize = CGSize(width: width, height: suggestedSize.height)
 
@@ -229,9 +213,9 @@ final class LitextSampleUnitTests: XCTestCase {
     func testFullTextDrawingPerformance() throws {
         let width: CGFloat = 320
         let attributedText = Self.lineDrawingProbeText(lineCount: 500)
-        let layout = LTXTextLayout(attributedString: attributedText)
-        let suggestedSize = layout.suggestContainerSize(
-            withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
+        let layout = TextLabel.Layout(attributedString: attributedText)
+        let suggestedSize = layout.sizeThatFits(
+            CGSize(width: width, height: .greatestFiniteMagnitude)
         )
         layout.containerSize = CGSize(width: width, height: suggestedSize.height)
         let fullContext = try XCTUnwrap(Self.makeBitmapContext(size: layout.containerSize))
@@ -246,7 +230,7 @@ final class LitextSampleUnitTests: XCTestCase {
 
     @MainActor
     private static func lineDrawingProbeText(lineCount: Int) -> NSAttributedString {
-        let action = LTXLineDrawingAction { _, _, _ in
+        let action = TextLabel.LineDrawingAction { _, _, _ in
             lineDrawingProbeInvocationCount += 1
         }
         let text = NSMutableAttributedString()
@@ -255,7 +239,7 @@ final class LitextSampleUnitTests: XCTestCase {
                 string: "Probe line \(index) keeps layout stable while drawing is clipped.\n",
                 attributes: [
                     .font: PlatformFont.systemFont(ofSize: 16),
-                    .ltxLineDrawingCallback: action,
+                    .litextLineDrawingAction: action,
                 ]
             ))
         }

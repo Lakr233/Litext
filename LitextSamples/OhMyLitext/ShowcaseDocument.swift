@@ -7,7 +7,7 @@
 //  Builds the single rich-text document rendered by the demo. Every Litext
 //  feature — styled runs, links, inline attachments, bidirectional text,
 //  custom line drawing, and selection — lives in one attributed string
-//  displayed by one LTXLabel.
+//  displayed by one TextLabelView.
 //
 
 import CoreText
@@ -138,7 +138,7 @@ enum ShowcaseDocument {
                 "where CoreText keeps scrolling smooth no matter how much rich content is on screen.\n"
         ))
 
-        text.append(style.caption("Rendered by a single LTXLabel — no TextKit involved."))
+        text.append(style.caption("Rendered by a single TextLabelView — no TextKit involved."))
         return text
     }
 
@@ -150,28 +150,19 @@ enum ShowcaseDocument {
         identifier: String,
         linkURL: URL?
     ) -> NSAttributedString {
-        let attachment = LTXAttachment()
+        let attachment = TextLabel.Attachment()
         attachment.size = CGSize(width: width, height: 28)
         attachment.view = makeBadgeView(title: title, width: width, identifier: identifier)
 
-        let string = NSMutableAttributedString(string: LTXReplacementText)
-        let range = NSRange(location: 0, length: string.length)
-        string.addAttribute(.ltxAttachment, value: attachment, range: range)
-        string.addAttribute(
-            kCTRunDelegateAttributeName as NSAttributedString.Key,
-            value: attachment.runDelegate,
-            range: range
-        )
+        var attributes: [NSAttributedString.Key: Any] = [:]
         if let linkURL {
-            string.addAttributes(
-                [.link: linkURL, .foregroundColor: PlatformColor.link],
-                range: range
-            )
+            attributes[.link] = linkURL
+            attributes[.foregroundColor] = PlatformColor.link
         }
-        return string
+        return attachment.attributedString(attributes: attributes)
     }
 
-    private static func makeBadgeView(title: String, width: CGFloat, identifier: String) -> LTXPlatformView {
+    private static func makeBadgeView(title: String, width: CGFloat, identifier: String) -> PlatformView {
         #if canImport(UIKit)
             let label = UILabel()
             label.text = title
@@ -350,7 +341,7 @@ private struct Stylist {
     }
 
     func lineDrawn(_ string: String) -> NSAttributedString {
-        let action = LTXLineDrawingAction { context, line, origin in
+        let action = TextLabel.LineDrawingAction { context, line, origin in
             var descent: CGFloat = 0
             let width = CGFloat(CTLineGetTypographicBounds(line, nil, &descent, nil))
             let underlineY = origin.y - descent - 2
@@ -361,7 +352,7 @@ private struct Stylist {
             context.strokePath()
         }
         var attrs = attributes(font: bodyFont, color: theme.textColor)
-        attrs[.ltxLineDrawingCallback] = action
+        attrs[.litextLineDrawingAction] = action
         return NSAttributedString(string: string, attributes: attrs)
     }
 }

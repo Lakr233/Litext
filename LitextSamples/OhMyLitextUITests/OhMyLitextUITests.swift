@@ -10,7 +10,7 @@ import XCTest
 ///
 /// The demo renders every rendering kind (styled runs, multi-style links,
 /// inline/linked attachments, RTL, custom line drawing, long selectable text)
-/// inside one LTXLabel with the accessibility identifier `demo.document`.
+/// inside one TextLabelView with the accessibility identifier `demo.document`.
 final class OhMyLitextUITests: XCTestCase {
     private var app: XCUIApplication!
 

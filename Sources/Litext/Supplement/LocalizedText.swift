@@ -14,10 +14,10 @@ import Foundation
 // **Localized resources can be mixed** -> true
 //
 
-public enum LocalizedText {
-    public static let copy = NSLocalizedString("Copy", bundle: .module, comment: "Copy menu item")
-    public static let selectAll = NSLocalizedString("Select All", bundle: .module, comment: "Select all menu item")
-    public static let share = NSLocalizedString("Share", bundle: .module, comment: "Share menu item")
-    public static let openLink = NSLocalizedString("Open Link", bundle: .module, comment: "Open link menu item")
-    public static let copyLink = NSLocalizedString("Copy Link", bundle: .module, comment: "Copy link menu item")
+enum LocalizedText {
+    static let copy = NSLocalizedString("Copy", bundle: .module, comment: "Copy menu item")
+    static let selectAll = NSLocalizedString("Select All", bundle: .module, comment: "Select all menu item")
+    static let share = NSLocalizedString("Share", bundle: .module, comment: "Share menu item")
+    static let openLink = NSLocalizedString("Open Link", bundle: .module, comment: "Open link menu item")
+    static let copyLink = NSLocalizedString("Copy Link", bundle: .module, comment: "Copy link menu item")
 }

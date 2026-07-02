@@ -14,7 +14,7 @@ import Testing
 
 @MainActor
 @Test func invalidRangesDoNotProduceRects() {
-    let layout = LTXTextLayout(attributedString: NSAttributedString(string: "Hello Litext"))
+    let layout = TextLabel.Layout(attributedString: NSAttributedString(string: "Hello Litext"))
     layout.containerSize = CGSize(width: 200, height: 60)
 
     #expect(layout.rects(for: NSRange(location: NSNotFound, length: 1)).isEmpty)
@@ -26,7 +26,7 @@ import Testing
 #if !os(watchOS)
     @MainActor
     @Test func publicSelectionRangeIsSanitized() {
-        let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+        let label = TextLabelView(attributedText: NSAttributedString(string: "Hello"))
 
         label.selectionRange = NSRange(location: 1, length: 100)
         #expect(label.selectionRange == NSRange(location: 1, length: 4))
@@ -40,7 +40,7 @@ import Testing
 
     @MainActor
     @Test func clearSelectionRemovesStaleSelectionLayerEvenWhenRangeIsNil() {
-        let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
+        let label = TextLabelView(attributedText: NSAttributedString(string: "Hello"))
         label.selectionLayer = CAShapeLayer()
 
         label.clearSelection()
@@ -61,30 +61,22 @@ import Testing
         ))
         text.append(NSAttributedString(string: " "))
 
-        let attachment = LTXAttachment()
+        let attachment = TextLabel.Attachment()
         attachment.size = CGSize(width: 30, height: 20)
-        let attachmentString = NSMutableAttributedString(string: LTXReplacementText)
-        let attachmentRange = NSRange(location: 0, length: attachmentString.length)
-        attachmentString.addAttributes(
-            [
-                .font: PlatformFont.systemFont(ofSize: 16),
-                .ltxAttachment: attachment,
-                .link: url,
-                kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate,
-            ],
-            range: attachmentRange
-        )
-        text.append(attachmentString)
+        text.append(attachment.attributedString(attributes: [
+            .font: PlatformFont.systemFont(ofSize: 16),
+            .link: url,
+        ]))
 
-        let label = LTXLabel(attributedText: text)
+        let label = TextLabelView(attributedText: text)
         label.frame = CGRect(x: 0, y: 0, width: 180, height: 40)
-        let layout = LTXTextLayout(attributedString: text)
+        let layout = TextLabel.Layout(attributedString: text)
         layout.containerSize = label.bounds.size
         layout.updateHighlightRegions()
         label.textLayout = layout
 
         let attachmentRegion = try #require(label.highlightRegions.first { $0.kind == .attachment })
-        let rect = try #require(attachmentRegion.cgRects.first)
+        let rect = try #require(attachmentRegion.rects.first)
         let tapRect = label.convertRectFromTextLayout(rect, insetForInteraction: true)
         let tapPoint = CGPoint(x: tapRect.midX, y: tapRect.midY)
 
@@ -114,21 +106,13 @@ import Testing
     ))
     text.append(NSAttributedString(string: " "))
 
-    let attachment = LTXAttachment()
+    let attachment = TextLabel.Attachment()
     attachment.size = CGSize(width: 30, height: 20)
-    let attachmentString = NSMutableAttributedString(string: LTXReplacementText)
-    let attachmentRange = NSRange(location: 0, length: attachmentString.length)
-    attachmentString.addAttributes(
-        [
-            .ltxAttachment: attachment,
-            .link: url,
-            kCTRunDelegateAttributeName as NSAttributedString.Key: attachment.runDelegate,
-        ],
-        range: attachmentRange
-    )
-    text.append(attachmentString)
+    text.append(attachment.attributedString(attributes: [
+        .link: url,
+    ]))
 
-    let layout = LTXTextLayout(attributedString: text)
+    let layout = TextLabel.Layout(attributedString: text)
     layout.containerSize = CGSize(width: 240, height: 80)
     layout.updateHighlightRegions()
 
@@ -138,18 +122,18 @@ import Testing
     #expect(linkRegions.count == 2)
     #expect(attachmentRegions.count == 1)
     #expect(linkRegions.contains { $0.stringRange == NSRange(location: 6, length: 11) })
-    #expect(attachmentRegions.first?.cgRects.isEmpty == false)
+    #expect(attachmentRegions.first?.rects.isEmpty == false)
 }
 
 @MainActor
 @Test func attachmentRunDelegateUsesRetainedMetricsAfterOriginalAttachmentDrops() throws {
-    var attachment: LTXAttachment? = LTXAttachment()
+    var attachment: TextLabel.Attachment? = TextLabel.Attachment()
     attachment?.size = CGSize(width: 24, height: 16)
     let cachedDelegate = try #require(attachment?.runDelegate) as AnyObject
     let repeatedDelegate = try #require(attachment?.runDelegate) as AnyObject
     #expect(ObjectIdentifier(cachedDelegate) == ObjectIdentifier(repeatedDelegate))
 
-    var string: NSMutableAttributedString? = NSMutableAttributedString(string: LTXReplacementText)
+    var string: NSMutableAttributedString? = NSMutableAttributedString(string: TextLabel.Attachment.replacementText)
     var delegate: CTRunDelegate? = try #require(attachment?.runDelegate)
     let range = NSRange(location: 0, length: string?.length ?? 0)
     try string?.addAttribute(
@@ -173,10 +157,8 @@ import Testing
     let width: CGFloat = 260
     let lineCount = 12
     let attributedText = lineDrawingProbeText(lineCount: lineCount)
-    let layout = LTXTextLayout(attributedString: attributedText)
-    let suggestedSize = layout.suggestContainerSize(
-        withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
-    )
+    let layout = TextLabel.Layout(attributedString: attributedText)
+    let suggestedSize = layout.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
     layout.containerSize = CGSize(width: width, height: suggestedSize.height)
 
     lineDrawingProbeInvocationCount = 0
@@ -188,7 +170,7 @@ import Testing
 
 @MainActor
 @Test func naturalSizeFastPathMatchesFramesetterForNonWrappingWidths() {
-    let layout = LTXTextLayout(attributedString: NSAttributedString(
+    let layout = TextLabel.Layout(attributedString: NSAttributedString(
         string: "Short line",
         attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
     ))
@@ -197,19 +179,19 @@ import Testing
         height: CGFloat.greatestFiniteMagnitude
     )
 
-    let naturalSize = layout.suggestContainerSize(withSize: unconstrained)
+    let naturalSize = layout.sizeThatFits(unconstrained)
 
     // A fresh layout answers a wide-enough constraint identically to the fast path.
-    let reference = LTXTextLayout(attributedString: NSAttributedString(
+    let reference = TextLabel.Layout(attributedString: NSAttributedString(
         string: "Short line",
         attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
     ))
     let wideConstraint = CGSize(width: naturalSize.width + 100, height: .greatestFiniteMagnitude)
-    #expect(layout.suggestContainerSize(withSize: wideConstraint) == reference.suggestContainerSize(withSize: wideConstraint))
+    #expect(layout.sizeThatFits(wideConstraint) == reference.sizeThatFits(wideConstraint))
 
     // A narrower constraint must fall back to the framesetter and wrap.
     let narrowConstraint = CGSize(width: naturalSize.width / 2, height: .greatestFiniteMagnitude)
-    let wrapped = layout.suggestContainerSize(withSize: narrowConstraint)
+    let wrapped = layout.sizeThatFits(narrowConstraint)
     #expect(wrapped.height > naturalSize.height)
 }
 
@@ -218,7 +200,7 @@ private var lineDrawingProbeInvocationCount = 0
 
 @MainActor
 private func lineDrawingProbeText(lineCount: Int) -> NSAttributedString {
-    let action = LTXLineDrawingAction { _, _, _ in
+    let action = TextLabel.LineDrawingAction { _, _, _ in
         lineDrawingProbeInvocationCount += 1
     }
     let text = NSMutableAttributedString()
@@ -227,7 +209,7 @@ private func lineDrawingProbeText(lineCount: Int) -> NSAttributedString {
             string: "Probe line \(index) keeps layout stable while drawing is clipped.\n",
             attributes: [
                 .font: PlatformFont.systemFont(ofSize: 16),
-                .ltxLineDrawingCallback: action,
+                .litextLineDrawingAction: action,
             ]
         ))
     }

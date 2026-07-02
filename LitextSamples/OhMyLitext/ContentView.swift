@@ -4,7 +4,7 @@
 //
 //  Created by Litext Team.
 //
-//  The demo renders one rich-text document inside a single LTXLabel —
+//  The demo renders one rich-text document inside a single TextLabelView —
 //  the way Litext is meant to be used — instead of scattering features
 //  across many small labels.
 //
@@ -28,7 +28,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LitextLabel(attributedString: document)
+                TextLabel(attributedString: document)
                     .selectable(theme.isSelectable)
                     .selectionBackgroundColor(theme.selectionColor)
                     .onTapLink(recordLinkTap)
