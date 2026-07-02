@@ -60,12 +60,6 @@ import QuartzCore
                 performLayout()
             }
 
-            override func viewDidMoveToSuperview() {
-                super.viewDidMoveToSuperview()
-                updateVisibleRenderingObservation()
-                setNeedsTextDisplay()
-            }
-
             override func setFrameSize(_ newSize: NSSize) {
                 let oldSize = frame.size
                 super.setFrameSize(newSize)
@@ -107,10 +101,6 @@ import QuartzCore
                 updateSelectionLayer()
                 setNeedsTextDisplay()
             }
-
-            #if (canImport(UIKit) && !os(watchOS)) || (canImport(AppKit) && !targetEnvironment(macCatalyst))
-                updateVisibleRenderingObservation()
-            #endif
         }
 
         func setNeedsTextDisplay() {

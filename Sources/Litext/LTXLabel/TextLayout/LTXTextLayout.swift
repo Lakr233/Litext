@@ -45,6 +45,7 @@ public class LTXTextLayout: NSObject {
     private var _highlightRegions: [RegionKey: LTXHighlightRegion]
     private var _highlightRegionsArray: [LTXHighlightRegion] = []
     private var suggestedSizeCache: (input: CGSize, output: CGSize)?
+    private var naturalSizeCache: CGSize?
 
     public init(attributedString: NSAttributedString) {
         self.attributedString = attributedString
@@ -61,12 +62,25 @@ public class LTXTextLayout: NSObject {
     /// `containerSize` already triggers layout regeneration when assigned. Call this only after
     /// external state referenced by run delegates or custom drawing callbacks changes.
     public func invalidateLayout() {
+        suggestedSizeCache = nil
+        naturalSizeCache = nil
         generateLayout()
     }
 
     public func suggestContainerSize(withSize size: CGSize) -> CGSize {
         if let suggestedSizeCache, suggestedSizeCache.input == size {
             return suggestedSizeCache.output
+        }
+
+        // Fast path: once the unconstrained (natural) size is known, any constraint
+        // that already fits it cannot change line breaking, so the framesetter pass
+        // can be skipped for those queries.
+        if let naturalSizeCache,
+           naturalSizeCache.width <= size.width,
+           naturalSizeCache.height <= size.height
+        {
+            suggestedSizeCache = (input: size, output: naturalSizeCache)
+            return naturalSizeCache
         }
 
         let suggestedSize = CTFramesetterSuggestFrameSizeWithConstraints(
@@ -76,15 +90,14 @@ public class LTXTextLayout: NSObject {
             size,
             nil
         )
+        if size.width == CGFloat.greatestFiniteMagnitude, size.height == CGFloat.greatestFiniteMagnitude {
+            naturalSizeCache = suggestedSize
+        }
         suggestedSizeCache = (input: size, output: suggestedSize)
         return suggestedSize
     }
 
     public func draw(in context: CGContext) {
-        draw(in: context, visibleRect: nil)
-    }
-
-    public func draw(in context: CGContext, visibleRect: CGRect?) {
         context.saveGState()
 
         context.setAllowsAntialiasing(true)
@@ -92,58 +105,25 @@ public class LTXTextLayout: NSObject {
         context.translateBy(x: 0, y: containerSize.height)
         context.scaleBy(x: 1, y: -1)
 
-        let visibleTextRect = visibleRect.flatMap(coreTextVisibleRect)
-        if let visibleTextRect {
-            context.saveGState()
-            context.clip(to: visibleTextRect)
-            drawLines(in: context, visibleTextRect: visibleTextRect)
-            processLineDrawingActions(in: context, visibleTextRect: visibleTextRect)
-            context.restoreGState()
-        } else if let ctFrame {
+        if let ctFrame {
             CTFrameDraw(ctFrame, context)
-            processLineDrawingActions(in: context, visibleTextRect: nil)
+            processLineDrawingActions(in: context)
         }
 
         context.restoreGState()
     }
 
-    public func visibleLineCount(in visibleRect: CGRect?) -> Int {
-        guard let visibleTextRect = visibleRect.flatMap(coreTextVisibleRect) else {
-            return lines?.count ?? 0
-        }
-
-        var count = 0
-        enumerateLines(in: visibleTextRect) { _, _, _ in
-            count += 1
-        }
-        return count
-    }
-
-    private func drawLines(in context: CGContext, visibleTextRect: CGRect) {
-        context.textMatrix = .identity
-        enumerateLines(in: visibleTextRect) { line, _, lineOrigin in
-            context.textPosition = lineOrigin
-            CTLineDraw(line, context)
-        }
-    }
-
-    private func processLineDrawingActions(in context: CGContext, visibleTextRect: CGRect?) {
+    private func processLineDrawingActions(in context: CGContext) {
         guard hasLineDrawingActions else { return }
 
-        let block: (CTLine, Int, CGPoint) -> Void = { line, _, lineOrigin in
-            self.enumerateRuns(in: line) { _, attributes in
+        enumerateLines { line, _, lineOrigin in
+            enumerateRuns(in: line) { _, attributes in
                 if let action = attributes[LTXLineDrawingCallbackName] as? LTXLineDrawingAction {
                     context.saveGState()
                     action.action(context, line, lineOrigin)
                     context.restoreGState()
                 }
             }
-        }
-
-        if let visibleTextRect {
-            enumerateLines(in: visibleTextRect, using: block)
-        } else {
-            enumerateLines(using: block)
         }
     }
 
@@ -423,42 +403,6 @@ public class LTXTextLayout: NSObject {
             let origin = lineOrigins[i]
             block(line, i, origin)
         }
-    }
-
-    private func enumerateLines(
-        in visibleTextRect: CGRect,
-        using block: (CTLine, Int, CGPoint) -> Void
-    ) {
-        enumerateLines { line, index, origin in
-            guard lineRect(for: line, origin: origin).intersects(visibleTextRect) else { return }
-            block(line, index, origin)
-        }
-    }
-
-    private func coreTextVisibleRect(from visibleRect: CGRect) -> CGRect? {
-        let containerBounds = CGRect(origin: .zero, size: containerSize)
-        let rect = visibleRect.standardized.intersection(containerBounds)
-        guard !rect.isNull, !rect.isEmpty else { return nil }
-
-        return CGRect(
-            x: rect.minX,
-            y: containerSize.height - rect.maxY,
-            width: rect.width,
-            height: rect.height
-        ).insetBy(dx: -1, dy: -1)
-    }
-
-    private func lineRect(for line: CTLine, origin: CGPoint) -> CGRect {
-        var ascent: CGFloat = 0
-        var descent: CGFloat = 0
-        var leading: CGFloat = 0
-        let lineWidth = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
-        return CGRect(
-            x: origin.x,
-            y: origin.y - descent,
-            width: lineWidth,
-            height: ascent + descent + leading
-        )
     }
 
     // MARK: - Text Index Helpers

@@ -48,39 +48,6 @@ final class LitextSampleUnitTests: XCTestCase {
     }
 
     @MainActor
-    func testVisibleTextDrawingRectKeepsGuardBandDuringPartialDirtyRedraw() throws {
-        let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
-        label.frame = CGRect(x: 0, y: 0, width: 320, height: 600)
-
-        let dirtyStrip = CGRect(x: 0, y: 280, width: 320, height: 2)
-        let clippedDirtyRect = try XCTUnwrap(label.visibleTextDrawingRect(for: dirtyStrip))
-
-        XCTAssertGreaterThan(clippedDirtyRect.height, dirtyStrip.height)
-        XCTAssertLessThanOrEqual(clippedDirtyRect.minY, dirtyStrip.minY)
-        XCTAssertGreaterThanOrEqual(clippedDirtyRect.maxY, dirtyStrip.maxY)
-        XCTAssertLessThanOrEqual(clippedDirtyRect.maxY, label.bounds.maxY)
-
-        label.drawsOnlyVisibleText = false
-        XCTAssertEqual(label.visibleTextDrawingRect(for: dirtyStrip), dirtyStrip)
-    }
-
-    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
-        @MainActor
-        func testAppKitVisibleRenderingObservesScrollClipBounds() {
-            let scrollView = NSScrollView(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
-            let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
-            label.frame = CGRect(x: 0, y: 0, width: 320, height: 600)
-
-            scrollView.documentView = label
-            label.updateVisibleRenderingObservation()
-
-            XCTAssertTrue(label.visibleRenderingClipView === scrollView.contentView)
-            XCTAssertNotNil(label.visibleRenderingBoundsObserver)
-            XCTAssertTrue(scrollView.contentView.postsBoundsChangedNotifications)
-        }
-    #endif
-
-    @MainActor
     func testHighlightRegionForTapPrioritizesLinkedAttachments() throws {
         let url = try XCTUnwrap(URL(string: "https://example.com/attachment"))
         let text = NSMutableAttributedString(string: "Start ")
@@ -241,35 +208,25 @@ final class LitextSampleUnitTests: XCTestCase {
     }
 
     @MainActor
-    func testVisibleRectDrawingSkipsOffscreenLineActionsWithoutChangingLayoutHeight() throws {
+    func testDrawingInvokesLineDrawingActionForEveryLine() throws {
         let width: CGFloat = 260
-        let attributedText = Self.lineDrawingProbeText(lineCount: 80)
+        let lineCount = 12
+        let attributedText = Self.lineDrawingProbeText(lineCount: lineCount)
         let layout = LTXTextLayout(attributedString: attributedText)
         let suggestedSize = layout.suggestContainerSize(
             withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
         )
         layout.containerSize = CGSize(width: width, height: suggestedSize.height)
 
-        let fullLineCount = layout.visibleLineCount(in: nil)
-        let visibleRect = CGRect(x: 0, y: 0, width: width, height: 90)
-        let visibleLineCount = layout.visibleLineCount(in: visibleRect)
-
-        XCTAssertGreaterThan(fullLineCount, visibleLineCount)
-        XCTAssertGreaterThan(visibleLineCount, 0)
-        XCTAssertEqual(
-            layout.suggestContainerSize(withSize: CGSize(width: width, height: .greatestFiniteMagnitude)),
-            suggestedSize
-        )
-
         Self.lineDrawingProbeInvocationCount = 0
         let context = try XCTUnwrap(Self.makeBitmapContext(size: layout.containerSize))
-        layout.draw(in: context, visibleRect: visibleRect)
+        layout.draw(in: context)
 
-        XCTAssertEqual(Self.lineDrawingProbeInvocationCount, visibleLineCount)
+        XCTAssertGreaterThanOrEqual(Self.lineDrawingProbeInvocationCount, lineCount)
     }
 
     @MainActor
-    func testVisibleRectDrawingPerformance() throws {
+    func testFullTextDrawingPerformance() throws {
         let width: CGFloat = 320
         let attributedText = Self.lineDrawingProbeText(lineCount: 500)
         let layout = LTXTextLayout(attributedString: attributedText)
@@ -277,13 +234,10 @@ final class LitextSampleUnitTests: XCTestCase {
             withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
         )
         layout.containerSize = CGSize(width: width, height: suggestedSize.height)
-        let visibleRect = CGRect(x: 0, y: suggestedSize.height / 2, width: width, height: 900)
         let fullContext = try XCTUnwrap(Self.makeBitmapContext(size: layout.containerSize))
-        let visibleContext = try XCTUnwrap(Self.makeBitmapContext(size: layout.containerSize))
 
         measure(metrics: [XCTClockMetric(), XCTCPUMetric(), XCTMemoryMetric()]) {
             layout.draw(in: fullContext)
-            layout.draw(in: visibleContext, visibleRect: visibleRect)
         }
     }
 

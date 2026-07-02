@@ -49,39 +49,6 @@ import Testing
     }
 
     @MainActor
-    @Test func visibleTextDrawingRectKeepsGuardBandDuringPartialDirtyRedraw() throws {
-        let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
-        label.frame = CGRect(x: 0, y: 0, width: 320, height: 600)
-
-        let dirtyStrip = CGRect(x: 0, y: 280, width: 320, height: 2)
-        let clippedDirtyRect = try #require(label.visibleTextDrawingRect(for: dirtyStrip))
-
-        #expect(clippedDirtyRect.height > dirtyStrip.height)
-        #expect(clippedDirtyRect.minY <= dirtyStrip.minY)
-        #expect(clippedDirtyRect.maxY >= dirtyStrip.maxY)
-        #expect(clippedDirtyRect.maxY <= label.bounds.maxY)
-
-        label.drawsOnlyVisibleText = false
-        #expect(label.visibleTextDrawingRect(for: dirtyStrip) == dirtyStrip)
-    }
-
-    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
-        @MainActor
-        @Test func appKitVisibleRenderingObservesScrollClipBounds() {
-            let scrollView = NSScrollView(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
-            let label = LTXLabel(attributedText: NSAttributedString(string: "Hello"))
-            label.frame = CGRect(x: 0, y: 0, width: 320, height: 600)
-
-            scrollView.documentView = label
-            label.updateVisibleRenderingObservation()
-
-            #expect(label.visibleRenderingClipView === scrollView.contentView)
-            #expect(label.visibleRenderingBoundsObserver != nil)
-            #expect(scrollView.contentView.postsBoundsChangedNotifications)
-        }
-    #endif
-
-    @MainActor
     @Test func highlightRegionForTapPrioritizesLinkedAttachments() throws {
         let url = try #require(URL(string: "https://example.com/attachment"))
         let text = NSMutableAttributedString(string: "Start ")
@@ -202,30 +169,48 @@ import Testing
 }
 
 @MainActor
-@Test func visibleRectDrawingSkipsOffscreenLineActionsWithoutChangingLayoutHeight() throws {
+@Test func drawingInvokesLineDrawingActionForEveryLine() throws {
     let width: CGFloat = 260
-    let attributedText = lineDrawingProbeText(lineCount: 80)
+    let lineCount = 12
+    let attributedText = lineDrawingProbeText(lineCount: lineCount)
     let layout = LTXTextLayout(attributedString: attributedText)
     let suggestedSize = layout.suggestContainerSize(
         withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
     )
     layout.containerSize = CGSize(width: width, height: suggestedSize.height)
 
-    let fullLineCount = layout.visibleLineCount(in: nil)
-    let visibleRect = CGRect(x: 0, y: 0, width: width, height: 90)
-    let visibleLineCount = layout.visibleLineCount(in: visibleRect)
-
-    #expect(fullLineCount > visibleLineCount)
-    #expect(visibleLineCount > 0)
-    #expect(layout.suggestContainerSize(
-        withSize: CGSize(width: width, height: .greatestFiniteMagnitude)
-    ) == suggestedSize)
-
     lineDrawingProbeInvocationCount = 0
     let context = try #require(makeBitmapContext(size: layout.containerSize))
-    layout.draw(in: context, visibleRect: visibleRect)
+    layout.draw(in: context)
 
-    #expect(lineDrawingProbeInvocationCount == visibleLineCount)
+    #expect(lineDrawingProbeInvocationCount >= lineCount)
+}
+
+@MainActor
+@Test func naturalSizeFastPathMatchesFramesetterForNonWrappingWidths() {
+    let layout = LTXTextLayout(attributedString: NSAttributedString(
+        string: "Short line",
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+    ))
+    let unconstrained = CGSize(
+        width: CGFloat.greatestFiniteMagnitude,
+        height: CGFloat.greatestFiniteMagnitude
+    )
+
+    let naturalSize = layout.suggestContainerSize(withSize: unconstrained)
+
+    // A fresh layout answers a wide-enough constraint identically to the fast path.
+    let reference = LTXTextLayout(attributedString: NSAttributedString(
+        string: "Short line",
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+    ))
+    let wideConstraint = CGSize(width: naturalSize.width + 100, height: .greatestFiniteMagnitude)
+    #expect(layout.suggestContainerSize(withSize: wideConstraint) == reference.suggestContainerSize(withSize: wideConstraint))
+
+    // A narrower constraint must fall back to the framesetter and wrap.
+    let narrowConstraint = CGSize(width: naturalSize.width / 2, height: .greatestFiniteMagnitude)
+    let wrapped = layout.suggestContainerSize(withSize: narrowConstraint)
+    #expect(wrapped.height > naturalSize.height)
 }
 
 @MainActor
