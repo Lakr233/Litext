@@ -8,18 +8,18 @@
 import CoreGraphics
 import Foundation
 
-public extension TextLabel {
+extension TextLabel {
     @MainActor
-    class HighlightRegion {
+    open class HighlightRegion {
         public enum Kind {
             case link
             case attachment
         }
 
-        public private(set) var rects: [CGRect] = []
+        open private(set) var rects: [CGRect] = []
 
-        public private(set) var attributes: [NSAttributedString.Key: Any]
-        public private(set) var stringRange: NSRange
+        open private(set) var attributes: [NSAttributedString.Key: Any]
+        open private(set) var stringRange: NSRange
         public let kind: Kind
 
         nonisolated(unsafe) var associatedObject: AnyObject?

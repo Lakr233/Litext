@@ -6,10 +6,10 @@
 import CoreText
 import Foundation
 
-public extension TextLabel {
+extension TextLabel {
     @MainActor
-    class LineDrawingAction: NSObject {
-        public var action: (CGContext, CTLine, CGPoint) -> Void
+    open class LineDrawingAction: NSObject {
+        open var action: (CGContext, CTLine, CGPoint) -> Void
 
         public init(action: @escaping (CGContext, CTLine, CGPoint) -> Void) {
             self.action = action

@@ -31,7 +31,7 @@ extension TextLabel {
             size = .zero
         }
 
-        public func attributedString(
+        open func attributedString(
             attributes: [NSAttributedString.Key: Any] = [:]
         ) -> NSAttributedString {
             let result = NSMutableAttributedString(

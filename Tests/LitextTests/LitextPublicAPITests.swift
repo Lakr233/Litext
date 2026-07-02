@@ -8,6 +8,32 @@ import Litext
 import Testing
 
 @MainActor
+private final class OpenLayoutOverride: TextLabel.Layout {
+    override func sizeThatFits(_ size: CGSize) -> CGSize {
+        super.sizeThatFits(size)
+    }
+}
+
+@MainActor
+private final class OpenAttachmentOverride: TextLabel.Attachment {
+    override func attributedString(
+        attributes: [NSAttributedString.Key: Any]
+    ) -> NSAttributedString {
+        super.attributedString(attributes: attributes)
+    }
+}
+
+#if !os(watchOS)
+    @MainActor
+    private final class OpenTextLabelViewOverride: TextLabelView {
+        override var isSelectable: Bool {
+            get { super.isSelectable }
+            set { super.isSelectable = newValue }
+        }
+    }
+#endif
+
+@MainActor
 @Test func renamedPublicAPIIsUsableWithoutTestableImport() throws {
     let attachment = TextLabel.Attachment()
     attachment.size = CGSize(width: 24, height: 16)
@@ -36,5 +62,21 @@ import Testing
         _ = label.copySelection()
         label.clearSelection()
         #expect(label.attributedText.length == attachmentText.length)
+    #endif
+}
+
+@MainActor
+@Test func openClassAPISupportsExternalSubclassing() {
+    let attachment = OpenAttachmentOverride()
+    attachment.size = CGSize(width: 12, height: 8)
+    #expect(attachment.attributedString(attributes: [:]).length == 1)
+
+    let layout = OpenLayoutOverride(attributedString: NSAttributedString(string: "Subclassable"))
+    #expect(layout.sizeThatFits(CGSize(width: 200, height: CGFloat.greatestFiniteMagnitude)).width > 0)
+
+    #if !os(watchOS)
+        let label = OpenTextLabelViewOverride()
+        label.isSelectable = true
+        #expect(label.isSelectable)
     #endif
 }

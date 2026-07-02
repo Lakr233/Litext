@@ -281,11 +281,11 @@
                 parentViewController?.present(activityController, animated: true)
             }
 
-            override public var canBecomeFirstResponder: Bool {
+            override open var canBecomeFirstResponder: Bool {
                 isSelectable
             }
 
-            override public func canPerformAction(
+            override open func canPerformAction(
                 _ action: Selector,
                 withSender _: Any?
             ) -> Bool {

@@ -23,15 +23,15 @@ private struct RegionKey: Hashable {
     let location: Int
 }
 
-public extension TextLabel {
+extension TextLabel {
     @MainActor
-    class Layout: NSObject {
-        public private(set) var attributedString: NSAttributedString
-        public var highlightRegions: [TextLabel.HighlightRegion] {
+    open class Layout: NSObject {
+        open private(set) var attributedString: NSAttributedString
+        open var highlightRegions: [TextLabel.HighlightRegion] {
             _highlightRegionsArray
         }
 
-        public var containerSize: CGSize {
+        open var containerSize: CGSize {
             didSet {
                 generateLayout()
             }
@@ -62,13 +62,13 @@ public extension TextLabel {
         ///
         /// `containerSize` already triggers layout regeneration when assigned. Call this only after
         /// external state referenced by run delegates or custom drawing callbacks changes.
-        public func invalidateLayout() {
+        open func invalidateLayout() {
             suggestedSizeCache = nil
             naturalSizeCache = nil
             generateLayout()
         }
 
-        public func sizeThatFits(_ size: CGSize) -> CGSize {
+        open func sizeThatFits(_ size: CGSize) -> CGSize {
             if let suggestedSizeCache, suggestedSizeCache.input == size {
                 return suggestedSizeCache.output
             }
@@ -98,7 +98,7 @@ public extension TextLabel {
             return suggestedSize
         }
 
-        public func draw(in context: CGContext) {
+        open func draw(in context: CGContext) {
             context.saveGState()
 
             context.setAllowsAntialiasing(true)
@@ -128,13 +128,13 @@ public extension TextLabel {
             }
         }
 
-        public func updateHighlightRegions() {
+        open func updateHighlightRegions() {
             _highlightRegions.removeAll()
             extractHighlightRegions()
             _highlightRegionsArray = Array(_highlightRegions.values)
         }
 
-        public func rects(for range: NSRange) -> [CGRect] {
+        open func rects(for range: NSRange) -> [CGRect] {
             var rects = [CGRect]()
             enumerateTextRects(in: range) { rect in
                 rects.append(rect)
@@ -142,7 +142,7 @@ public extension TextLabel {
             return rects
         }
 
-        public func enumerateTextRects(in range: NSRange, using block: (CGRect) -> Void) {
+        open func enumerateTextRects(in range: NSRange, using block: (CGRect) -> Void) {
             guard let range = NSRange.sanitized(range, within: attributedString.length),
                   let lines,
                   let lineOrigins
@@ -408,7 +408,7 @@ public extension TextLabel {
 
         // MARK: - Text Index Helpers
 
-        public func textIndex(at point: CGPoint) -> Int? {
+        open func textIndex(at point: CGPoint) -> Int? {
             guard let lines, let lineOrigins else { return nil }
 
             if let lineInfo = findLineContainingPoint(point) {
@@ -423,7 +423,7 @@ public extension TextLabel {
             return range.location + range.length
         }
 
-        public func nearestTextIndex(at point: CGPoint) -> Int? {
+        open func nearestTextIndex(at point: CGPoint) -> Int? {
             guard let lines, let lineOrigins else { return nil }
 
             if let lineInfo = findLineContainingPoint(point) {

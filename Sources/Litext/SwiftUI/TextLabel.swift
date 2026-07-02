@@ -86,7 +86,7 @@ import SwiftUI
 
         // MARK: - Coordinator
 
-        public class Coordinator: NSObject, TextLabelViewDelegate {
+        open class Coordinator: NSObject, TextLabelViewDelegate {
             var onTapLink: ((URL) -> Void)?
             var onSelectionChange: ((String?) -> Void)?
 
@@ -95,7 +95,7 @@ import SwiftUI
                 self.onSelectionChange = onSelectionChange
             }
 
-            public func textLabelView(
+            open func textLabelView(
                 _: TextLabelView,
                 didTapHighlightRegion region: TextLabel.HighlightRegion,
                 at _: CGPoint
@@ -113,11 +113,11 @@ import SwiftUI
                 }
             }
 
-            public func textLabelView(_ label: TextLabelView, didChangeSelection _: NSRange?) {
+            open func textLabelView(_ label: TextLabelView, didChangeSelection _: NSRange?) {
                 onSelectionChange?(label.selectedPlainText())
             }
 
-            public func textLabelView(_: TextLabelView, didDragSelectionAt _: CGPoint) {}
+            open func textLabelView(_: TextLabelView, didDragSelectionAt _: CGPoint) {}
         }
     }
 
@@ -198,7 +198,7 @@ import SwiftUI
 
         // MARK: - Coordinator
 
-        public class Coordinator: NSObject, TextLabelViewDelegate {
+        open class Coordinator: NSObject, TextLabelViewDelegate {
             var onTapLink: ((URL) -> Void)?
             var onSelectionChange: ((String?) -> Void)?
 
@@ -207,7 +207,7 @@ import SwiftUI
                 self.onSelectionChange = onSelectionChange
             }
 
-            public func textLabelView(
+            open func textLabelView(
                 _: TextLabelView,
                 didTapHighlightRegion region: TextLabel.HighlightRegion,
                 at _: CGPoint
@@ -221,11 +221,11 @@ import SwiftUI
                 }
             }
 
-            public func textLabelView(_ label: TextLabelView, didChangeSelection _: NSRange?) {
+            open func textLabelView(_ label: TextLabelView, didChangeSelection _: NSRange?) {
                 onSelectionChange?(label.selectedPlainText())
             }
 
-            public func textLabelView(_: TextLabelView, didDragSelectionAt _: CGPoint) {}
+            open func textLabelView(_: TextLabelView, didDragSelectionAt _: CGPoint) {}
         }
     }
 #endif

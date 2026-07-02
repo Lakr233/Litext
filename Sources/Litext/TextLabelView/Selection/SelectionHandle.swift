@@ -12,7 +12,7 @@ import Foundation
         func selectionHandleDidMove(_ kind: SelectionHandle.Kind, toLocationInSuperView point: CGPoint)
     }
 
-    public class SelectionHandle: UIView {
+    open class SelectionHandle: UIView {
         static let knobRadius: CGFloat = 12
         static let knobExtraResponsiveArea: CGFloat = 20
 
@@ -59,7 +59,7 @@ import Foundation
             setupView()
         }
 
-        required init?(coder: NSCoder) {
+        public required init?(coder: NSCoder) {
             kind = .start
             super.init(coder: coder)
             setupView()
@@ -75,7 +75,7 @@ import Foundation
             addGestureRecognizer(panGesture)
         }
 
-        override public func layoutSubviews() {
+        override open func layoutSubviews() {
             super.layoutSubviews()
             let stickWidth = 2
             stickView.frame = .init(
@@ -124,7 +124,7 @@ import Foundation
             }
         }
 
-        override public func point(inside point: CGPoint, with _: UIEvent?) -> Bool {
+        override open func point(inside point: CGPoint, with _: UIEvent?) -> Bool {
             let touchRect = bounds.insetBy(
                 dx: -Self.knobExtraResponsiveArea,
                 dy: -Self.knobExtraResponsiveArea

@@ -19,16 +19,16 @@ import QuartzCore
 #if !os(watchOS)
 
     @MainActor
-    public class TextLabelView: PlatformView, Identifiable {
+    open class TextLabelView: PlatformView, Identifiable {
         public let id: UUID = .init()
 
         // MARK: - Public Properties
 
-        public var attributedText: NSAttributedString = .init() {
+        open var attributedText: NSAttributedString = .init() {
             didSet { textLayout = TextLabel.Layout(attributedString: attributedText) }
         }
 
-        public var preferredMaxLayoutWidth: CGFloat = 0 {
+        open var preferredMaxLayoutWidth: CGFloat = 0 {
             didSet {
                 if preferredMaxLayoutWidth != oldValue {
                     invalidateTextLayout()
@@ -36,7 +36,7 @@ import QuartzCore
             }
         }
 
-        override public var frame: CGRect {
+        override open var frame: CGRect {
             get { super.frame }
             set {
                 guard newValue != super.frame else { return }
@@ -45,17 +45,17 @@ import QuartzCore
             }
         }
 
-        public var isSelectable: Bool = false {
+        open var isSelectable: Bool = false {
             didSet { if !isSelectable { clearSelection() } }
         }
 
-        public var selectionBackgroundColor: PlatformColor? {
+        open var selectionBackgroundColor: PlatformColor? {
             didSet { updateSelectionLayer() }
         }
 
-        public internal(set) var isInteractionInProgress = false
+        open internal(set) var isInteractionInProgress = false
 
-        public weak var delegate: TextLabelViewDelegate?
+        open weak var delegate: TextLabelViewDelegate?
 
         // MARK: - Internal Properties
 
@@ -74,7 +74,7 @@ import QuartzCore
 
         private var _selectionRange: NSRange?
 
-        public var selectionRange: NSRange? {
+        open var selectionRange: NSRange? {
             get {
                 _selectionRange
             }
@@ -175,21 +175,21 @@ import QuartzCore
         }
 
         #if canImport(UIKit)
-            override public func didMoveToWindow() {
+            override open func didMoveToWindow() {
                 super.didMoveToWindow()
                 clearSelection()
                 invalidateTextLayout()
             }
 
         #elseif canImport(AppKit)
-            override public func viewDidMoveToWindow() {
+            override open func viewDidMoveToWindow() {
                 super.viewDidMoveToWindow()
                 clearSelection()
                 invalidateTextLayout()
                 setNeedsTextDisplay()
             }
 
-            public var backgroundColor: NSColor? {
+            open var backgroundColor: NSColor? {
                 get {
                     guard let cgColor = layer?.backgroundColor else { return nil }
                     return NSColor(cgColor: cgColor)
