@@ -90,13 +90,6 @@ import QuartzCore
         var selectedLinkForMenuAction: URL?
         nonisolated(unsafe) var selectionLayer: CAShapeLayer?
 
-        #if canImport(AppKit) && !targetEnvironment(macCatalyst)
-            /// The cursor currently applied by this label. Setting the same cursor
-            /// repeatedly makes AppKit flicker between cursors, so updates are
-            /// deduplicated against this value.
-            var activeCursor: NSCursor?
-        #endif
-
         #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
             var selectionHandleStart: SelectionHandle = .init(kind: .start)
             var selectionHandleEnd: SelectionHandle = .init(kind: .end)

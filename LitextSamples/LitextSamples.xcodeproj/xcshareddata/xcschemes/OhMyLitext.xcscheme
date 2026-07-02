@@ -50,16 +50,6 @@
                ReferencedContainer = "container:LitextSamples.xcodeproj">
             </BuildableReference>
          </TestableReference>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A10000012F6A00010000000D"
-               BuildableName = "OhMyLitextUITests.xctest"
-               BlueprintName = "OhMyLitextUITests"
-               ReferencedContainer = "container:LitextSamples.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

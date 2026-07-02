@@ -13,6 +13,12 @@ import Foundation
     import AppKit
 
     public extension TextLabelView {
+        /// The cursor most recently applied by any label. Re-setting the same
+        /// cursor on every mouse event makes AppKit flicker, and nested labels
+        /// share the cursor, so deduplication must be global — a per-view cache
+        /// goes stale as soon as another label sets a different cursor.
+        fileprivate static var appliedCursor: NSCursor?
+
         override var acceptsFirstResponder: Bool {
             isSelectable
         }
@@ -114,15 +120,21 @@ import Foundation
         }
 
         override func hitTest(_ point: NSPoint) -> NSView? {
-            if !bounds.contains(point) { return nil }
+            // AppKit hands hitTest the point in the superview's coordinate
+            // space; local geometry (bounds, attachment frames, highlight
+            // regions) can only be tested after converting. Skipping the
+            // conversion makes a label nested at a non-zero origin — e.g.
+            // inside another label's attachment view — mouse-transparent.
+            let localPoint = superview.map { convert(point, from: $0) } ?? point
+            if !bounds.contains(localPoint) { return nil }
 
             for view in attachmentViews {
-                if view.frame.contains(point) {
+                if view.frame.contains(localPoint) {
                     return super.hitTest(point)
                 }
             }
 
-            if isSelectable || highlightRegionAtPoint(point) != nil {
+            if isSelectable || highlightRegionAtPoint(localPoint) != nil {
                 return self
             }
             return super.hitTest(point)
@@ -163,7 +175,7 @@ import Foundation
         override func mouseExited(with event: NSEvent) {
             super.mouseExited(with: event)
             applyCursor(.arrow)
-            activeCursor = nil
+            Self.appliedCursor = nil
         }
 
         override func mouseMoved(with event: NSEvent) {
@@ -224,12 +236,16 @@ import Foundation
             }
         }
 
-        /// Resolves which cursor the point deserves. The whole label surface is
+        /// Resolves which cursor the point deserves, or `nil` when another view
+        /// owns the cursor at that location. The whole label surface is
         /// treated as text (like NSTextView) instead of hit-testing individual
         /// glyph rects — per-glyph tests alternate between hit and miss while the
         /// pointer moves, which flickered between the arrow and the I-beam.
-        private func desiredCursor(at point: CGPoint) -> NSCursor {
+        private func desiredCursor(at point: CGPoint) -> NSCursor? {
             if isLocationAboveAttachmentView(location: point) {
+                // A nested TextLabelView runs this same tracking-area logic for
+                // its own surface; applying .arrow from here would fight it.
+                if nestedTextLabelView(at: point) != nil { return nil }
                 return .arrow
             }
             if highlightRegionAtPoint(point) != nil {
@@ -241,9 +257,26 @@ import Foundation
             return .arrow
         }
 
-        private func applyCursor(_ cursor: NSCursor) {
-            guard activeCursor !== cursor else { return }
-            activeCursor = cursor
+        /// The label (if any) that would receive mouse events inside an
+        /// attachment view under the given point in local coordinates.
+        private func nestedTextLabelView(at point: CGPoint) -> TextLabelView? {
+            for view in attachmentViews where view.frame.contains(point) {
+                // NSView.hitTest expects the point in the receiver's superview
+                // coordinates — attachment views are direct subviews, so the
+                // local point is already in the right space.
+                var hit = view.hitTest(point)
+                while let current = hit {
+                    if let label = current as? TextLabelView { return label }
+                    hit = current.superview
+                }
+            }
+            return nil
+        }
+
+        private func applyCursor(_ cursor: NSCursor?) {
+            guard let cursor else { return }
+            guard Self.appliedCursor !== cursor else { return }
+            Self.appliedCursor = cursor
             cursor.set()
         }
 

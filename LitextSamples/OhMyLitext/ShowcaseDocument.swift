@@ -106,21 +106,26 @@ enum ShowcaseDocument {
         text.append(style.body(" link. On macOS, hovering shows a pointing hand and right-click offers Open / Copy.\n"))
 
         text.append(style.heading("INLINE ATTACHMENTS\n"))
-        text.append(style.body("Native views flow with the text: "))
-        text.append(attachmentString(
-            title: "INLINE VIEW",
-            width: 96,
+        text.append(style.body("Even Litext nests inside Litext: "))
+        text.append(nestedLabelAttachment(
+            text: nestedInlineText(),
             identifier: "demo.attachment.inline.view",
             linkURL: nil
         ))
-        text.append(style.body(" sits on the baseline, while "))
-        text.append(attachmentString(
-            title: "LINKED VIEW",
-            width: 120,
+        text.append(style.body(" is a selectable nested label, while "))
+        text.append(nestedLabelAttachment(
+            text: nestedLinkedText(),
             identifier: "demo.attachment.linked.view",
             linkURL: linkedAttachmentURL
         ))
         text.append(style.body(" opens a link when activated.\n"))
+
+        text.append(nestedLabelAttachment(
+            text: nestedLinkedText(),
+            identifier: "demo.attachment.linked.view",
+            linkURL: linkedAttachmentURL
+        ))
+        text.append(style.body("\n"))
 
         text.append(style.heading("BIDIRECTIONAL TEXT\n"))
         text.append(style.body("English שלום عربى 123 mixed-direction text lays out, hit-tests, and selects correctly.\n"))
@@ -138,21 +143,44 @@ enum ShowcaseDocument {
                 "where CoreText keeps scrolling smooth no matter how much rich content is on screen.\n"
         ))
 
-        text.append(style.caption("Rendered by a single TextLabelView — no TextKit involved."))
+        text.append(style.caption("Rendered with CoreText — no TextKit involved. Even the inline boxes above are nested TextLabelViews."))
         return text
     }
 
     // MARK: Attachments
 
-    private static func attachmentString(
-        title: String,
-        width: CGFloat,
+    private static let nestedLabelPadding: CGFloat = 8
+
+    private static func nestedInlineText() -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        result.append(NSAttributedString(string: "Nested Litext\n", attributes: [
+            .font: PlatformFont.boldSystemFont(ofSize: 12),
+            .foregroundColor: PlatformColor.label,
+        ]))
+        result.append(NSAttributedString(string: "drag to select me", attributes: [
+            .font: PlatformFont.systemFont(ofSize: 11),
+            .foregroundColor: PlatformColor.secondaryLabel,
+        ]))
+        return result
+    }
+
+    private static func nestedLinkedText() -> NSAttributedString {
+        NSAttributedString(string: "nested link ↗", attributes: [
+            .font: PlatformFont.boldSystemFont(ofSize: 12),
+            .foregroundColor: PlatformColor.link,
+            .link: linkedAttachmentURL,
+        ])
+    }
+
+    private static func nestedLabelAttachment(
+        text: NSAttributedString,
         identifier: String,
         linkURL: URL?
     ) -> NSAttributedString {
         let attachment = TextLabel.Attachment()
-        attachment.size = CGSize(width: width, height: 28)
-        attachment.view = makeBadgeView(title: title, width: width, identifier: identifier)
+        let view = makeNestedLabelView(text: text, identifier: identifier)
+        attachment.view = view
+        attachment.size = view.frame.size
 
         var attributes: [NSAttributedString.Key: Any] = [:]
         if let linkURL {
@@ -162,41 +190,70 @@ enum ShowcaseDocument {
         return attachment.attributedString(attributes: attributes)
     }
 
-    private static func makeBadgeView(title: String, width: CGFloat, identifier: String) -> PlatformView {
+    private static func makeNestedLabelView(text: NSAttributedString, identifier: String) -> PlatformView {
+        let label = TextLabelView()
+        label.attributedText = text
+        label.isSelectable = true
+        label.delegate = NestedLabelEventForwarder.shared
+
+        let textSize = label.intrinsicContentSize
+        label.frame = CGRect(
+            x: nestedLabelPadding,
+            y: nestedLabelPadding,
+            width: textSize.width,
+            height: textSize.height
+        )
+
+        let containerSize = CGSize(
+            width: textSize.width + nestedLabelPadding * 2,
+            height: textSize.height + nestedLabelPadding * 2
+        )
+
         #if canImport(UIKit)
-            let label = UILabel()
-            label.text = title
-            label.textAlignment = .center
-            label.font = .boldSystemFont(ofSize: 11)
-            label.textColor = .white
-            label.backgroundColor = .systemBlue
-            label.layer.cornerRadius = 8
-            label.clipsToBounds = true
-            label.isAccessibilityElement = true
-            label.accessibilityIdentifier = identifier
-            return label
+            let container = UIView(frame: CGRect(origin: .zero, size: containerSize))
+            container.backgroundColor = .systemBlue.withAlphaComponent(0.12)
+            container.layer.cornerRadius = 8
+            container.isAccessibilityElement = true
+            container.accessibilityIdentifier = identifier
         #elseif canImport(AppKit)
-            // NSTextField does not center its text vertically, so wrap it in a
-            // container and keep it centered with autoresizing margins.
-            let container = NSView(frame: CGRect(x: 0, y: 0, width: width, height: 28))
+            let container = NSView(frame: CGRect(origin: .zero, size: containerSize))
             container.wantsLayer = true
-            container.layer?.backgroundColor = NSColor.systemBlue.cgColor
+            container.layer?.backgroundColor = NSColor.systemBlue.withAlphaComponent(0.12).cgColor
             container.layer?.cornerRadius = 8
             container.setAccessibilityIdentifier(identifier)
-
-            let label = NSTextField(labelWithString: title)
-            label.alignment = .center
-            label.font = .boldSystemFont(ofSize: 11)
-            label.textColor = .white
-            label.sizeToFit()
-            label.frame.origin = CGPoint(
-                x: (container.bounds.width - label.frame.width) / 2,
-                y: (container.bounds.height - label.frame.height) / 2
-            )
-            label.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin, .maxYMargin]
-            container.addSubview(label)
-            return container
         #endif
+        container.addSubview(label)
+        return container
+    }
+}
+
+/// Nested labels live inside another label's attachment view, out of reach of
+/// the SwiftUI wrapper's coordinator. Forward their events to the enclosing
+/// label's delegate so the demo status bar and alerts reflect nested
+/// interactions too.
+@MainActor
+private final class NestedLabelEventForwarder: NSObject, TextLabelViewDelegate {
+    static let shared = NestedLabelEventForwarder()
+
+    func textLabelView(
+        _ label: TextLabelView,
+        didTapHighlightRegion region: TextLabel.HighlightRegion,
+        at location: CGPoint
+    ) {
+        enclosingLabel(of: label)?.delegate?.textLabelView(label, didTapHighlightRegion: region, at: location)
+    }
+
+    func textLabelView(_ label: TextLabelView, didChangeSelection selection: NSRange?) {
+        enclosingLabel(of: label)?.delegate?.textLabelView(label, didChangeSelection: selection)
+    }
+
+    private func enclosingLabel(of label: TextLabelView) -> TextLabelView? {
+        var view = label.superview
+        while let current = view {
+            if let outer = current as? TextLabelView { return outer }
+            view = current.superview
+        }
+        return nil
     }
 }
 

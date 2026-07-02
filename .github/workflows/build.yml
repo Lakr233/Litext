@@ -94,9 +94,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --disable-logging
 
-      - name: Xcode iOS simulator UI tests
-        env:
-          LITEXT_SCREENSHOT_DIR: ${{ github.workspace }}/Artworks/RenderingAudit
+      - name: Xcode iOS simulator unit tests
         run: |
           set -o pipefail
           IOS_SIMULATOR_ID=$(xcodebuild -scheme OhMyLitext -workspace Litext.xcworkspace -showdestinations 2>/dev/null \
@@ -118,15 +116,8 @@ jobs:
             -scheme OhMyLitext \
             -workspace Litext.xcworkspace \
             -destination "id=$IOS_SIMULATOR_ID" \
+            -only-testing:OhMyLitextTests \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --disable-logging
-
-      - name: Upload rendering audit screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: rendering-audit-screenshots
-          path: Artworks/RenderingAudit/*.png
-          if-no-files-found: ignore

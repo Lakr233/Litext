@@ -25,8 +25,7 @@ function test_scheme() {
 	DESTINATION=$2
 	shift 2
 	echo "[*] test $SCHEME on $DESTINATION"
-	LITEXT_SCREENSHOT_DIR="${LITEXT_SCREENSHOT_DIR:-$PWD/Artworks/RenderingAudit}" \
-		xcodebuild test -scheme "$SCHEME" -workspace $WORKSPACE -destination "$DESTINATION" \
+	xcodebuild test -scheme "$SCHEME" -workspace $WORKSPACE -destination "$DESTINATION" \
 		"$@" \
 		CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
 		| xcbeautify --disable-logging
@@ -81,4 +80,4 @@ if [ -z "$IOS_SIMULATOR_ID" ]; then
 	echo "[!] failed to locate an available iPhone simulator"
 	exit 1
 fi
-test_scheme "OhMyLitext" "id=$IOS_SIMULATOR_ID"
+test_scheme "OhMyLitext" "id=$IOS_SIMULATOR_ID" "-only-testing:OhMyLitextTests"
