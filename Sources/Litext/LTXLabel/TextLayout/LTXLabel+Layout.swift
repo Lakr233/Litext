@@ -11,9 +11,7 @@ import QuartzCore
 
     public extension LTXLabel {
         func invalidateTextLayout() {
-            if let selectionRange,
-               attributedText.length >= selectionRange.location + selectionRange.length
-            { /* pass */ } else {
+            if selectionRange != NSRange.sanitized(selectionRange, within: attributedText.length) {
                 clearSelection()
             }
 
@@ -49,10 +47,12 @@ import QuartzCore
                 performLayout()
             }
 
-            override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-                super.traitCollectionDidChange(previousTraitCollection)
-                invalidateTextLayout()
-            }
+            #if !os(visionOS)
+                override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+                    super.traitCollectionDidChange(previousTraitCollection)
+                    invalidateTextLayout()
+                }
+            #endif
 
         #elseif canImport(AppKit)
             override func layout() {
@@ -60,9 +60,26 @@ import QuartzCore
                 performLayout()
             }
 
+            override func setFrameSize(_ newSize: NSSize) {
+                let oldSize = frame.size
+                super.setFrameSize(newSize)
+                guard oldSize != newSize else { return }
+                invalidateTextLayout()
+                setNeedsTextDisplay()
+            }
+
+            override func setBoundsSize(_ newSize: NSSize) {
+                let oldSize = bounds.size
+                super.setBoundsSize(newSize)
+                guard oldSize != newSize else { return }
+                invalidateTextLayout()
+                setNeedsTextDisplay()
+            }
+
             override func viewDidEndLiveResize() {
                 super.viewDidEndLiveResize()
                 invalidateTextLayout()
+                setNeedsTextDisplay()
             }
         #endif
 
@@ -74,26 +91,24 @@ import QuartzCore
                 invalidateIntrinsicContentSize()
                 lastContainerSize = containerSize
                 textLayout.containerSize = containerSize
-                flags.needsUpdateHighlightRegions = true
-                flags.layoutIsDirty = false
-                layoutUpdateWasMade = true
-            }
-
-            if flags.needsUpdateHighlightRegions {
                 textLayout.updateHighlightRegions()
                 updateAttachmentViews()
-                flags.needsUpdateHighlightRegions = false
+                flags.layoutIsDirty = false
                 layoutUpdateWasMade = true
             }
 
             if layoutUpdateWasMade {
                 updateSelectionLayer()
-                #if canImport(UIKit)
-                    setNeedsDisplay()
-                #elseif canImport(AppKit)
-                    needsDisplay = true
-                #endif
+                setNeedsTextDisplay()
             }
+        }
+
+        func setNeedsTextDisplay() {
+            #if canImport(UIKit)
+                setNeedsDisplay()
+            #elseif canImport(AppKit)
+                needsDisplay = true
+            #endif
         }
     }
 

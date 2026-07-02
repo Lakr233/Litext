@@ -41,6 +41,7 @@ import Foundation
         override func rightMouseDown(with event: NSEvent) {
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
+            defer { isInteractionInProgress = false }
             if handleRightClick(with: event) { return }
             super.rightMouseDown(with: event)
         }
@@ -53,26 +54,24 @@ import Foundation
                 super.mouseDown(with: event)
                 return
             }
-            interactionState.isFirstMove = true
 
             if activateHighlightRegionAtPoint(location) {
                 return
             }
 
-            bumpClickCountIfWithinTimeGap()
+            interactionState.clickCount = event.clickCount
             if !isSelectable { return }
 
             if interactionState.clickCount <= 1 {
-                if isLocationInSelection(location: location) {
-                } else {
+                if !isLocationInSelection(location: location) {
                     clearSelection()
                 }
             } else if interactionState.clickCount == 2 {
-                if let index = textIndexAtPoint(location) {
+                if let index = nearestTextIndexAtPoint(location) {
                     selectWordAtIndex(index)
                 }
             } else {
-                if let index = textIndexAtPoint(location) {
+                if let index = nearestTextIndexAtPoint(location) {
                     selectLineAtIndex(index)
                 }
             }
@@ -105,14 +104,8 @@ import Foundation
 
             guard !isTouchReallyMoved(location) else { return }
 
-            for region in highlightRegions {
-                let rects = region.rects.map {
-                    convertRectFromTextLayout($0.rectValue, insetForInteraction: true)
-                }
-                for rect in rects where rect.contains(location) {
-                    self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
-                    return
-                }
+            if let region = highlightRegionForTap(at: location) {
+                delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
             }
         }
 
@@ -261,26 +254,6 @@ import Foundation
             if copiedText.length <= 0 {
                 _ = copyFromSubviewsRecursively()
             }
-        }
-
-        private func copyFromSubviewsRecursively() -> Bool {
-            copyFromSubviewsRecursively(in: self)
-        }
-
-        private func copyFromSubviewsRecursively(in view: NSView) -> Bool {
-            for subview in view.subviews {
-                if let ltxLabel = subview as? LTXLabel {
-                    let copiedText = ltxLabel.copySelectedText()
-                    if copiedText.length > 0 {
-                        return true
-                    }
-                } else {
-                    if copyFromSubviewsRecursively(in: subview) {
-                        return true
-                    }
-                }
-            }
-            return false
         }
     }
 #endif

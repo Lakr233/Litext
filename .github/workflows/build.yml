@@ -7,6 +7,22 @@ on:
     branches: [main]
 
 jobs:
+  format-check:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install formatting tools
+        run: brew install swiftformat swiftlint
+
+      - name: SwiftFormat
+        run: swiftformat --lint .
+
+      - name: SwiftLint
+        run: swiftlint --strict
+
   build:
     runs-on: macos-15
     strategy:
@@ -51,3 +67,66 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --disable-logging
+
+  test:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+
+      - name: SwiftPM tests
+        run: swift test
+
+      - name: Xcode macOS unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme OhMyLitext \
+            -workspace Litext.xcworkspace \
+            -destination "platform=macOS" \
+            -only-testing:OhMyLitextTests \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --disable-logging
+
+      - name: Xcode iOS simulator UI tests
+        env:
+          LITEXT_SCREENSHOT_DIR: ${{ github.workspace }}/Artworks/RenderingAudit
+        run: |
+          set -o pipefail
+          IOS_SIMULATOR_ID=$(xcodebuild -scheme OhMyLitext -workspace Litext.xcworkspace -showdestinations 2>/dev/null \
+            | awk -F '[{},]' '/platform:iOS Simulator/ && /name:iPhone/ {
+                for (field = 1; field <= NF; field++) {
+                  gsub(/^ +| +$/, "", $field)
+                  if ($field ~ /^id:/) {
+                    sub(/^id:/, "", $field)
+                    print $field
+                    exit
+                  }
+                }
+              }')
+          if [ -z "$IOS_SIMULATOR_ID" ]; then
+            echo "No available iPhone simulator found"
+            exit 1
+          fi
+          xcodebuild test \
+            -scheme OhMyLitext \
+            -workspace Litext.xcworkspace \
+            -destination "id=$IOS_SIMULATOR_ID" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --disable-logging
+
+      - name: Upload rendering audit screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendering-audit-screenshots
+          path: Artworks/RenderingAudit/*.png
+          if-no-files-found: ignore

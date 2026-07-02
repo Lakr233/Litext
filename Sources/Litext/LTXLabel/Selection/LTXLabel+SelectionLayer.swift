@@ -16,9 +16,6 @@ import QuartzCore
 
     extension LTXLabel {
         func updateSelectionLayer() {
-            selectionLayer?.removeFromSuperlayer()
-            selectionLayer = nil
-
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 selectionHandleStart.isHidden = true
                 selectionHandleEnd.isHidden = true
@@ -31,6 +28,7 @@ import QuartzCore
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                     hideSelectionMenuController()
                 #endif
+                clearSelectionLayer()
                 return
             }
 
@@ -40,17 +38,16 @@ import QuartzCore
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                     hideSelectionMenuController()
                 #endif
+                clearSelectionLayer()
                 return
             }
 
             createSelectionPath(selectionPath, fromRects: selectionRects)
-            createSelectionLayer(withPath: selectionPath)
+            updateSelectionLayer(withPath: selectionPath)
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 showSelectionMenuController()
-            #endif
 
-            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 selectionHandleStart.isHidden = false
                 selectionHandleEnd.isHidden = false
 
@@ -106,35 +103,30 @@ import QuartzCore
             }
         }
 
-        private func createSelectionLayer(withPath path: LTXPlatformBezierPath) {
+        private func updateSelectionLayer(withPath path: LTXPlatformBezierPath) {
+            let fillColor = (selectionBackgroundColor ?? LTXDefaultSelectionTint).cgColor
+
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            defer { CATransaction.commit() }
+
+            if let selectionLayer {
+                selectionLayer.path = cgPath(from: path)
+                selectionLayer.fillColor = fillColor
+                return
+            }
+
             let selLayer = CAShapeLayer()
-
-            #if canImport(UIKit)
-                selLayer.path = path.cgPath
-            #elseif canImport(AppKit)
-                if #available(macOS 14.0, *) {
-                    selLayer.path = path.cgPath
-                } else {
-                    selLayer.path = path.quartzPath
-                }
-            #endif
-
-            #if canImport(UIKit)
-                let defaultColor = UIColor.systemBlue.withAlphaComponent(0.1)
-                selLayer.fillColor = (selectionBackgroundColor ?? defaultColor).cgColor
-            #elseif canImport(AppKit)
-                let defaultColor = NSColor.linkColor.withAlphaComponent(0.1)
-                selLayer.fillColor = (selectionBackgroundColor ?? defaultColor).cgColor
-            #endif
-
-            #if canImport(UIKit)
-                layer.insertSublayer(selLayer, at: 0)
-            #elseif canImport(AppKit)
-                layer?.insertSublayer(selLayer, at: 0)
-            #endif
-
+            selLayer.path = cgPath(from: path)
+            selLayer.fillColor = fillColor
+            ltxBackingLayer?.insertSublayer(selLayer, at: 0)
             selectionLayer = selLayer
+        }
+
+        private func clearSelectionLayer() {
+            selectionLayer?.removeFromSuperlayer()
+            selectionLayer = nil
         }
     }
 
-#endif // \!os(watchOS)
+#endif // !os(watchOS)

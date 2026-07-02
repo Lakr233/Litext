@@ -12,7 +12,10 @@ import Foundation
 
 @MainActor
 open class LTXAttachment {
+    static let descentFraction: CGFloat = 0.1
+
     open var size: CGSize
+    private var cachedRunDelegate: CTRunDelegate?
 
     #if !os(watchOS)
         /// The platform view to embed as an inline attachment (iOS/macOS/tvOS/visionOS).
@@ -21,8 +24,6 @@ open class LTXAttachment {
         /// The SwiftUI view to embed as an inline attachment (watchOS).
         open var swiftUIView: AnyView?
     #endif
-
-    private var _runDelegate: CTRunDelegate?
 
     public init() {
         size = .zero
@@ -37,31 +38,40 @@ open class LTXAttachment {
         return NSAttributedString(string: " ")
     }
 
+    /// A CoreText run delegate that retains this attachment for as long as CoreText needs metrics.
+    ///
+    /// The delegate is cached so repeated reads do not allocate additional delegates or retain
+    /// the attachment more than once.
     open var runDelegate: CTRunDelegate {
-        if _runDelegate == nil {
-            var callbacks = CTRunDelegateCallbacks(
-                version: kCTRunDelegateVersion1,
-                dealloc: { refCon in
-                    Unmanaged<LTXAttachment>.fromOpaque(refCon).release()
-                },
-                getAscent: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.height * 0.9
-                },
-                getDescent: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.height * 0.1
-                },
-                getWidth: { refCon in
-                    let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.width
-                }
-            )
-
-            let unmanagedSelf = Unmanaged.passRetained(self)
-            _runDelegate = CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque())
+        if let cachedRunDelegate {
+            return cachedRunDelegate
         }
 
-        return _runDelegate!
+        var callbacks = CTRunDelegateCallbacks(
+            version: kCTRunDelegateVersion1,
+            dealloc: { refCon in
+                Unmanaged<LTXAttachment>.fromOpaque(refCon).release()
+            },
+            getAscent: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                return attachment.size.height * (1 - LTXAttachment.descentFraction)
+            },
+            getDescent: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                return attachment.size.height * LTXAttachment.descentFraction
+            },
+            getWidth: { refCon in
+                let attachment = Unmanaged<LTXAttachment>.fromOpaque(refCon).takeUnretainedValue()
+                return attachment.size.width
+            }
+        )
+
+        let unmanagedSelf = Unmanaged.passRetained(self)
+        guard let delegate = CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque()) else {
+            unmanagedSelf.release()
+            fatalError("Unable to create CTRunDelegate for LTXAttachment")
+        }
+        cachedRunDelegate = delegate
+        return delegate
     }
 }

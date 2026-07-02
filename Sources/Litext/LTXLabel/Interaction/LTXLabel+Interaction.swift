@@ -56,4 +56,4 @@ import Foundation
         }
     }
 
-#endif // \!os(watchOS)
+#endif // !os(watchOS)

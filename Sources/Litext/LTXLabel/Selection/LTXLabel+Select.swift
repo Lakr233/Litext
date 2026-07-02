@@ -28,33 +28,6 @@ import QuartzCore
             selectionRange = range
         }
 
-        func selectSentenceAtIndex(_ index: Int) {
-            guard isSelectable else { return }
-            guard let text = textLayout.attributedString.string as NSString? else { return }
-            let sentenceDelimiters = CharacterSet(charactersIn: ".!?")
-            var startIndex = index
-            while startIndex > 0 {
-                let prevChar = text.substring(with: NSRange(location: startIndex - 1, length: 1))
-                if sentenceDelimiters.contains(prevChar.unicodeScalars.first!) {
-                    break
-                }
-                startIndex -= 1
-            }
-            var endIndex = index
-            while endIndex < text.length {
-                if endIndex < text.length - 1 {
-                    let currentChar = text.substring(with: NSRange(location: endIndex, length: 1))
-                    if sentenceDelimiters.contains(currentChar.unicodeScalars.first!) {
-                        endIndex += 1
-                        break
-                    }
-                }
-                endIndex += 1
-            }
-            let range = NSRange(location: startIndex, length: endIndex - startIndex)
-            selectionRange = range
-        }
-
         func selectLineAtIndex(_ index: Int) {
             guard isSelectable else { return }
             let attributedString = textLayout.attributedString
@@ -77,4 +50,4 @@ import QuartzCore
         }
     }
 
-#endif // \!os(watchOS)
+#endif // !os(watchOS)

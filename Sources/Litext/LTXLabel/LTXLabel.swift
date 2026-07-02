@@ -8,6 +8,14 @@ import CoreText
 import Foundation
 import QuartzCore
 
+#if canImport(UIKit) && !os(watchOS)
+    import UIKit
+#endif
+
+#if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    import AppKit
+#endif
+
 #if !os(watchOS)
 
     @MainActor
@@ -60,15 +68,22 @@ import QuartzCore
             textLayout.highlightRegions
         }
 
+        nonisolated(unsafe) var pendingHighlightRemovalLayers: [CALayer] = []
         var activeHighlightRegion: LTXHighlightRegion?
         var lastContainerSize: CGSize = .zero
 
-        public internal(set) var selectionRange: NSRange? {
-            didSet {
+        private var _selectionRange: NSRange?
+
+        public var selectionRange: NSRange? {
+            get {
+                _selectionRange
+            }
+            set {
+                let sanitizedRange = NSRange.sanitized(newValue, within: attributedText.length)
+                guard sanitizedRange != _selectionRange else { return }
+                _selectionRange = sanitizedRange
                 updateSelectionLayer()
-                if selectionRange != oldValue {
-                    delegate?.ltxLabelSelectionDidChange(self, selection: selectionRange)
-                }
+                delegate?.ltxLabelSelectionDidChange(self, selection: sanitizedRange)
             }
         }
 
@@ -78,6 +93,9 @@ import QuartzCore
         #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
             var selectionHandleStart: LTXSelectionHandle = .init(type: .start)
             var selectionHandleEnd: LTXSelectionHandle = .init(type: .end)
+            var editMenuInteractionStorage: UIInteraction?
+            var isEditMenuVisible = false
+            var editMenuTargetRect: CGRect = .zero
         #endif
 
         var interactionState = InteractionState()
@@ -110,6 +128,12 @@ import QuartzCore
                     selectionHandleEnd.delegate = self
                     addSubview(selectionHandleEnd)
                 #endif
+
+                if #available(iOS 17.0, tvOS 17.0, visionOS 1.0, *) {
+                    registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in
+                        self.invalidateTextLayout()
+                    }
+                }
             }
 
         #elseif canImport(AppKit)
@@ -133,12 +157,14 @@ import QuartzCore
 
         deinit {
             selectionLayer?.removeFromSuperlayer()
+            pendingHighlightRemovalLayers.forEach { $0.removeFromSuperlayer() }
             if let activeHighlightRegion,
                let highlightLayer = activeHighlightRegion.associatedObject as? CALayer
             {
                 highlightLayer.removeFromSuperlayer()
             }
             NotificationCenter.default.removeObserver(self)
+            NSObject.cancelPreviousPerformRequests(withTarget: self)
         }
 
         #if canImport(UIKit)
@@ -153,6 +179,7 @@ import QuartzCore
                 super.viewDidMoveToWindow()
                 clearSelection()
                 invalidateTextLayout()
+                setNeedsTextDisplay()
             }
 
             public var backgroundColor: NSColor? {
@@ -173,12 +200,12 @@ import QuartzCore
             var initialTouchLocation: CGPoint = .zero
             var clickCount: Int = 1
             var lastClickTime: TimeInterval = 0
+            /// AppKit uses this to clear a pre-existing selection on the first drag event.
             var isFirstMove: Bool = false
         }
 
         struct Flags {
             var layoutIsDirty: Bool = false
-            var needsUpdateHighlightRegions: Bool = false
         }
     }
 

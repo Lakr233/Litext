@@ -23,7 +23,7 @@
                 // Use keyCode instead of charactersIgnoringModifiers for keyboard layout independence
                 if key.keyCode == .keyboardC, key.modifierFlags.contains(.command) {
                     let copiedText = copySelectedText()
-                    didHandleEvent = copiedText.length > 0
+                    didHandleEvent = copiedText.length > 0 || copyFromSubviewsRecursively()
                 }
                 if key.keyCode == .keyboardA, key.modifierFlags.contains(.command) {
                     selectAllText()
@@ -40,6 +40,7 @@
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 for handler in [selectionHandleStart, selectionHandleEnd] {
+                    guard !handler.isHidden else { continue }
                     let rect = handler.frame
                         .insetBy(
                             dx: -LTXSelectionHandle.knobExtraResponsiveArea,
@@ -84,7 +85,6 @@
                 super.touchesBegan(touches, with: event)
                 return
             }
-            interactionState.isFirstMove = true
 
             if activateHighlightRegionAtPoint(location) {
                 return
@@ -100,19 +100,19 @@
                     }
                 }
             } else if interactionState.clickCount == 2 {
-                if let index = textIndexAtPoint(location) {
+                if let index = nearestTextIndexAtPoint(location) {
                     selectWordAtIndex(index)
                     // prevent touches did end discard the changes
-                    DispatchQueue.main.asyncAfter(deadline: .now()) {
-                        self.selectWordAtIndex(index)
+                    DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
+                        self?.selectWordAtIndex(index)
                     }
                 }
             } else {
-                if let index = textIndexAtPoint(location) {
+                if let index = nearestTextIndexAtPoint(location) {
                     selectLineAtIndex(index)
                     // prevent touches did end discard the changes
-                    DispatchQueue.main.asyncAfter(deadline: .now()) {
-                        self.selectLineAtIndex(index)
+                    DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
+                        self?.selectLineAtIndex(index)
                     }
                 }
             }
@@ -131,10 +131,6 @@
 
             deactivateHighlightRegion()
             performContinuousStateReset()
-
-            if interactionState.isFirstMove {
-                interactionState.isFirstMove = false
-            }
 
             guard isSelectable else { return }
 
@@ -170,26 +166,23 @@
             }
 
             guard selectionRange == nil, !isTouchReallyMoved(location) else { return }
-            outer: for region in highlightRegions {
-                let rects = region.rects.map {
-                    convertRectFromTextLayout($0.cgRectValue, insetForInteraction: true)
-                }
-                for rect in rects where rect.contains(location) {
-                    self.delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
-                    break outer
-                }
+            if let region = highlightRegionForTap(at: location) {
+                delegate?.ltxLabelDidTapOnHighlightContent(self, region: region, location: location)
             }
         }
 
         override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
             isInteractionInProgress = false
-            guard touches.count == 1,
-                  let firstTouch = touches.first
-            else {
+            guard touches.count == 1 else {
                 super.touchesCancelled(touches, with: event)
                 return
             }
-            _ = firstTouch
+            NSObject.cancelPreviousPerformRequests(
+                withTarget: self,
+                selector: #selector(performContinuousStateReset),
+                object: nil
+            )
+            performContinuousStateReset()
             deactivateHighlightRegion()
         }
 
@@ -227,13 +220,21 @@
                     unionRect = unionRect.union(rect)
                 }
 
+                let availableItems = availableTextSelectionMenuItems()
+                guard !availableItems.isEmpty else { return }
+
+                #if !targetEnvironment(macCatalyst)
+                    if #available(iOS 16.0, visionOS 1.0, *) {
+                        showEditMenuController(from: unionRect)
+                        return
+                    }
+                #endif
+
                 let menuController = UIMenuController.shared
 
-                let items = LTXLabelMenuItem
-                    .textSelectionMenu()
+                let items = availableItems
                     .compactMap { item -> UIMenuItem? in
                         guard let selector = item.action else { return nil }
-                        guard canPerformAction(selector, withSender: nil) else { return nil }
                         return UIMenuItem(title: item.title, action: selector)
                     }
                 menuController.menuItems = items
@@ -247,6 +248,14 @@
 
             func hideSelectionMenuController() {
                 guard Self.menuOwnerIdentifier == id else { return }
+                #if !targetEnvironment(macCatalyst)
+                    if #available(iOS 16.0, visionOS 1.0, *),
+                       let editMenuInteraction = editMenuInteractionStorage as? UIEditMenuInteraction
+                    {
+                        editMenuInteraction.dismissMenu()
+                        return
+                    }
+                #endif
                 UIMenuController.shared.hideMenu()
             }
 
@@ -272,13 +281,6 @@
                 parentViewController?.present(activityController, animated: true)
             }
 
-            @objc private func copyKeyCommand() {
-                let copiedText = copySelectedText()
-                if copiedText.length <= 0 {
-                    _ = copyFromSubviewsRecursively()
-                }
-            }
-
             override public var canBecomeFirstResponder: Bool {
                 isSelectable
             }
@@ -300,24 +302,78 @@
                 return false
             }
 
-            private func copyFromSubviewsRecursively() -> Bool {
-                copyFromSubviewsRecursively(in: self)
+            fileprivate func availableTextSelectionMenuItems() -> [LTXLabelMenuItem] {
+                LTXLabelMenuItem.textSelectionMenu().filter { item in
+                    guard let selector = item.action else { return false }
+                    return canPerformAction(selector, withSender: nil)
+                }
             }
 
-            private func copyFromSubviewsRecursively(in view: UIView) -> Bool {
-                for subview in view.subviews {
-                    if let ltxLabel = subview as? LTXLabel {
-                        let copiedText = ltxLabel.copySelectedText()
-                        if copiedText.length > 0 {
-                            return true
-                        }
-                    } else {
-                        if copyFromSubviewsRecursively(in: subview) {
-                            return true
-                        }
+            #if !targetEnvironment(macCatalyst)
+                @available(iOS 16.0, visionOS 1.0, *)
+                private func ensureEditMenuInteraction() -> UIEditMenuInteraction {
+                    if let editMenuInteraction = editMenuInteractionStorage as? UIEditMenuInteraction {
+                        return editMenuInteraction
+                    }
+
+                    let editMenuInteraction = UIEditMenuInteraction(delegate: self)
+                    editMenuInteractionStorage = editMenuInteraction
+                    addInteraction(editMenuInteraction)
+                    return editMenuInteraction
+                }
+
+                @available(iOS 16.0, visionOS 1.0, *)
+                private func showEditMenuController(from unionRect: CGRect) {
+                    // UIEditMenuInteraction presentation is unsupported on Mac Catalyst.
+                    let editMenuInteraction = ensureEditMenuInteraction()
+                    editMenuTargetRect = unionRect
+                    Self.menuOwnerIdentifier = id
+
+                    if isEditMenuVisible {
+                        editMenuInteraction.updateVisibleMenuPosition(animated: false)
+                        return
+                    }
+
+                    isEditMenuVisible = true
+                    let sourcePoint = CGPoint(x: unionRect.midX, y: unionRect.midY)
+                    let configuration = UIEditMenuConfiguration(identifier: nil, sourcePoint: sourcePoint)
+                    editMenuInteraction.presentEditMenu(with: configuration)
+                }
+            #endif
+        }
+    #endif
+
+    #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+        @available(iOS 16.0, visionOS 1.0, *)
+        extension LTXLabel: @preconcurrency UIEditMenuInteractionDelegate {
+            public func editMenuInteraction(
+                _: UIEditMenuInteraction,
+                menuFor _: UIEditMenuConfiguration,
+                suggestedActions _: [UIMenuElement]
+            ) -> UIMenu? {
+                let actions = availableTextSelectionMenuItems().compactMap { item -> UIAction? in
+                    guard let selector = item.action else { return nil }
+                    return UIAction(title: item.title, image: item.image) { [weak self] _ in
+                        self?.perform(selector)
                     }
                 }
-                return false
+                guard !actions.isEmpty else { return nil }
+                return UIMenu(children: actions)
+            }
+
+            public func editMenuInteraction(
+                _: UIEditMenuInteraction,
+                targetRectFor _: UIEditMenuConfiguration
+            ) -> CGRect {
+                editMenuTargetRect
+            }
+
+            public func editMenuInteraction(
+                _: UIEditMenuInteraction,
+                willDismissMenuFor _: UIEditMenuConfiguration,
+                animator _: UIEditMenuInteractionAnimating
+            ) {
+                isEditMenuVisible = false
             }
         }
     #endif
