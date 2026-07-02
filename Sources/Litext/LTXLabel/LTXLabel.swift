@@ -53,19 +53,6 @@ import QuartzCore
             didSet { updateSelectionLayer() }
         }
 
-        /// When enabled, drawing is clipped to the portion of the label currently visible
-        /// through its window and nearest scrolling ancestors. Layout, hit-testing, selection,
-        /// and highlight regions still use the full text container.
-        public var drawsOnlyVisibleText: Bool = true {
-            didSet {
-                guard drawsOnlyVisibleText != oldValue else { return }
-                #if (canImport(UIKit) && !os(watchOS)) || (canImport(AppKit) && !targetEnvironment(macCatalyst))
-                    updateVisibleRenderingObservation()
-                #endif
-                setNeedsTextDisplay()
-            }
-        }
-
         public internal(set) var isInteractionInProgress = false
 
         public weak var delegate: LTXLabelDelegate?
@@ -109,17 +96,6 @@ import QuartzCore
             var editMenuInteractionStorage: UIInteraction?
             var isEditMenuVisible = false
             var editMenuTargetRect: CGRect = .zero
-        #endif
-
-        #if canImport(UIKit) && !os(watchOS)
-            weak var visibleRenderingScrollView: UIScrollView?
-            var visibleRenderingBoundsObservation: NSKeyValueObservation?
-            var visibleRenderingContentOffsetObservation: NSKeyValueObservation?
-        #endif
-
-        #if canImport(AppKit) && !targetEnvironment(macCatalyst)
-            weak var visibleRenderingClipView: NSClipView?
-            nonisolated(unsafe) var visibleRenderingBoundsObserver: NSObjectProtocol?
         #endif
 
         var interactionState = InteractionState()
@@ -180,15 +156,6 @@ import QuartzCore
         }
 
         deinit {
-            #if canImport(UIKit) && !os(watchOS)
-                visibleRenderingBoundsObservation?.invalidate()
-                visibleRenderingContentOffsetObservation?.invalidate()
-            #endif
-            #if canImport(AppKit) && !targetEnvironment(macCatalyst)
-                if let visibleRenderingBoundsObserver {
-                    NotificationCenter.default.removeObserver(visibleRenderingBoundsObserver)
-                }
-            #endif
             selectionLayer?.removeFromSuperlayer()
             pendingHighlightRemovalLayers.forEach { $0.removeFromSuperlayer() }
             if let activeHighlightRegion,
@@ -201,16 +168,9 @@ import QuartzCore
         }
 
         #if canImport(UIKit)
-            override public func didMoveToSuperview() {
-                super.didMoveToSuperview()
-                updateVisibleRenderingObservation()
-                setNeedsTextDisplay()
-            }
-
             override public func didMoveToWindow() {
                 super.didMoveToWindow()
                 clearSelection()
-                updateVisibleRenderingObservation()
                 invalidateTextLayout()
             }
 
@@ -218,7 +178,6 @@ import QuartzCore
             override public func viewDidMoveToWindow() {
                 super.viewDidMoveToWindow()
                 clearSelection()
-                updateVisibleRenderingObservation()
                 invalidateTextLayout()
                 setNeedsTextDisplay()
             }
