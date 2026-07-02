@@ -55,6 +55,20 @@ private final class OpenAttachmentOverride: TextLabel.Attachment {
     let suggestedSize = layout.sizeThatFits(CGSize(width: 100, height: CGFloat.greatestFiniteMagnitude))
     #expect(suggestedSize.width > 0)
 
+    layout.containerSize = CGSize(width: 100, height: suggestedSize.height)
+    #expect(layout.visibleLineCount(in: nil) > 0)
+    if let context = CGContext(
+        data: nil,
+        width: 100,
+        height: max(1, Int(suggestedSize.height.rounded(.up))),
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) {
+        layout.draw(in: context, visibleRect: CGRect(x: 0, y: 0, width: 100, height: 10))
+    }
+
     #if !os(watchOS)
         let label = TextLabelView(attributedText: attachmentText)
         label.isSelectable = true

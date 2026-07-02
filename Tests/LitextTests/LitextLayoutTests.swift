@@ -196,6 +196,140 @@ import Testing
 }
 
 @MainActor
+@Test func drawingWithVisibleRectSkipsOffscreenLines() throws {
+    let width: CGFloat = 260
+    let lineCount = 12
+    let attributedText = lineDrawingProbeText(lineCount: lineCount)
+    let layout = TextLabel.Layout(attributedString: attributedText)
+    let suggestedSize = layout.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+    layout.containerSize = CGSize(width: width, height: suggestedSize.height)
+
+    #expect(layout.visibleLineCount(in: nil) >= lineCount)
+
+    let lineHeight = suggestedSize.height / CGFloat(layout.visibleLineCount(in: nil))
+    let visibleRect = CGRect(x: 0, y: 0, width: width, height: lineHeight * 2)
+
+    lineDrawingProbeInvocationCount = 0
+    let context = try #require(makeBitmapContext(size: layout.containerSize))
+    layout.draw(in: context, visibleRect: visibleRect)
+
+    // The two intersecting lines plus at most one overhang line on each side.
+    #expect(lineDrawingProbeInvocationCount >= 2)
+    #expect(lineDrawingProbeInvocationCount <= 4)
+    #expect(layout.visibleLineCount(in: visibleRect) == lineDrawingProbeInvocationCount)
+}
+
+@MainActor
+@Test func sizeThatFitsMatchesFramesetterSuggestionForLeftAlignedText() {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineSpacing = 5
+    let text = NSMutableAttributedString(
+        string: "Litext measures multi-line content through a real CoreText frame instead of a second framesetter pass.\nSecond paragraph keeps wrapping.",
+        attributes: [
+            .font: PlatformFont.systemFont(ofSize: 16),
+            .paragraphStyle: paragraph,
+        ]
+    )
+
+    let framesetter = CTFramesetterCreateWithAttributedString(text)
+    for constraint in [
+        CGSize(width: 220, height: CGFloat.greatestFiniteMagnitude),
+        CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
+        CGSize(width: 220, height: 40),
+        // The framesetter treats non-positive dimensions as unconstrained.
+        CGSize.zero,
+        CGSize(width: 0, height: CGFloat.greatestFiniteMagnitude),
+        CGSize(width: 220, height: 0),
+    ] {
+        let layout = TextLabel.Layout(attributedString: text)
+        let suggested = CTFramesetterSuggestFrameSizeWithConstraints(
+            framesetter,
+            CFRange(location: 0, length: 0),
+            nil,
+            constraint,
+            nil
+        )
+        let measured = layout.sizeThatFits(constraint)
+        #expect(abs(measured.width - suggested.width) < 0.001)
+        #expect(abs(measured.height - suggested.height) < 0.001)
+    }
+}
+
+@MainActor
+@Test func sizeThatFitsKeepsFramesetterSuggestionForCenteredText() {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.alignment = .center
+    let text = NSAttributedString(
+        string: "Centered short\nand a much longer centered line here",
+        attributes: [
+            .font: PlatformFont.systemFont(ofSize: 14),
+            .paragraphStyle: paragraph,
+        ]
+    )
+
+    let layout = TextLabel.Layout(attributedString: text)
+    let measured = layout.sizeThatFits(CGSize(
+        width: CGFloat.greatestFiniteMagnitude,
+        height: CGFloat.greatestFiniteMagnitude
+    ))
+
+    let framesetter = CTFramesetterCreateWithAttributedString(text)
+    let suggested = CTFramesetterSuggestFrameSizeWithConstraints(
+        framesetter,
+        CFRange(location: 0, length: 0),
+        nil,
+        CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
+        nil
+    )
+    #expect(measured == suggested)
+}
+
+@MainActor
+@Test func adoptedMeasurementFrameMatchesFreshlyGeneratedLayout() {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineSpacing = 3
+    let text = NSMutableAttributedString()
+    for index in 0 ..< 40 {
+        text.append(NSAttributedString(
+            string: "Adoption check line \(index) wraps once the width narrows sufficiently.\n",
+            attributes: [
+                .font: PlatformFont.systemFont(ofSize: 16),
+                .paragraphStyle: paragraph,
+            ]
+        ))
+    }
+
+    let width: CGFloat = 240
+
+    // Measured first, so the container assignment can adopt the measurement frame.
+    let adopted = TextLabel.Layout(attributedString: text)
+    let suggested = adopted.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+    adopted.containerSize = CGSize(width: width, height: suggested.height.rounded(.up))
+
+    // Never measured, so the container assignment runs a full framesetter pass.
+    let fresh = TextLabel.Layout(attributedString: text)
+    fresh.containerSize = CGSize(width: width, height: suggested.height.rounded(.up))
+
+    #expect(adopted.visibleLineCount(in: nil) == fresh.visibleLineCount(in: nil))
+
+    for range in [
+        NSRange(location: 0, length: 12),
+        NSRange(location: text.length / 2, length: 30),
+        NSRange(location: text.length - 20, length: 20),
+    ] {
+        let adoptedRects = adopted.rects(for: range)
+        let freshRects = fresh.rects(for: range)
+        #expect(adoptedRects.count == freshRects.count)
+        for (lhs, rhs) in zip(adoptedRects, freshRects) {
+            #expect(abs(lhs.origin.x - rhs.origin.x) < 0.001)
+            #expect(abs(lhs.origin.y - rhs.origin.y) < 0.001)
+            #expect(abs(lhs.width - rhs.width) < 0.001)
+            #expect(abs(lhs.height - rhs.height) < 0.001)
+        }
+    }
+}
+
+@MainActor
 private var lineDrawingProbeInvocationCount = 0
 
 @MainActor
