@@ -47,6 +47,10 @@ import QuartzCore
             )
         }
 
+        func layoutRuns(matching key: NSAttributedString.Key) -> [TextLabel.LayoutRun] {
+            textLayout.layoutRuns(matching: key)
+        }
+
         #if canImport(UIKit)
             override func layoutSubviews() {
                 super.layoutSubviews()

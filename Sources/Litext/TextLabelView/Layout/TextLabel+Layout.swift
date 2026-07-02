@@ -37,6 +37,17 @@ private struct FrameFill {
 
 extension TextLabel {
     @MainActor
+    public struct LayoutRun {
+        public let lineIndex: Int
+        public let attributes: [NSAttributedString.Key: Any]
+        public let stringRange: NSRange
+        public let rect: CGRect
+        public let lineRect: CGRect
+    }
+}
+
+extension TextLabel {
+    @MainActor
     open class Layout: NSObject {
         open private(set) var attributedString: NSAttributedString
         open var highlightRegions: [TextLabel.HighlightRegion] {
@@ -161,14 +172,11 @@ extension TextLabel {
         ///
         /// The rect uses a top-left origin in the same space as `containerSize`, matching the
         /// dirty rect handed to a view's `draw(_:)`. Passing `nil` draws every line.
-        ///
-        /// Line drawing actions are always invoked for every laid-out line. They may synchronize
-        /// external views with text layout, so dirty-rect culling must not skip them.
         open func draw(in context: CGContext, visibleRect: CGRect?) {
             guard let lines, let lineOrigins, !lines.isEmpty else { return }
 
             let textLineIndices = lineIndices(intersecting: visibleRect)
-            guard !textLineIndices.isEmpty || hasLineDrawingActions else { return }
+            guard !textLineIndices.isEmpty else { return }
 
             context.saveGState()
 
@@ -182,7 +190,7 @@ extension TextLabel {
                 context.textPosition = lineOrigins[index]
                 CTLineDraw(lines[index], context)
             }
-            processLineDrawingActions(in: context, lineIndices: 0 ..< lines.count)
+            processLineDrawingActions(in: context, lineIndices: textLineIndices)
 
             context.restoreGState()
         }
@@ -190,6 +198,51 @@ extension TextLabel {
         /// The number of laid-out lines intersecting `rect`; `nil` counts every line.
         open func visibleLineCount(in rect: CGRect?) -> Int {
             lineIndices(intersecting: rect).count
+        }
+
+        /// Returns laid-out glyph runs that carry `key`.
+        ///
+        /// Rects are in the same CoreText layout space returned by `rects(for:)`:
+        /// lower-left origin, before a `TextLabelView` converts them to view space.
+        open func layoutRuns(matching key: NSAttributedString.Key) -> [TextLabel.LayoutRun] {
+            guard let lines, let lineOrigins, let lineMetrics else { return [] }
+
+            let runKey = key.rawValue as CFString
+            var result = [TextLabel.LayoutRun]()
+
+            for lineIndex in 0 ..< lines.count {
+                let line = lines[lineIndex]
+                let lineOrigin = lineOrigins[lineIndex]
+                let lineRect = lineBoundingRect(
+                    origin: lineOrigin,
+                    metrics: lineMetrics[lineIndex]
+                )
+                let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
+
+                for runIndex in 0 ..< glyphRuns.count {
+                    let glyphRun = glyphRuns[runIndex] as! CTRun
+                    guard Self.runAttributeValue(glyphRun, runKey) != nil else { continue }
+
+                    let attributes = CTRunGetAttributes(glyphRun) as? [NSAttributedString.Key: Any] ?? [:]
+                    let cfStringRange = CTRunGetStringRange(glyphRun)
+                    result.append(TextLabel.LayoutRun(
+                        lineIndex: lineIndex,
+                        attributes: attributes,
+                        stringRange: NSRange(
+                            location: cfStringRange.location,
+                            length: cfStringRange.length
+                        ),
+                        rect: runBoundingRect(
+                            glyphRun,
+                            attributes: attributes,
+                            lineOrigin: lineOrigin
+                        ),
+                        lineRect: lineRect
+                    ))
+                }
+            }
+
+            return result
         }
 
         private func processLineDrawingActions(in context: CGContext, lineIndices: Range<Int>) {
@@ -530,21 +583,11 @@ extension TextLabel {
                 length: cfStringRange.length
             )
 
-            var runBounds = CTRunGetImageBounds(
+            let runBounds = runBoundingRect(
                 glyphRun,
-                nil,
-                CFRange(location: 0, length: 0)
+                attributes: attributes,
+                lineOrigin: lineOrigin
             )
-
-            if let attachment = attributes[
-                .litextAttachment
-            ] as? TextLabel.Attachment {
-                runBounds.size = attachment.size
-                runBounds.origin.y -= attachment.size.height * TextLabel.Attachment.descentFraction
-            }
-
-            runBounds.origin.x += lineOrigin.x
-            runBounds.origin.y += lineOrigin.y
 
             if attributes[.link] != nil {
                 var linkRange = NSRange()
@@ -599,6 +642,36 @@ extension TextLabel {
             }
 
             highlightRegion.addRect(rect)
+        }
+
+        private func runBoundingRect(
+            _ glyphRun: CTRun,
+            attributes: [NSAttributedString.Key: Any],
+            lineOrigin: CGPoint
+        ) -> CGRect {
+            var runBounds = CTRunGetImageBounds(
+                glyphRun,
+                nil,
+                CFRange(location: 0, length: 0)
+            )
+
+            if let attachment = attributes[.litextAttachment] as? TextLabel.Attachment {
+                runBounds.size = attachment.size
+                runBounds.origin.y -= attachment.size.height * TextLabel.Attachment.descentFraction
+            }
+
+            runBounds.origin.x += lineOrigin.x
+            runBounds.origin.y += lineOrigin.y
+            return runBounds
+        }
+
+        private func lineBoundingRect(origin: CGPoint, metrics: LineMetrics) -> CGRect {
+            CGRect(
+                x: origin.x,
+                y: origin.y - metrics.descent,
+                width: metrics.width,
+                height: metrics.ascent + metrics.descent
+            )
         }
 
         private func enumerateLines(

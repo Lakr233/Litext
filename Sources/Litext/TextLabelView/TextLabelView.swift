@@ -148,6 +148,8 @@ import QuartzCore
         public convenience init(frame: CGRect = .zero, attributedText: NSAttributedString) {
             self.init(frame: frame)
             self.attributedText = attributedText
+            textLayout = TextLabel.Layout(attributedString: attributedText)
+            invalidateTextLayout()
         }
 
         @available(*, unavailable)
@@ -206,7 +208,6 @@ import QuartzCore
 
         struct Flags {
             var layoutIsDirty: Bool = false
-            var fullDisplayRefreshIsScheduled: Bool = false
         }
     }
 

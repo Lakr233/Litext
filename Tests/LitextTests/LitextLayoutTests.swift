@@ -86,18 +86,29 @@ import Testing
     }
 
     @MainActor
-    @Test func partialDirtyRectSchedulesFullDisplayRefresh() async {
-        let label = TextLabelView(attributedText: NSAttributedString(string: "Hello Litext"))
-        label.frame = CGRect(x: 0, y: 0, width: 200, height: 80)
+    @Test func textLabelViewExposesLayoutRunsAfterLayout() throws {
+        let marker = NSAttributedString.Key("TextLabelViewLayoutRunProbe")
+        let attachment = TextLabel.Attachment()
+        attachment.size = CGSize(width: 40, height: 24)
+        let text = attachment.attributedString(attributes: [
+            .font: PlatformFont.systemFont(ofSize: 16),
+            marker: "embedded",
+        ])
+        let label = TextLabelView(attributedText: text)
+        label.frame = CGRect(x: 0, y: 0, width: 120, height: 40)
 
-        label.scheduleFullDisplayRefreshIfNeeded(for: label.bounds)
-        #expect(!label.flags.fullDisplayRefreshIsScheduled)
+        #if canImport(UIKit)
+            label.setNeedsLayout()
+            label.layoutIfNeeded()
+        #elseif canImport(AppKit)
+            label.needsLayout = true
+            label.layout()
+        #endif
 
-        label.scheduleFullDisplayRefreshIfNeeded(for: CGRect(x: 0, y: 0, width: 40, height: 20))
-        #expect(label.flags.fullDisplayRefreshIsScheduled)
-
-        await Task.yield()
-        #expect(!label.flags.fullDisplayRefreshIsScheduled)
+        let run = try #require(label.layoutRuns(matching: marker).first)
+        #expect(run.attributes[marker] as? String == "embedded")
+        #expect(abs(run.rect.width - attachment.size.width) < 0.001)
+        #expect(abs(run.rect.height - attachment.size.height) < 0.001)
     }
 #endif
 
@@ -184,6 +195,44 @@ import Testing
 }
 
 @MainActor
+@Test func layoutRunsExposeMarkedAttachmentGeometry() throws {
+    let marker = NSAttributedString.Key("LayoutRunProbe")
+    let font = PlatformFont.systemFont(ofSize: 16)
+    let attachment = TextLabel.Attachment()
+    attachment.size = CGSize(width: 64, height: 28)
+
+    let text = NSMutableAttributedString(
+        string: "Before\n",
+        attributes: [.font: font]
+    )
+    let attachmentStart = text.length
+    text.append(attachment.attributedString(attributes: [
+        .font: font,
+        marker: "context",
+    ]))
+    text.append(NSAttributedString(
+        string: "\nAfter",
+        attributes: [.font: font]
+    ))
+
+    let layout = TextLabel.Layout(attributedString: text)
+    let suggestedSize = layout.sizeThatFits(CGSize(width: 200, height: CGFloat.greatestFiniteMagnitude))
+    layout.containerSize = CGSize(width: 200, height: ceil(suggestedSize.height))
+
+    let runs = layout.layoutRuns(matching: marker)
+    let run = try #require(runs.first)
+
+    #expect(runs.count == 1)
+    #expect(run.lineIndex == 1)
+    #expect(run.attributes[marker] as? String == "context")
+    #expect(run.stringRange == NSRange(location: attachmentStart, length: 1))
+    #expect(abs(run.rect.width - attachment.size.width) < 0.001)
+    #expect(abs(run.rect.height - attachment.size.height) < 0.001)
+    #expect(run.lineRect.minY <= run.rect.minY + 0.001)
+    #expect(run.rect.maxY <= run.lineRect.maxY + 0.001)
+}
+
+@MainActor
 @Test func naturalSizeFastPathMatchesFramesetterForNonWrappingWidths() {
     let layout = TextLabel.Layout(attributedString: NSAttributedString(
         string: "Short line",
@@ -211,7 +260,7 @@ import Testing
 }
 
 @MainActor
-@Test func drawingWithVisibleRectStillInvokesAllLineDrawingActions() throws {
+@Test func drawingWithVisibleRectSkipsOffscreenLineDrawingActions() throws {
     let width: CGFloat = 260
     let lineCount = 12
     let attributedText = lineDrawingProbeText(lineCount: lineCount)
@@ -228,10 +277,8 @@ import Testing
     let context = try #require(makeBitmapContext(size: layout.containerSize))
     layout.draw(in: context, visibleRect: visibleRect)
 
-    // Text drawing is still dirty-rect clipped, but line drawing actions can own
-    // external layout side effects and must run for every laid-out line.
     #expect(layout.visibleLineCount(in: visibleRect) < layout.visibleLineCount(in: nil))
-    #expect(lineDrawingProbeInvocationCount >= lineCount)
+    #expect(lineDrawingProbeInvocationCount == layout.visibleLineCount(in: visibleRect))
 }
 
 @MainActor
