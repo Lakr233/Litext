@@ -84,6 +84,21 @@ import Testing
         let tappedRegion = try #require(label.highlightRegionForTap(at: tapPoint))
         #expect(ObjectIdentifier(tappedRegion) == ObjectIdentifier(attachmentRegion))
     }
+
+    @MainActor
+    @Test func partialDirtyRectSchedulesFullDisplayRefresh() async {
+        let label = TextLabelView(attributedText: NSAttributedString(string: "Hello Litext"))
+        label.frame = CGRect(x: 0, y: 0, width: 200, height: 80)
+
+        label.scheduleFullDisplayRefreshIfNeeded(for: label.bounds)
+        #expect(!label.flags.fullDisplayRefreshIsScheduled)
+
+        label.scheduleFullDisplayRefreshIfNeeded(for: CGRect(x: 0, y: 0, width: 40, height: 20))
+        #expect(label.flags.fullDisplayRefreshIsScheduled)
+
+        await Task.yield()
+        #expect(!label.flags.fullDisplayRefreshIsScheduled)
+    }
 #endif
 
 @MainActor

@@ -206,6 +206,7 @@ import QuartzCore
 
         struct Flags {
             var layoutIsDirty: Bool = false
+            var fullDisplayRefreshIsScheduled: Bool = false
         }
     }
 

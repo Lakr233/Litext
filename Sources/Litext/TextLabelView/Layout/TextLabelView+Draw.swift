@@ -13,6 +13,7 @@ import Foundation
     public extension TextLabelView {
         override func draw(_ rect: CGRect) {
             guard let context = UIGraphicsGetCurrentContext() else { return }
+            scheduleFullDisplayRefreshIfNeeded(for: rect)
             UIGraphicsPushContext(context)
             textLayout.draw(in: context, visibleRect: visibleRectForDrawing(dirtyRect: rect))
             UIGraphicsPopContext()
@@ -26,6 +27,7 @@ import Foundation
         override func draw(_ dirtyRect: NSRect) {
             super.draw(dirtyRect)
             guard let context = NSGraphicsContext.current?.cgContext else { return }
+            scheduleFullDisplayRefreshIfNeeded(for: dirtyRect)
             textLayout.draw(in: context, visibleRect: visibleRectForDrawing(dirtyRect: dirtyRect))
         }
 
@@ -42,6 +44,19 @@ import Foundation
         func visibleRectForDrawing(dirtyRect: CGRect) -> CGRect? {
             guard textLayout.containerSize == bounds.size else { return nil }
             return dirtyRect
+        }
+
+        func scheduleFullDisplayRefreshIfNeeded(for dirtyRect: CGRect) {
+            guard !bounds.isEmpty else { return }
+            guard !dirtyRect.standardized.contains(bounds) else { return }
+            guard !flags.fullDisplayRefreshIsScheduled else { return }
+
+            flags.fullDisplayRefreshIsScheduled = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                flags.fullDisplayRefreshIsScheduled = false
+                setNeedsTextDisplay()
+            }
         }
     }
 #endif
