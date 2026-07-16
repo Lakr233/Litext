@@ -24,6 +24,9 @@ import Foundation
         }
 
         override func performKeyEquivalent(with event: NSEvent) -> Bool {
+            guard window?.firstResponder === self else {
+                return super.performKeyEquivalent(with: event)
+            }
             guard event.modifierFlags.contains(.command) else {
                 return super.performKeyEquivalent(with: event)
             }

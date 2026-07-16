@@ -24,6 +24,46 @@ import Testing
 }
 
 #if !os(watchOS)
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+        @MainActor
+        @Test func selectionKeyEquivalentRequiresTextLabelFirstResponder() throws {
+            let window = NSWindow(
+                contentRect: CGRect(x: 0, y: 0, width: 320, height: 160),
+                styleMask: [.titled],
+                backing: .buffered,
+                defer: false
+            )
+            let label = TextLabelView(attributedText: NSAttributedString(string: "Selectable text"))
+            label.isSelectable = true
+            label.frame = CGRect(x: 0, y: 40, width: 200, height: 40)
+            let input = NSTextField(frame: CGRect(x: 0, y: 0, width: 200, height: 24))
+            window.contentView?.addSubview(label)
+            window.contentView?.addSubview(input)
+
+            let commandA = try #require(NSEvent.keyEvent(
+                with: .keyDown,
+                location: .zero,
+                modifierFlags: .command,
+                timestamp: 0,
+                windowNumber: window.windowNumber,
+                context: nil,
+                characters: "a",
+                charactersIgnoringModifiers: "a",
+                isARepeat: false,
+                keyCode: 0
+            ))
+
+            #expect(window.makeFirstResponder(input))
+            #expect(!label.performKeyEquivalent(with: commandA))
+            #expect(label.selectionRange == nil)
+
+            label.clearSelection()
+            #expect(window.makeFirstResponder(label))
+            #expect(label.performKeyEquivalent(with: commandA))
+            #expect(label.selectionRange == NSRange(location: 0, length: label.attributedText.length))
+        }
+    #endif
+
     @MainActor
     @Test func publicSelectionRangeIsSanitized() {
         let label = TextLabelView(attributedText: NSAttributedString(string: "Hello"))
