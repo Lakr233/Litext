@@ -194,8 +194,9 @@ import QuartzCore
             override open func viewDidMoveToWindow() {
                 super.viewDidMoveToWindow()
                 clearSelection()
+                // No display request here: the pending layout pass issues one once the text
+                // layout matches the new geometry. See `TextLabelView.canDrawTextLayout`.
                 invalidateTextLayout()
-                setNeedsTextDisplay()
             }
 
             open var backgroundColor: NSColor? {

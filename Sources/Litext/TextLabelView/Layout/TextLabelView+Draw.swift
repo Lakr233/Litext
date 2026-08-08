@@ -12,9 +12,10 @@ import Foundation
 
     public extension TextLabelView {
         override func draw(_ rect: CGRect) {
+            guard canDrawTextLayout else { return }
             guard let context = UIGraphicsGetCurrentContext() else { return }
             UIGraphicsPushContext(context)
-            textLayout.draw(in: context, visibleRect: visibleRectForDrawing(dirtyRect: rect))
+            textLayout.draw(in: context, visibleRect: rect)
             UIGraphicsPopContext()
         }
     }
@@ -25,8 +26,9 @@ import Foundation
     public extension TextLabelView {
         override func draw(_ dirtyRect: NSRect) {
             super.draw(dirtyRect)
+            guard canDrawTextLayout else { return }
             guard let context = NSGraphicsContext.current?.cgContext else { return }
-            textLayout.draw(in: context, visibleRect: visibleRectForDrawing(dirtyRect: dirtyRect))
+            textLayout.draw(in: context, visibleRect: dirtyRect)
         }
 
         override var isFlipped: Bool {
@@ -37,11 +39,18 @@ import Foundation
 
 #if !os(watchOS)
     extension TextLabelView {
-        /// Dirty-rect culling is only meaningful while the layout matches the view's
-        /// current geometry; during transitions draw everything to stay correct.
-        func visibleRectForDrawing(dirtyRect: CGRect) -> CGRect? {
-            guard textLayout.containerSize == bounds.size else { return nil }
-            return dirtyRect
+        /// Whether the text layout describes the geometry being painted.
+        ///
+        /// Lines are positioned against `TextLabel.Layout.containerSize`, so painting while
+        /// it disagrees with `bounds` offsets every line by the difference — and a shorter
+        /// container may not even hold the same lines. A layout pass is always pending when
+        /// they disagree, and it marks the view for display once it has caught up, so
+        /// skipping here costs at most one frame and never paints the wrong thing.
+        ///
+        /// Repairing the layout from `draw(_:)` is not an option: the host is inside its
+        /// display phase, and laying out there would reenter the phase it just left.
+        var canDrawTextLayout: Bool {
+            textLayout.containerSize == bounds.size
         }
     }
 #endif

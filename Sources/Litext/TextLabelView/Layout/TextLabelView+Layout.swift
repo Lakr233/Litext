@@ -80,12 +80,16 @@ import QuartzCore
                 performLayout()
             }
 
+            // Geometry hooks only invalidate; they must not mark the view for display.
+            // Marking it here lets a display pass paint before the layout pass has moved
+            // the text layout onto the new size, and `draw(_:)` would then position every
+            // line against a stale container height. `performLayout()` asks for the redraw
+            // once the layout actually matches the bounds.
             override func setFrameSize(_ newSize: NSSize) {
                 let oldSize = frame.size
                 super.setFrameSize(newSize)
                 guard oldSize != newSize else { return }
                 invalidateTextLayout()
-                setNeedsTextDisplay()
             }
 
             override func setBoundsSize(_ newSize: NSSize) {
@@ -93,13 +97,11 @@ import QuartzCore
                 super.setBoundsSize(newSize)
                 guard oldSize != newSize else { return }
                 invalidateTextLayout()
-                setNeedsTextDisplay()
             }
 
             override func viewDidEndLiveResize() {
                 super.viewDidEndLiveResize()
                 invalidateTextLayout()
-                setNeedsTextDisplay()
             }
         #endif
 
@@ -108,7 +110,12 @@ import QuartzCore
 
             var layoutUpdateWasMade = false
             if flags.layoutIsDirty || lastContainerSize != containerSize {
-                invalidateIntrinsicContentSize()
+                // Only the width can change how text wraps, so a height-only change must
+                // not dirty the intrinsic size — doing so from inside a layout pass sends
+                // the host back through constraint solving for a value that cannot differ.
+                if lastContainerSize.width != containerSize.width {
+                    invalidateIntrinsicContentSize()
+                }
                 lastContainerSize = containerSize
                 textLayout.containerSize = containerSize
                 textLayout.updateHighlightRegions()
@@ -118,7 +125,11 @@ import QuartzCore
             }
 
             if layoutUpdateWasMade {
-                updateSelectionLayer()
+                // Presenting or dismissing the selection menu belongs to a selection
+                // change, not to a layout pass: it presents UI and notifies sibling labels,
+                // both of which would mutate the view tree while the host is still laying
+                // it out.
+                updateSelectionLayer(presentsMenu: false)
                 setNeedsTextDisplay()
             }
         }

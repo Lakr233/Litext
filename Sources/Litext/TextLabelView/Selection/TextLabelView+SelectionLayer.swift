@@ -15,7 +15,13 @@ import QuartzCore
     )
 
     extension TextLabelView {
-        func updateSelectionLayer() {
+        /// Rebuilds the selection highlight, handles, and — unless `presentsMenu` is false —
+        /// the selection menu.
+        ///
+        /// A layout pass passes `false`. Presenting the menu attaches an interaction and
+        /// shows UI, and the deduplication notification makes every other label clear its
+        /// selection; neither may happen while the host is still laying this view out.
+        func updateSelectionLayer(presentsMenu: Bool = true) {
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 selectionHandleStart.isHidden = true
                 selectionHandleEnd.isHidden = true
@@ -26,7 +32,7 @@ import QuartzCore
                   range.length > 0
             else {
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                    hideSelectionMenuController()
+                    if presentsMenu { hideSelectionMenuController() }
                 #endif
                 clearSelectionLayer()
                 return
@@ -36,7 +42,7 @@ import QuartzCore
             let selectionRects = textLayout.rects(for: range)
             guard !selectionRects.isEmpty else {
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                    hideSelectionMenuController()
+                    if presentsMenu { hideSelectionMenuController() }
                 #endif
                 clearSelectionLayer()
                 return
@@ -46,7 +52,7 @@ import QuartzCore
             updateSelectionLayer(withPath: selectionPath)
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                showSelectionMenuController()
+                if presentsMenu { showSelectionMenuController() }
 
                 selectionHandleStart.isHidden = false
                 selectionHandleEnd.isHidden = false
@@ -78,7 +84,9 @@ import QuartzCore
                 )
             #endif
 
-            NotificationCenter.default.post(name: kDeduplicateSelectionNotification, object: self)
+            if presentsMenu {
+                NotificationCenter.default.post(name: kDeduplicateSelectionNotification, object: self)
+            }
         }
 
         func registerNotificationCenterForSelectionDeduplicate() {

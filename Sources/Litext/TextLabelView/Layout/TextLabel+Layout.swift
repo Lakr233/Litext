@@ -109,6 +109,12 @@ extension TextLabel {
             suggestedSizeHistory.removeAll()
             naturalSizeCache = nil
             measurementFill = nil
+            // CoreText caches the typographic bounds it obtained from a run delegate inside
+            // the framesetter, and never asks again for the lifetime of that framesetter.
+            // Rebuilding lines from the existing one would pick up an attachment's new width
+            // while keeping its old line height, so the framesetter is rebuilt too — this is
+            // the only way a changed run delegate is observed.
+            framesetter = CTFramesetterCreateWithAttributedString(attributedString)
             generateLayout()
         }
 

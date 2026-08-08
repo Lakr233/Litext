@@ -215,3 +215,146 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 
     #expect(layout.highlightRegions.contains { $0.kind == .attachment })
 }
+
+// MARK: - Run delegate metrics
+
+@MainActor
+@Test func invalidateLayoutObservesChangedAttachmentMetrics() {
+    let attachment = TextLabel.Attachment()
+    attachment.size = CGSize(width: 60, height: 40)
+    let text = NSMutableAttributedString(
+        string: "before ",
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+    )
+    text.append(attachment.attributedString(attributes: [.font: PlatformFont.systemFont(ofSize: 16)]))
+    text.append(NSAttributedString(
+        string: " after",
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+    ))
+
+    let constraint = CGSize(width: 300, height: unconstrainedHeight)
+    let layout = TextLabel.Layout(attributedString: text)
+    let before = layout.sizeThatFits(constraint)
+
+    attachment.size = CGSize(width: 200, height: 120)
+    layout.invalidateLayout()
+    let after = layout.sizeThatFits(constraint)
+
+    // CoreText caches typographic bounds obtained from a run delegate inside the
+    // framesetter, so reusing it would report the new width with the old line height.
+    // A layout rebuilt from scratch is the ground truth.
+    let rebuilt = TextLabel.Layout(attributedString: text).sizeThatFits(constraint)
+
+    #expect(after == rebuilt)
+    #expect(after.height > before.height)
+    #expect(after.width > before.width)
+}
+
+#if !os(watchOS)
+
+    // MARK: - UIKit / AppKit phase separation
+
+    @MainActor
+    @Test func drawingIsSkippedWhileTheLayoutTrailsTheBounds() {
+        let text = NSAttributedString(
+            string: String(repeating: "wrap me across several lines please. ", count: 12),
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        )
+        let label = TextLabelView(attributedText: text)
+        label.frame = CGRect(x: 0, y: 0, width: 300, height: 200)
+        runLayoutPass(label)
+        #expect(label.canDrawTextLayout)
+
+        // Growing the view leaves the layout describing the old container until the next
+        // layout pass. Lines are positioned against that container height, so painting now
+        // would offset every one of them.
+        label.frame = CGRect(x: 0, y: 0, width: 300, height: 420)
+        #expect(label.textLayout.containerSize != label.bounds.size)
+        #expect(!label.canDrawTextLayout)
+
+        runLayoutPass(label)
+        #expect(label.textLayout.containerSize == label.bounds.size)
+        #expect(label.canDrawTextLayout)
+    }
+
+    /// Pins the reported value. Whether a height-only change still *dirties* the intrinsic
+    /// size is not observable from here — `invalidateIntrinsicContentSize()` changes no public
+    /// state — so that half is covered by the instrumented benchmark rather than this test.
+    @MainActor
+    @Test func heightOnlyChangesDoNotDisturbTheIntrinsicSize() {
+        let text = NSAttributedString(
+            string: String(repeating: "measure me. ", count: 20),
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        )
+        let label = TextLabelView(attributedText: text)
+        label.preferredMaxLayoutWidth = 240
+        label.frame = CGRect(x: 0, y: 0, width: 240, height: 100)
+        runLayoutPass(label)
+
+        let intrinsicAtWidth = label.intrinsicContentSize
+        label.frame = CGRect(x: 0, y: 0, width: 240, height: 400)
+        runLayoutPass(label)
+        #expect(label.intrinsicContentSize == intrinsicAtWidth)
+
+        label.preferredMaxLayoutWidth = 160
+        runLayoutPass(label)
+        #expect(label.intrinsicContentSize.height > intrinsicAtWidth.height)
+    }
+
+    /// Pins the deduplication contract across layout passes.
+    ///
+    /// This does not prove the phase fix in `performLayout()`: a layout pass only reaches the
+    /// deduplication broadcast when the view being laid out owns a selection, and the
+    /// deduplication itself keeps at most one label selected, so the broadcast is a no-op in
+    /// practice. Suppressing the menu during layout is the part that matters, and it lives
+    /// behind `canImport(UIKit)` — unreachable from a macOS test run.
+    @MainActor
+    @Test func aLayoutPassDoesNotClearASiblingSelection() {
+        let font = PlatformFont.systemFont(ofSize: 16)
+        let first = TextLabelView(attributedText: NSAttributedString(string: "first label text", attributes: [.font: font]))
+        let second = TextLabelView(attributedText: NSAttributedString(string: "second label text", attributes: [.font: font]))
+        first.isSelectable = true
+        second.isSelectable = true
+        first.frame = CGRect(x: 0, y: 0, width: 300, height: 60)
+        second.frame = CGRect(x: 0, y: 80, width: 300, height: 60)
+        runLayoutPass(first)
+        runLayoutPass(second)
+
+        first.selectionRange = NSRange(location: 0, length: 5)
+        #expect(first.selectionRange != nil)
+
+        // Re-laying out `second` runs its selection-layer update. That update must not
+        // broadcast the deduplication notification, which would reach into `first`.
+        second.frame = CGRect(x: 0, y: 80, width: 260, height: 60)
+        runLayoutPass(second)
+        #expect(first.selectionRange != nil)
+
+        // A genuine selection change still wins the selection away.
+        second.selectionRange = NSRange(location: 0, length: 6)
+        #expect(first.selectionRange == nil)
+    }
+
+    @MainActor
+    @Test func selectionHighlightFollowsAReflow() {
+        let text = NSAttributedString(
+            string: String(repeating: "wrap me across several lines please. ", count: 12),
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        )
+        let label = TextLabelView(attributedText: text)
+        label.isSelectable = true
+        label.frame = CGRect(x: 0, y: 0, width: 300, height: 200)
+        runLayoutPass(label)
+        label.selectionRange = NSRange(location: 0, length: 40)
+
+        let before = label.selectionLayer?.path?.boundingBox
+        #expect(before != nil)
+
+        label.frame = CGRect(x: 0, y: 0, width: 200, height: 300)
+        runLayoutPass(label)
+
+        let after = label.selectionLayer?.path?.boundingBox
+        #expect(after != nil)
+        #expect(after != before)
+    }
+
+#endif // !os(watchOS)
