@@ -407,26 +407,49 @@ extension TextLabel {
             if let fill = measurementFill,
                fill.isComplete,
                fill.pathSize.width == containerSize.width,
-               fill.measuredSize.height <= containerSize.height,
                containerSize.height <= Self.maxLayoutDimension
             {
-                let offsetY = containerSize.height - fill.pathSize.height
-                lines = fill.lines
-                lineMetrics = fill.lineMetrics
-                if offsetY == 0 {
-                    lineOrigins = fill.lineOrigins
-                } else {
-                    lineOrigins = fill.lineOrigins.map {
-                        CGPoint(x: $0.x, y: $0.y + offsetY)
-                    }
-                }
+                adopt(fill)
                 return
             }
 
-            let fill = makeFrameFill(constraint: containerSize, clampsToMaxLayoutDimension: false)
+            // CoreText fills a frame only as far as its path allows and silently
+            // discards the lines beyond it. A host whose height trails its content
+            // — a resize, a pending measurement — would lose the tail of the text
+            // along with every attachment and run living there, so the path is
+            // grown to whatever the text needs. Text stays anchored to the top of
+            // `containerSize`, so lines past the container simply fall outside the
+            // view and are clipped rather than lost.
+            var pathSize = containerSize
+            pathSize.height = min(
+                max(containerSize.height, naturalHeight(forWidth: containerSize.width)),
+                Self.maxLayoutDimension
+            )
+            adopt(makeFrameFill(constraint: pathSize, clampsToMaxLayoutDimension: false))
+        }
+
+        /// Takes a fill's lines and moves its origins into the current container,
+        /// keeping the first line anchored to the top of `containerSize`.
+        private func adopt(_ fill: FrameFill) {
             lines = fill.lines
-            lineOrigins = fill.lineOrigins
             lineMetrics = fill.lineMetrics
+
+            let offsetY = containerSize.height - fill.pathSize.height
+            if offsetY == 0 {
+                lineOrigins = fill.lineOrigins
+            } else {
+                lineOrigins = fill.lineOrigins.map {
+                    CGPoint(x: $0.x, y: $0.y + offsetY)
+                }
+            }
+        }
+
+        /// The height the text needs at `width`, unconstrained vertically.
+        private func naturalHeight(forWidth width: CGFloat) -> CGFloat {
+            sizeThatFits(CGSize(
+                width: width,
+                height: Self.maxLayoutDimension
+            )).height
         }
 
         private func makeFrameFill(constraint: CGSize, clampsToMaxLayoutDimension: Bool) -> FrameFill {
