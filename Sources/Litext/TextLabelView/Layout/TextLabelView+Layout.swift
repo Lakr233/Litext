@@ -10,6 +10,16 @@ import QuartzCore
 #if !os(watchOS)
 
     public extension TextLabelView {
+        /// Discards the cached CoreText layout and re-runs it on the next layout pass.
+        ///
+        /// Assigning `attributedText` skips the rebuild when the new string equals the old
+        /// one. Use this when the string is unchanged but external state read by a run
+        /// delegate or a custom line-drawing callback has changed.
+        func reloadTextLayout() {
+            textLayout.invalidateLayout()
+            invalidateTextLayout()
+        }
+
         func invalidateTextLayout() {
             if selectionRange != NSRange.sanitized(selectionRange, within: attributedText.length) {
                 clearSelection()

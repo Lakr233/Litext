@@ -68,11 +68,18 @@ extension TextLabel {
         private var _highlightRegions: [RegionKey: TextLabel.HighlightRegion]
         private var _highlightRegionsArray: [TextLabel.HighlightRegion] = []
         private var suggestedSizeCache: (input: CGSize, output: CGSize)?
+        private var suggestedSizeHistory: [(input: CGSize, output: CGSize)] = []
         private var naturalSizeCache: CGSize?
         private var measurementFill: FrameFill?
 
         private lazy var hasLineDrawingActions: Bool = attributedStringHasLineDrawingActions()
+        private lazy var hasHighlightAttributes: Bool = attributedStringHasHighlightAttributes()
         private lazy var usesFrameDerivedMeasurement: Bool = frameDerivedMeasurementIsSafe()
+
+        /// Hosts that probe several candidate widths — self-sizing cells, multi-pass
+        /// constraint solving, split-view drags — alternate between a few sizes, so a
+        /// single-entry cache misses on every query and re-runs the framesetter.
+        private static let suggestedSizeHistoryLimit = 4
 
         /// CoreText positions lines from the top of the layout path, so an
         /// unconstrained measurement only needs a path comfortably taller than any
@@ -99,6 +106,7 @@ extension TextLabel {
         /// external state referenced by run delegates or custom drawing callbacks changes.
         open func invalidateLayout() {
             suggestedSizeCache = nil
+            suggestedSizeHistory.removeAll()
             naturalSizeCache = nil
             measurementFill = nil
             generateLayout()
@@ -108,6 +116,10 @@ extension TextLabel {
             if let suggestedSizeCache, suggestedSizeCache.input == size {
                 return suggestedSizeCache.output
             }
+            if let remembered = suggestedSizeHistory.first(where: { $0.input == size }) {
+                suggestedSizeCache = remembered
+                return remembered.output
+            }
 
             // Fast path: once the unconstrained (natural) size is known, any constraint
             // that already fits it cannot change line breaking, so the framesetter pass
@@ -116,7 +128,7 @@ extension TextLabel {
                naturalSizeCache.width <= size.width,
                naturalSizeCache.height <= size.height
             {
-                suggestedSizeCache = (input: size, output: naturalSizeCache)
+                rememberSuggestedSize(input: size, output: naturalSizeCache)
                 return naturalSizeCache
             }
 
@@ -160,8 +172,19 @@ extension TextLabel {
             if size.width == CGFloat.greatestFiniteMagnitude, size.height == CGFloat.greatestFiniteMagnitude {
                 naturalSizeCache = suggestedSize
             }
-            suggestedSizeCache = (input: size, output: suggestedSize)
+            rememberSuggestedSize(input: size, output: suggestedSize)
             return suggestedSize
+        }
+
+        /// Records a measurement in both the most-recent slot and the small history
+        /// consulted when a host alternates between candidate widths.
+        private func rememberSuggestedSize(input: CGSize, output: CGSize) {
+            suggestedSizeCache = (input: input, output: output)
+            suggestedSizeHistory.removeAll { $0.input == input }
+            suggestedSizeHistory.insert((input: input, output: output), at: 0)
+            if suggestedSizeHistory.count > Self.suggestedSizeHistoryLimit {
+                suggestedSizeHistory.removeLast()
+            }
         }
 
         open func draw(in context: CGContext) {
@@ -266,6 +289,13 @@ extension TextLabel {
 
         open func updateHighlightRegions() {
             _highlightRegions.removeAll()
+            // Extraction walks every glyph run of every line. Text carrying neither
+            // links nor attachments can never produce a region, so the walk is skipped
+            // rather than repeated on each layout pass.
+            guard hasHighlightAttributes else {
+                _highlightRegionsArray = []
+                return
+            }
             extractHighlightRegions()
             _highlightRegionsArray = Array(_highlightRegions.values)
         }
@@ -553,6 +583,25 @@ extension TextLabel {
                 Unmanaged.passUnretained(key).toOpaque()
             ) else { return nil }
             return Unmanaged<AnyObject>.fromOpaque(value).takeUnretainedValue()
+        }
+
+        private func attributedStringHasHighlightAttributes() -> Bool {
+            guard attributedString.length > 0 else { return false }
+
+            let fullRange = NSRange(location: 0, length: attributedString.length)
+            // Enumerating one key at a time keeps CoreText's attribute dictionaries out
+            // of Swift; `enumerateAttributes` would bridge every run's full dictionary.
+            for key in [NSAttributedString.Key.link, .litextAttachment] {
+                var hasAttribute = false
+                attributedString.enumerateAttribute(key, in: fullRange, options: []) { value, _, stop in
+                    if value != nil {
+                        hasAttribute = true
+                        stop.pointee = true
+                    }
+                }
+                if hasAttribute { return true }
+            }
+            return false
         }
 
         private func attributedStringHasLineDrawingActions() -> Bool {

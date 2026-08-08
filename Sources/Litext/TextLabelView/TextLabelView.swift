@@ -25,7 +25,14 @@ import QuartzCore
         // MARK: - Public Properties
 
         open var attributedText: NSAttributedString = .init() {
-            didSet { textLayout = TextLabel.Layout(attributedString: attributedText) }
+            didSet {
+                // Reusing hosts (cells, SwiftUI updates) routinely reassign an equal
+                // string; rebuilding the framesetter for those costs a full measurement
+                // pass. Call `reloadTextLayout()` to force a rebuild when the string is
+                // unchanged but state a run delegate reads from is not.
+                guard !attributedText.isEqual(to: oldValue) else { return }
+                textLayout = TextLabel.Layout(attributedString: attributedText)
+            }
         }
 
         open var preferredMaxLayoutWidth: CGFloat = 0 {
@@ -40,7 +47,14 @@ import QuartzCore
             get { super.frame }
             set {
                 guard newValue != super.frame else { return }
+                let sizeChanged = newValue.size != super.frame.size
                 super.frame = newValue
+                // Text layout follows `bounds.size`, the intrinsic size follows
+                // `preferredMaxLayoutWidth` / `lastContainerSize.width`, and selection
+                // validity follows the string length. A pure move changes none of them,
+                // so invalidating there would re-extract highlights, re-place attachment
+                // views, and repaint the whole backing store on every scroll step.
+                guard sizeChanged else { return }
                 invalidateTextLayout()
             }
         }
