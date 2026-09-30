@@ -88,6 +88,7 @@
             setInteractionStateToBegin(initialLocation: location)
 
             if isLocationAboveAttachmentView(location: location) {
+                interactionState.isForwardingToSuper = true
                 super.touchesBegan(touches, with: event)
                 return
             }
@@ -127,7 +128,7 @@
         }
 
         override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-            guard touches.count == 1,
+            guard !interactionState.isForwardingToSuper, touches.count == 1,
                   let firstTouch = touches.first
             else {
                 super.touchesMoved(touches, with: event)
@@ -152,6 +153,12 @@
 
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             isInteractionInProgress = false
+            if interactionState.isForwardingToSuper {
+                interactionState.isForwardingToSuper = false
+                deactivateHighlightRegion()
+                super.touchesEnded(touches, with: event)
+                return
+            }
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {
@@ -181,6 +188,12 @@
 
         override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
             isInteractionInProgress = false
+            if interactionState.isForwardingToSuper {
+                interactionState.isForwardingToSuper = false
+                deactivateHighlightRegion()
+                super.touchesCancelled(touches, with: event)
+                return
+            }
             guard touches.count == 1 else {
                 super.touchesCancelled(touches, with: event)
                 return

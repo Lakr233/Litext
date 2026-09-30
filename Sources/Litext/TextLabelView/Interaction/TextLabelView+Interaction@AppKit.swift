@@ -66,6 +66,7 @@ import Foundation
             }
 
             if isLocationAboveAttachmentView(location: location) {
+                interactionState.isForwardingToSuper = true
                 super.mouseDown(with: event)
                 return
             }
@@ -95,6 +96,10 @@ import Foundation
         }
 
         override func mouseDragged(with event: NSEvent) {
+            if interactionState.isForwardingToSuper {
+                super.mouseDragged(with: event)
+                return
+            }
             let location = convert(event.locationInWindow, from: nil)
 
             guard isTouchReallyMoved(location) else { return }
@@ -117,6 +122,11 @@ import Foundation
         override func mouseUp(with event: NSEvent) {
             isInteractionInProgress = false
             defer { deactivateHighlightRegion() }
+            if interactionState.isForwardingToSuper {
+                interactionState.isForwardingToSuper = false
+                super.mouseUp(with: event)
+                return
+            }
             let location = convert(event.locationInWindow, from: nil)
 
             guard !isTouchReallyMoved(location) else { return }

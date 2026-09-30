@@ -181,7 +181,9 @@ final class LitextSampleUnitTests: XCTestCase {
             range: range
         )
 
+        weak let weakAttachment = attachment
         attachment = nil
+        XCTAssertNil(weakAttachment)
         var line: CTLine? = try CTLineCreateWithAttributedString(XCTUnwrap(string))
         let width = try CTLineGetTypographicBounds(XCTUnwrap(line), nil, nil, nil)
         XCTAssertEqual(width, 24)

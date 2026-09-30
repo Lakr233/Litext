@@ -235,6 +235,9 @@ import QuartzCore
             var lastClickTime: TimeInterval = 0
             /// AppKit uses this to clear a pre-existing selection on the first drag event.
             var isFirstMove: Bool = false
+            /// Set when the interaction began over an attachment view and was forwarded to
+            /// `super`, so the remaining phases are forwarded too instead of driving selection.
+            var isForwardingToSuper: Bool = false
         }
 
         struct Flags {

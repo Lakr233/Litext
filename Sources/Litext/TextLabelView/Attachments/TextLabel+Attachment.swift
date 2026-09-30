@@ -14,9 +14,22 @@ extension TextLabel {
     @MainActor
     open class Attachment {
         public static let replacementText = "\u{FFFC}"
-        static let descentFraction: CGFloat = 0.1
 
-        open var size: CGSize
+        /// The size CoreText reserves for this attachment.
+        ///
+        /// CoreText reads the size when it typesets, and a hosting label caches that layout.
+        /// After changing the size of an attachment that is already displayed, call
+        /// `reloadTextLayout()` on the hosting label so the new size takes effect.
+        ///
+        /// Subclasses that override this property must call `super` in the setter, because the
+        /// run delegate reads the value pushed through the base implementation.
+        open var size: CGSize {
+            didSet { runMetrics.size = size }
+        }
+
+        /// Holds the metrics CoreText reads. The run delegate retains this box instead of the
+        /// attachment, so the attachment and its view are released when the caller drops them.
+        private let runMetrics = RunMetrics()
         private var cachedRunDelegate: CTRunDelegate?
 
         #if !os(watchOS)
@@ -30,6 +43,22 @@ extension TextLabel {
         public init() {
             size = .zero
         }
+
+        #if !os(watchOS)
+            /// Creates an attachment with a size and an optional platform view.
+            public convenience init(size: CGSize, view: PlatformView? = nil) {
+                self.init()
+                self.size = size
+                self.view = view
+            }
+        #else
+            /// Creates an attachment with a size and an optional SwiftUI view.
+            public convenience init(size: CGSize, swiftUIView: AnyView? = nil) {
+                self.init()
+                self.size = size
+                self.swiftUIView = swiftUIView
+            }
+        #endif
 
         open func attributedString(
             attributes: [NSAttributedString.Key: Any] = [:]
@@ -57,11 +86,14 @@ extension TextLabel {
             return NSAttributedString(string: " ")
         }
 
-        /// A CoreText run delegate that retains this attachment for as long as CoreText needs metrics.
+        /// A CoreText run delegate that reports this attachment's size.
         ///
-        /// The delegate is cached so repeated reads do not allocate additional delegates or retain
-        /// the attachment more than once.
+        /// The delegate retains a small metrics box rather than the attachment, so CoreText can
+        /// keep measuring after the attachment is gone without keeping the attachment alive.
+        /// The delegate is cached so repeated reads do not allocate additional delegates.
         open var runDelegate: CTRunDelegate {
+            // Sync through dynamic dispatch so a subclass getter override is honoured.
+            runMetrics.size = size
             if let cachedRunDelegate {
                 return cachedRunDelegate
             }
@@ -69,29 +101,41 @@ extension TextLabel {
             var callbacks = CTRunDelegateCallbacks(
                 version: kCTRunDelegateVersion1,
                 dealloc: { refCon in
-                    Unmanaged<Attachment>.fromOpaque(refCon).release()
+                    Unmanaged<RunMetrics>.fromOpaque(refCon).release()
                 },
                 getAscent: { refCon in
-                    let attachment = Unmanaged<Attachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.height * (1 - Attachment.descentFraction)
+                    let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
+                    return metrics.size.height * (1 - RunMetrics.descentFraction)
                 },
                 getDescent: { refCon in
-                    let attachment = Unmanaged<Attachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.height * Attachment.descentFraction
+                    let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
+                    return metrics.size.height * RunMetrics.descentFraction
                 },
                 getWidth: { refCon in
-                    let attachment = Unmanaged<Attachment>.fromOpaque(refCon).takeUnretainedValue()
-                    return attachment.size.width
+                    let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
+                    return metrics.size.width
                 }
             )
 
-            let unmanagedSelf = Unmanaged.passRetained(self)
-            guard let delegate = CTRunDelegateCreate(&callbacks, unmanagedSelf.toOpaque()) else {
-                unmanagedSelf.release()
+            let unmanagedMetrics = Unmanaged.passRetained(runMetrics)
+            guard let delegate = CTRunDelegateCreate(&callbacks, unmanagedMetrics.toOpaque()) else {
+                unmanagedMetrics.release()
                 fatalError("Unable to create CTRunDelegate for TextLabel.Attachment")
             }
             cachedRunDelegate = delegate
             return delegate
         }
+    }
+}
+
+extension TextLabel.Attachment {
+    /// The metrics a run delegate reports, read by CoreText at typesetting time.
+    ///
+    /// Writes happen on the main actor through `Attachment.size`, and CoreText reads happen
+    /// while the main-actor layout typesets, which is why unchecked sendability is sound here.
+    final class RunMetrics: @unchecked Sendable {
+        static let descentFraction: CGFloat = 0.1
+
+        var size: CGSize = .zero
     }
 }

@@ -62,6 +62,62 @@ import Testing
             #expect(label.performKeyEquivalent(with: commandA))
             #expect(label.selectionRange == NSRange(location: 0, length: label.attributedText.length))
         }
+
+        @MainActor
+        @Test func mouseDragThatBeganOverAttachmentViewDoesNotSelectText() throws {
+            let window = NSWindow(
+                contentRect: CGRect(x: 0, y: 0, width: 320, height: 160),
+                styleMask: [.titled],
+                backing: .buffered,
+                defer: false
+            )
+            let attachment = TextLabel.Attachment(
+                size: CGSize(width: 30, height: 20),
+                view: NSView()
+            )
+            let text = NSMutableAttributedString(attributedString: attachment.attributedString())
+            text.append(NSAttributedString(
+                string: " selectable text after the attachment",
+                attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+            ))
+            let label = TextLabelView(attributedText: text)
+            label.isSelectable = true
+            label.frame = CGRect(x: 0, y: 40, width: 300, height: 40)
+            window.contentView?.addSubview(label)
+            label.needsLayout = true
+            label.layout()
+
+            let attachmentView = try #require(attachment.view)
+            #expect(attachmentView.superview === label)
+            let start = label.convert(
+                CGPoint(x: attachmentView.frame.midX, y: attachmentView.frame.midY),
+                to: nil
+            )
+            let end = label.convert(CGPoint(x: label.bounds.maxX - 4, y: attachmentView.frame.midY), to: nil)
+
+            func mouseEvent(_ type: NSEvent.EventType, at point: CGPoint) throws -> NSEvent {
+                try #require(NSEvent.mouseEvent(
+                    with: type,
+                    location: point,
+                    modifierFlags: [],
+                    timestamp: 0,
+                    windowNumber: window.windowNumber,
+                    context: nil,
+                    eventNumber: 0,
+                    clickCount: 1,
+                    pressure: 1
+                ))
+            }
+
+            try label.mouseDown(with: mouseEvent(.leftMouseDown, at: start))
+            #expect(label.interactionState.isForwardingToSuper)
+            try label.mouseDragged(with: mouseEvent(.leftMouseDragged, at: end))
+            try label.mouseUp(with: mouseEvent(.leftMouseUp, at: end))
+
+            #expect(label.selectionRange == nil)
+            #expect(!label.interactionState.isForwardingToSuper)
+            #expect(!label.isInteractionInProgress)
+        }
     #endif
 
     @MainActor
@@ -208,7 +264,9 @@ import Testing
         range: range
     )
 
+    weak let weakAttachment = attachment
     attachment = nil
+    #expect(weakAttachment == nil)
     var line: CTLine? = try CTLineCreateWithAttributedString(#require(string))
     let width = try CTLineGetTypographicBounds(#require(line), nil, nil, nil)
     #expect(width == 24)
@@ -216,6 +274,32 @@ import Testing
     line = nil
     string = nil
     delegate = nil
+    #expect(weakAttachment == nil)
+}
+
+@MainActor
+@Test func attachmentDeallocatesAfterItsAttributedStringDrops() {
+    weak var weakAttachment: TextLabel.Attachment?
+    weak var weakView: PlatformView?
+    autoreleasepool {
+        let view = PlatformView()
+        let attachment = TextLabel.Attachment(size: CGSize(width: 24, height: 16), view: view)
+        weakAttachment = attachment
+        weakView = view
+        // Reading the run delegate used to retain the attachment forever.
+        _ = attachment.attributedString()
+    }
+    #expect(weakAttachment == nil)
+    #expect(weakView == nil)
+}
+
+@MainActor
+@Test func attachmentRunDelegateReadsSizeAtLayoutTime() {
+    let attachment = TextLabel.Attachment()
+    let string = attachment.attributedString()
+    attachment.size = CGSize(width: 40, height: 10)
+    let line = CTLineCreateWithAttributedString(string)
+    #expect(CTLineGetTypographicBounds(line, nil, nil, nil) == 40)
 }
 
 @MainActor

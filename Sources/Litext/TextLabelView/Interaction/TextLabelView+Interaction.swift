@@ -16,6 +16,7 @@ import Foundation
         func setInteractionStateToBegin(initialLocation: CGPoint) {
             interactionState.initialTouchLocation = initialLocation
             interactionState.isFirstMove = true
+            interactionState.isForwardingToSuper = false
             isInteractionInProgress = true
         }
 
