@@ -9,16 +9,10 @@ import Foundation
 
     extension TextLabelView {
         func isLocationAboveAttachmentView(location: CGPoint) -> Bool {
-            for view in attachmentViews {
-                if view.frame.contains(location) {
-                    return true
-                }
-            }
-            return false
+            attachmentViews.contains { $0.frame.contains(location) }
         }
 
         func updateAttachmentViews() {
-            let viewsToRemove = attachmentViews
             var newAttachmentViews: Set<PlatformView> = []
 
             for highlightRegion in highlightRegions {
@@ -28,23 +22,16 @@ import Foundation
                       let firstRect = highlightRegion.rects.first
                 else { continue }
 
-                if view.superview == self {
-                    newAttachmentViews.insert(view)
-                } else {
+                if view.superview != self {
                     addSubview(view)
-                    newAttachmentViews.insert(view)
                 }
+                newAttachmentViews.insert(view)
 
                 let convertedRect = convertRectFromTextLayout(firstRect, insetForInteraction: false)
                 view.frame = pixelAlign(convertedRect)
             }
 
-            for view in viewsToRemove {
-                if !newAttachmentViews.contains(view) {
-                    view.removeFromSuperview()
-                }
-            }
-
+            attachmentViews.subtracting(newAttachmentViews).forEach { $0.removeFromSuperview() }
             attachmentViews = newAttachmentViews
         }
     }

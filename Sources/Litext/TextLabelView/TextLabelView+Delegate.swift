@@ -11,6 +11,9 @@ import Foundation
 
     @MainActor
     public protocol TextLabelViewDelegate: AnyObject {
+        /// Called when a link or attachment is tapped. `location` is in the label's
+        /// view coordinates (top-left origin); `region.rects` are in layout space,
+        /// so convert them with `TextLabelView.viewRect(fromLayoutRect:)` first.
         func textLabelView(
             _ textLabelView: TextLabelView,
             didTapHighlightRegion region: TextLabel.HighlightRegion,
@@ -22,7 +25,8 @@ import Foundation
             didChangeSelection selection: NSRange?
         )
 
-        /// useful for moving scrollview accordingly to handle selection
+        /// Called while a drag extends the selection, with `location` in the label's
+        /// view coordinates. Useful for scrolling a containing scroll view.
         func textLabelView(
             _ textLabelView: TextLabelView,
             didDragSelectionAt location: CGPoint

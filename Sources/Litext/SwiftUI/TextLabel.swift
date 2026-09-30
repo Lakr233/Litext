@@ -10,6 +10,9 @@ import SwiftUI
 // MARK: - TextLabel
 
 #if !os(watchOS)
+    /// The representable conformance lives in an extension, so the main-actor
+    /// isolation (and Sendable) it used to infer on the struct is spelled out here.
+    @preconcurrency @MainActor
     public struct TextLabel {
         private let content: Content
         private var isSelectable: Bool = false

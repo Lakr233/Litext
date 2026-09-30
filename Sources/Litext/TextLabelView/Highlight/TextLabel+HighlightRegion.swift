@@ -8,18 +8,24 @@
 import CoreGraphics
 import Foundation
 
-extension TextLabel {
+public extension TextLabel {
+    /// A link or attachment range in a laid-out `TextLabel.Layout`.
+    ///
+    /// Only the layout creates regions, so the class is `final`.
     @MainActor
-    open class HighlightRegion {
+    final class HighlightRegion {
         public enum Kind {
             case link
             case attachment
         }
 
-        open private(set) var rects: [CGRect] = []
+        /// The region's rects in CoreText layout space (lower-left origin). Convert
+        /// them with `TextLabelView.viewRect(fromLayoutRect:)` before comparing them
+        /// with view coordinates such as a tap location.
+        public private(set) var rects: [CGRect] = []
 
-        open private(set) var attributes: [NSAttributedString.Key: Any]
-        open private(set) var stringRange: NSRange
+        public private(set) var attributes: [NSAttributedString.Key: Any]
+        public private(set) var stringRange: NSRange
         public let kind: Kind
 
         /// The region's `.link` value as a URL. `NSAttributedString.Key.link`

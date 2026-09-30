@@ -9,10 +9,12 @@
     import Foundation
     import UIKit
 
-    public extension TextLabelView {
+    /// Subclasses that override a touch, press or hit-testing hook below must call
+    /// `super` for the events they do not consume, or selection and link taps stop working.
+    extension TextLabelView {
         fileprivate static var menuOwnerIdentifier: UUID = .init()
 
-        override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        override open func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
             guard isSelectable else {
                 super.pressesBegan(presses, with: event)
                 return
@@ -34,11 +36,11 @@
             }
         }
 
-        override var canBecomeFocused: Bool {
+        override open var canBecomeFocused: Bool {
             isSelectable
         }
 
-        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        override open func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 for handler in [selectionHandleStart, selectionHandleEnd] {
                     guard !handler.isHidden else { continue }
@@ -63,7 +65,7 @@
             }
         }
 
-        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {
@@ -125,7 +127,7 @@
             }
         }
 
-        override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
             guard !interactionState.isForwardingToSuper, touches.count == 1,
                   let firstTouch = touches.first
             else {
@@ -149,7 +151,7 @@
             }
         }
 
-        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             isInteractionInProgress = false
             if interactionState.isForwardingToSuper {
                 interactionState.isForwardingToSuper = false
@@ -184,7 +186,7 @@
             }
         }
 
-        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        override open func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
             isInteractionInProgress = false
             if interactionState.isForwardingToSuper {
                 interactionState.isForwardingToSuper = false
@@ -207,12 +209,12 @@
 
         #if !os(tvOS) && !os(watchOS)
             /// for handling right click on iOS
-            func installContextMenuInteraction() {
+            public func installContextMenuInteraction() {
                 let interaction = UIContextMenuInteraction(delegate: self)
                 addInteraction(interaction)
             }
 
-            func installTextPointerInteraction() {
+            public func installTextPointerInteraction() {
                 if #available(iOS 13.4, macCatalyst 13.4, *) {
                     let pointerInteraction = UIPointerInteraction(delegate: self)
                     addInteraction(pointerInteraction)

@@ -1,8 +1,6 @@
 //
-//  TextLabelMenuItem.swift
-//  Litext
-//
-//  Created by OpenAI Codex.
+//  Created by Litext Team.
+//  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 
 #if canImport(UIKit) && !os(tvOS) && !os(watchOS)

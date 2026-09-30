@@ -18,10 +18,6 @@ import QuartzCore
             return false
         }
 
-        func deactivateHighlightRegion() {
-            removeActiveHighlightRegion()
-        }
-
         /// The link region under `point`. Attachment regions are ignored.
         func linkRegion(at point: CGPoint) -> TextLabel.HighlightRegion? {
             highlightRegions.first { $0.kind == .link && isHighlightRegion($0, containsPoint: point) }
@@ -50,7 +46,7 @@ import QuartzCore
         }
 
         func addActiveHighlightRegion(_ highlightRegion: TextLabel.HighlightRegion) {
-            removeActiveHighlightRegion()
+            deactivateHighlightRegion()
             removePendingHighlightLayers()
 
             activeHighlightRegion = highlightRegion
@@ -82,7 +78,8 @@ import QuartzCore
             highlightRegion.associatedObject = highlightLayer
         }
 
-        private func removeActiveHighlightRegion() {
+        /// Fades out and removes the press highlight, if one is showing.
+        func deactivateHighlightRegion() {
             guard let activeHighlightRegion else { return }
 
             if let highlightLayer = activeHighlightRegion.associatedObject as? CALayer {

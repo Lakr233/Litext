@@ -10,8 +10,10 @@ import Foundation
 #if canImport(UIKit) && !os(watchOS)
     import UIKit
 
-    public extension TextLabelView {
-        override func draw(_ rect: CGRect) {
+    extension TextLabelView {
+        /// Draws the laid-out text. Subclasses may draw extra content before or after
+        /// calling `super`; skipping `super` draws no text.
+        override open func draw(_ rect: CGRect) {
             guard canDrawTextLayout else { return }
             guard let context = UIGraphicsGetCurrentContext() else { return }
             UIGraphicsPushContext(context)
@@ -23,15 +25,19 @@ import Foundation
 #elseif canImport(AppKit)
     import AppKit
 
-    public extension TextLabelView {
-        override func draw(_ dirtyRect: NSRect) {
+    extension TextLabelView {
+        /// Draws the laid-out text. Subclasses may draw extra content before or after
+        /// calling `super`; skipping `super` draws no text.
+        override open func draw(_ dirtyRect: NSRect) {
             super.draw(dirtyRect)
             guard canDrawTextLayout else { return }
             guard let context = NSGraphicsContext.current?.cgContext else { return }
             textLayout.draw(in: context, visibleRect: dirtyRect)
         }
 
-        override var isFlipped: Bool {
+        /// Always `true`, and deliberately not `open`: every conversion between layout
+        /// and view space, and the flip in `draw(_:)`, assumes a top-left origin.
+        override public var isFlipped: Bool {
             true
         }
     }

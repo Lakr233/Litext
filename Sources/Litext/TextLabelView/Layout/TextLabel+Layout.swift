@@ -375,6 +375,8 @@ extension TextLabel {
             _highlightRegionsArray = Array(_highlightRegions.values)
         }
 
+        /// The rects covering `range`, in CoreText layout space (lower-left origin).
+        /// Use `viewRect(fromLayoutRect:)` to convert them to view space.
         open func rects(for range: NSRange) -> [CGRect] {
             var rects = [CGRect]()
             enumerateTextRects(in: range) { rect in
@@ -879,14 +881,18 @@ extension TextLabel {
         // so this is the only place the flip is written down.
 
         /// Converts a rect from layout space to top-left view space.
-        func viewRect(fromLayoutRect rect: CGRect) -> CGRect {
+        ///
+        /// Layout space is the lower-left-origin space of `rects(for:)`,
+        /// `layoutRuns(matching:)` and `HighlightRegion.rects`. The flip uses
+        /// `containerSize.height`, so it matches what `draw(in:)` paints.
+        public func viewRect(fromLayoutRect rect: CGRect) -> CGRect {
             var result = rect
             result.origin.y = containerSize.height - rect.origin.y - rect.size.height
             return result
         }
 
         /// Converts a rect from top-left view space to layout space.
-        func layoutRect(fromViewRect rect: CGRect) -> CGRect {
+        public func layoutRect(fromViewRect rect: CGRect) -> CGRect {
             CGRect(
                 x: rect.minX,
                 y: containerSize.height - rect.maxY,
@@ -896,7 +902,7 @@ extension TextLabel {
         }
 
         /// Converts a point from top-left view space to layout space.
-        func layoutPoint(fromViewPoint point: CGPoint) -> CGPoint {
+        public func layoutPoint(fromViewPoint point: CGPoint) -> CGPoint {
             CGPoint(x: point.x, y: containerSize.height - point.y)
         }
 

@@ -9,22 +9,24 @@ import QuartzCore
 
 #if !os(watchOS)
 
-    public extension TextLabelView {
+    /// Subclasses that override a layout or geometry hook below must call `super`:
+    /// the base implementations run the text layout pass or invalidate it.
+    extension TextLabelView {
         /// Discards the cached CoreText layout and re-runs it on the next layout pass.
         ///
         /// Assigning `attributedText` skips the rebuild when the new string equals the old
         /// one. Use this when the string is unchanged but external state read by a run
         /// delegate or a custom line-drawing callback has changed.
-        func reloadTextLayout() {
+        public func reloadTextLayout() {
             textLayout.invalidateLayout()
             invalidateTextLayout()
         }
 
-        func invalidateTextLayout() {
+        public func invalidateTextLayout() {
             invalidateTextLayout(invalidatesIntrinsicSize: true)
         }
 
-        override var intrinsicContentSize: CGSize {
+        override open var intrinsicContentSize: CGSize {
             var constraintSize = CGSize(
                 width: CGFloat.greatestFiniteMagnitude,
                 height: CGFloat.greatestFiniteMagnitude
@@ -47,25 +49,30 @@ import QuartzCore
             )
         }
 
-        func layoutRuns(matching key: NSAttributedString.Key) -> [TextLabel.LayoutRun] {
+        /// Returns laid-out glyph runs that carry `key`.
+        ///
+        /// Rects are in CoreText layout space (lower-left origin), exactly as
+        /// `TextLabel.Layout.layoutRuns(matching:)` returns them. Convert them with
+        /// `viewRect(fromLayoutRect:)` before using them as view coordinates.
+        public func layoutRuns(matching key: NSAttributedString.Key) -> [TextLabel.LayoutRun] {
             textLayout.layoutRuns(matching: key)
         }
 
         #if canImport(UIKit)
-            override func layoutSubviews() {
+            override open func layoutSubviews() {
                 super.layoutSubviews()
                 performLayout()
             }
 
             #if !os(visionOS)
-                override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+                override open func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
                     super.traitCollectionDidChange(previousTraitCollection)
                     invalidateTextLayout()
                 }
             #endif
 
         #elseif canImport(AppKit)
-            override func layout() {
+            override open func layout() {
                 super.layout()
                 performLayout()
             }
@@ -75,21 +82,21 @@ import QuartzCore
             /// the text layout onto the new size, and `draw(_:)` would then position every
             /// line against a stale container height. `performLayout()` asks for the redraw
             /// once the layout actually matches the bounds.
-            override func setFrameSize(_ newSize: NSSize) {
+            override open func setFrameSize(_ newSize: NSSize) {
                 let oldSize = frame.size
                 super.setFrameSize(newSize)
                 guard oldSize != newSize else { return }
                 invalidateTextLayout(invalidatesIntrinsicSize: oldSize.width != newSize.width)
             }
 
-            override func setBoundsSize(_ newSize: NSSize) {
+            override open func setBoundsSize(_ newSize: NSSize) {
                 let oldSize = bounds.size
                 super.setBoundsSize(newSize)
                 guard oldSize != newSize else { return }
                 invalidateTextLayout(invalidatesIntrinsicSize: oldSize.width != newSize.width)
             }
 
-            override func viewDidEndLiveResize() {
+            override open func viewDidEndLiveResize() {
                 super.viewDidEndLiveResize()
                 invalidateTextLayout()
             }
@@ -97,41 +104,36 @@ import QuartzCore
 
         private func performLayout() {
             let containerSize = bounds.size
+            guard flags.layoutIsDirty || lastContainerSize != containerSize else { return }
 
-            var layoutUpdateWasMade = false
-            if flags.layoutIsDirty || lastContainerSize != containerSize {
-                // Only the width can change how text wraps, so a height-only change must
-                // not dirty the intrinsic size — doing so from inside a layout pass sends
-                // the host back through constraint solving for a value that cannot differ.
-                if lastContainerSize.width != containerSize.width {
-                    invalidateIntrinsicContentSize()
-                }
-                lastContainerSize = containerSize
-                textLayout.containerSize = containerSize
-                // Highlight regions depend only on the laid-out lines. Window moves and
-                // trait changes invalidate without changing them, so extraction is skipped
-                // then. Attachment frames are still re-placed: they snap to the display
-                // scale, which a window move can change.
-                if highlightRegionsGeneration != textLayout.generation {
-                    textLayout.updateHighlightRegions()
-                    highlightRegionsGeneration = textLayout.generation
-                }
-                updateAttachmentViews()
-                flags.layoutIsDirty = false
-                layoutUpdateWasMade = true
+            // Only the width can change how text wraps, so a height-only change must
+            // not dirty the intrinsic size — doing so from inside a layout pass sends
+            // the host back through constraint solving for a value that cannot differ.
+            if lastContainerSize.width != containerSize.width {
+                invalidateIntrinsicContentSize()
             }
+            lastContainerSize = containerSize
+            textLayout.containerSize = containerSize
+            // Highlight regions depend only on the laid-out lines. Window moves and
+            // trait changes invalidate without changing them, so extraction is skipped
+            // then. Attachment frames are still re-placed: they snap to the display
+            // scale, which a window move can change.
+            if highlightRegionsGeneration != textLayout.generation {
+                textLayout.updateHighlightRegions()
+                highlightRegionsGeneration = textLayout.generation
+            }
+            updateAttachmentViews()
+            flags.layoutIsDirty = false
 
-            if layoutUpdateWasMade {
-                // Presenting or dismissing the selection menu belongs to a selection
-                // change, not to a layout pass: it presents UI and notifies sibling labels,
-                // both of which would mutate the view tree while the host is still laying
-                // it out.
-                updateSelectionLayer(presentsMenu: false)
-                setNeedsTextDisplay()
-            }
+            // Presenting or dismissing the selection menu belongs to a selection
+            // change, not to a layout pass: it presents UI and notifies sibling labels,
+            // both of which would mutate the view tree while the host is still laying
+            // it out.
+            updateSelectionLayer(presentsMenu: false)
+            setNeedsTextDisplay()
         }
 
-        func setNeedsTextDisplay() {
+        public func setNeedsTextDisplay() {
             #if canImport(UIKit)
                 setNeedsDisplay()
             #elseif canImport(AppKit)

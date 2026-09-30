@@ -8,12 +8,12 @@
 
 import Foundation
 
-//
-// Make sure to add following key to Info.plist
-//
-// **Localized resources can be mixed** -> true
-//
-
+/// Menu titles, localized from the package's own resource bundle.
+///
+/// A host app localized in fewer languages than Litext shows these titles in its
+/// own development language unless the app's Info.plist sets
+/// `CFBundleAllowMixedLocalizations` ("Localized resources can be mixed") to `true`.
+/// The key is read from the host app's bundle, not from this package.
 enum LocalizedText {
     static let copy = NSLocalizedString("Copy", bundle: .module, comment: "Copy menu item")
     static let selectAll = NSLocalizedString("Select All", bundle: .module, comment: "Select all menu item")

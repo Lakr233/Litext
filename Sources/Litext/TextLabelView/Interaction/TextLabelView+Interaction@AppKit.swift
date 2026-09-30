@@ -12,18 +12,20 @@ import Foundation
 #elseif canImport(AppKit)
     import AppKit
 
-    public extension TextLabelView {
+    /// Subclasses that override a mouse, key or hit-testing hook below must call
+    /// `super` for the events they do not consume, or selection and link clicks stop working.
+    extension TextLabelView {
         /// The cursor most recently applied by any label. Re-setting the same
         /// cursor on every mouse event makes AppKit flicker, and nested labels
         /// share the cursor, so deduplication must be global — a per-view cache
         /// goes stale as soon as another label sets a different cursor.
         fileprivate static var appliedCursor: NSCursor?
 
-        override var acceptsFirstResponder: Bool {
+        override open var acceptsFirstResponder: Bool {
             isSelectable
         }
 
-        override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        override open func performKeyEquivalent(with event: NSEvent) -> Bool {
             guard window?.firstResponder === self else {
                 return super.performKeyEquivalent(with: event)
             }
@@ -44,7 +46,7 @@ import Foundation
             return false
         }
 
-        override func rightMouseDown(with event: NSEvent) {
+        override open func rightMouseDown(with event: NSEvent) {
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
             defer { isInteractionInProgress = false }
@@ -54,7 +56,7 @@ import Foundation
             super.rightMouseDown(with: event)
         }
 
-        override func mouseDown(with event: NSEvent) {
+        override open func mouseDown(with event: NSEvent) {
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
 
@@ -97,7 +99,7 @@ import Foundation
             }
         }
 
-        override func mouseDragged(with event: NSEvent) {
+        override open func mouseDragged(with event: NSEvent) {
             if interactionState.isForwardingToSuper {
                 super.mouseDragged(with: event)
                 return
@@ -121,7 +123,7 @@ import Foundation
             }
         }
 
-        override func mouseUp(with event: NSEvent) {
+        override open func mouseUp(with event: NSEvent) {
             isInteractionInProgress = false
             defer { deactivateHighlightRegion() }
             if interactionState.isForwardingToSuper {
@@ -138,7 +140,7 @@ import Foundation
             }
         }
 
-        override func hitTest(_ point: NSPoint) -> NSView? {
+        override open func hitTest(_ point: NSPoint) -> NSView? {
             // AppKit hands hitTest the point in the superview's coordinate
             // space; local geometry (bounds, attachment frames, highlight
             // regions) can only be tested after converting. Skipping the
@@ -162,7 +164,7 @@ import Foundation
             }
         }
 
-        override func updateTrackingAreas() {
+        override open func updateTrackingAreas() {
             super.updateTrackingAreas()
 
             for trackingArea in trackingAreas {
@@ -182,25 +184,25 @@ import Foundation
             addTrackingArea(trackingArea)
         }
 
-        override func cursorUpdate(with event: NSEvent) {
+        override open func cursorUpdate(with event: NSEvent) {
             // Intentionally not calling super: it would reset to the arrow cursor.
             let point = convert(event.locationInWindow, from: nil)
             applyCursor(desiredCursor(at: point))
         }
 
-        override func mouseEntered(with event: NSEvent) {
+        override open func mouseEntered(with event: NSEvent) {
             super.mouseEntered(with: event)
             let point = convert(event.locationInWindow, from: nil)
             applyCursor(desiredCursor(at: point))
         }
 
-        override func mouseExited(with event: NSEvent) {
+        override open func mouseExited(with event: NSEvent) {
             super.mouseExited(with: event)
             applyCursor(.arrow)
             Self.appliedCursor = nil
         }
 
-        override func mouseMoved(with event: NSEvent) {
+        override open func mouseMoved(with event: NSEvent) {
             super.mouseMoved(with: event)
             let point = convert(event.locationInWindow, from: nil)
             applyCursor(desiredCursor(at: point))
@@ -316,7 +318,7 @@ import Foundation
             NSWorkspace.shared.open(url)
         }
 
-        @objc func copyAction(_: Any?) {
+        @objc public func copyAction(_: Any?) {
             copySelectionOrNestedSelection()
         }
     }

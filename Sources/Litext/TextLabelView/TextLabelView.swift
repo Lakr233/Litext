@@ -112,7 +112,8 @@ import QuartzCore
             didSet { updateSelectionLayer() }
         }
 
-        open internal(set) var isInteractionInProgress = false
+        /// Whether a touch or mouse sequence that began on the label is still running.
+        public internal(set) var isInteractionInProgress = false
 
         open weak var delegate: TextLabelViewDelegate?
 
