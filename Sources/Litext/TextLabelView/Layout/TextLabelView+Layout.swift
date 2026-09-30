@@ -80,11 +80,11 @@ import QuartzCore
                 performLayout()
             }
 
-            // Geometry hooks only invalidate; they must not mark the view for display.
-            // Marking it here lets a display pass paint before the layout pass has moved
-            // the text layout onto the new size, and `draw(_:)` would then position every
-            // line against a stale container height. `performLayout()` asks for the redraw
-            // once the layout actually matches the bounds.
+            /// Geometry hooks only invalidate; they must not mark the view for display.
+            /// Marking it here lets a display pass paint before the layout pass has moved
+            /// the text layout onto the new size, and `draw(_:)` would then position every
+            /// line against a stale container height. `performLayout()` asks for the redraw
+            /// once the layout actually matches the bounds.
             override func setFrameSize(_ newSize: NSSize) {
                 let oldSize = frame.size
                 super.setFrameSize(newSize)

@@ -32,7 +32,9 @@ import QuartzCore
                   range.length > 0
             else {
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                    if presentsMenu { hideSelectionMenuController() }
+                    if presentsMenu {
+                        hideSelectionMenuController()
+                    }
                 #endif
                 clearSelectionLayer()
                 return
@@ -42,7 +44,9 @@ import QuartzCore
             let selectionRects = textLayout.rects(for: range)
             guard !selectionRects.isEmpty else {
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                    if presentsMenu { hideSelectionMenuController() }
+                    if presentsMenu {
+                        hideSelectionMenuController()
+                    }
                 #endif
                 clearSelectionLayer()
                 return
@@ -52,7 +56,9 @@ import QuartzCore
             updateSelectionLayer(withPath: selectionPath)
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                if presentsMenu { showSelectionMenuController() }
+                if presentsMenu {
+                    showSelectionMenuController()
+                }
 
                 selectionHandleStart.isHidden = false
                 selectionHandleEnd.isHidden = false

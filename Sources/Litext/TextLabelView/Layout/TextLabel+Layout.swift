@@ -24,6 +24,27 @@ private struct LineMetrics {
     var descent: CGFloat
     var leading: CGFloat
     var width: CGFloat
+
+    /// The line's box in CoreText layout space (lower-left origin).
+    ///
+    /// CoreText places the first baseline `ascent` below the top of the path and
+    /// spaces each following line by `descent + leading` below the previous one,
+    /// so a line's leading belongs below its descent. Every consumer — selection
+    /// rects, hit testing, draw culling — shares this box so they agree.
+    func rect(at origin: CGPoint, includingLeading: Bool = true) -> CGRect {
+        let trailingGap = includingLeading ? leading : 0
+        return CGRect(
+            x: origin.x,
+            y: origin.y - descent - trailingGap,
+            width: width,
+            height: ascent + descent + trailingGap
+        )
+    }
+}
+
+private struct LineHit {
+    var line: CTLine
+    var origin: CGPoint
 }
 
 private struct FrameFill {
@@ -35,13 +56,17 @@ private struct FrameFill {
     var isComplete: Bool
 }
 
-extension TextLabel {
+public extension TextLabel {
     @MainActor
-    public struct LayoutRun {
+    struct LayoutRun {
         public let lineIndex: Int
         public let attributes: [NSAttributedString.Key: Any]
         public let stringRange: NSRange
+        /// The run's typographic box: its advance width by the ascent and descent
+        /// of its font (or of its attachment's run delegate).
         public let rect: CGRect
+        /// The line's typographic box, from the bottom of its descent to the top of
+        /// its ascent. The line's leading, which sits below the descent, is excluded.
         public let lineRect: CGRect
     }
 }
@@ -91,11 +116,15 @@ extension TextLabel {
         private static let lineDrawingRunKey = NSAttributedString.Key.litextLineDrawingAction.rawValue as CFString
 
         public init(attributedString: NSAttributedString) {
-            self.attributedString = attributedString
+            // The framesetter works from its own snapshot of the string, and CTRun
+            // ranges index that snapshot. Keeping the caller's (possibly mutable)
+            // object would let later edits desynchronize attribute lookups and the
+            // lazily computed flags from the laid-out runs. Copying an immutable
+            // string only retains it.
+            let snapshot = attributedString.copy() as! NSAttributedString
+            self.attributedString = snapshot
             containerSize = .zero
-            framesetter = CTFramesetterCreateWithAttributedString(
-                attributedString
-            )
+            framesetter = CTFramesetterCreateWithAttributedString(snapshot)
             _highlightRegions = [:]
             super.init()
         }
@@ -243,61 +272,72 @@ extension TextLabel {
         /// Rects are in the same CoreText layout space returned by `rects(for:)`:
         /// lower-left origin, before a `TextLabelView` converts them to view space.
         open func layoutRuns(matching key: NSAttributedString.Key) -> [TextLabel.LayoutRun] {
-            guard let lines, let lineOrigins, let lineMetrics else { return [] }
+            guard let lines, let lineMetrics else { return [] }
 
-            let runKey = key.rawValue as CFString
             var result = [TextLabel.LayoutRun]()
-
-            for lineIndex in 0 ..< lines.count {
-                let line = lines[lineIndex]
-                let lineOrigin = lineOrigins[lineIndex]
-                let lineRect = lineBoundingRect(
-                    origin: lineOrigin,
-                    metrics: lineMetrics[lineIndex]
-                )
-                let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
-
-                for runIndex in 0 ..< glyphRuns.count {
-                    let glyphRun = glyphRuns[runIndex] as! CTRun
-                    guard Self.runAttributeValue(glyphRun, runKey) != nil else { continue }
-
-                    let attributes = CTRunGetAttributes(glyphRun) as? [NSAttributedString.Key: Any] ?? [:]
-                    let cfStringRange = CTRunGetStringRange(glyphRun)
-                    result.append(TextLabel.LayoutRun(
-                        lineIndex: lineIndex,
-                        attributes: attributes,
-                        stringRange: NSRange(
-                            location: cfStringRange.location,
-                            length: cfStringRange.length
-                        ),
-                        rect: runBoundingRect(
-                            glyphRun,
-                            attributes: attributes,
-                            lineOrigin: lineOrigin
-                        ),
-                        lineRect: lineRect
-                    ))
-                }
+            enumerateRuns(
+                inLines: 0 ..< lines.count,
+                carrying: [key.rawValue as CFString]
+            ) { lineIndex, _, lineOrigin, glyphRun in
+                let attributes = CTRunGetAttributes(glyphRun) as? [NSAttributedString.Key: Any] ?? [:]
+                result.append(TextLabel.LayoutRun(
+                    lineIndex: lineIndex,
+                    attributes: attributes,
+                    stringRange: NSRange(CTRunGetStringRange(glyphRun)),
+                    rect: runBoundingRect(glyphRun, lineOrigin: lineOrigin),
+                    lineRect: lineMetrics[lineIndex].rect(at: lineOrigin, includingLeading: false)
+                ))
             }
-
             return result
         }
 
         private func processLineDrawingActions(in context: CGContext, lineIndices: Range<Int>) {
-            guard hasLineDrawingActions, let lines, let lineOrigins else { return }
+            guard hasLineDrawingActions else { return }
 
-            for index in lineIndices {
-                let line = lines[index]
-                let lineOrigin = lineOrigins[index]
+            // An action is line-scoped, but CoreText splits a line into several runs
+            // wherever attributes or fonts change. Each action runs once per line.
+            var invokedLineIndex = -1
+            var invokedActions: [ObjectIdentifier] = []
+            enumerateRuns(
+                inLines: lineIndices,
+                carrying: [Self.lineDrawingRunKey]
+            ) { lineIndex, line, lineOrigin, glyphRun in
+                guard let action = Self.runAttributeValue(glyphRun, Self.lineDrawingRunKey)
+                    as? TextLabel.LineDrawingAction
+                else { return }
+                if lineIndex != invokedLineIndex {
+                    invokedLineIndex = lineIndex
+                    invokedActions.removeAll(keepingCapacity: true)
+                }
+                let actionID = ObjectIdentifier(action)
+                guard !invokedActions.contains(actionID) else { return }
+                invokedActions.append(actionID)
+
+                context.saveGState()
+                action.action(context, line, lineOrigin)
+                context.restoreGState()
+            }
+        }
+
+        /// Calls `body` for every glyph run in `lineIndices` that carries at least
+        /// one of `keys`, in line order and then in the line's run order.
+        ///
+        /// Runs are pre-filtered through `runAttributeValue`, so attribute
+        /// dictionaries are only bridged into Swift for runs the caller wants.
+        private func enumerateRuns(
+            inLines lineIndices: Range<Int>,
+            carrying keys: [CFString],
+            _ body: (_ lineIndex: Int, _ line: CTLine, _ lineOrigin: CGPoint, _ run: CTRun) -> Void
+        ) {
+            guard let lines, let lineOrigins else { return }
+
+            for lineIndex in lineIndices {
+                let line = lines[lineIndex]
                 let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
                 for runIndex in 0 ..< glyphRuns.count {
                     let glyphRun = glyphRuns[runIndex] as! CTRun
-                    guard let action = Self.runAttributeValue(glyphRun, Self.lineDrawingRunKey)
-                        as? TextLabel.LineDrawingAction
-                    else { continue }
-                    context.saveGState()
-                    action.action(context, line, lineOrigin)
-                    context.restoreGState()
+                    guard keys.contains(where: { Self.runAttributeValue(glyphRun, $0) != nil }) else { continue }
+                    body(lineIndex, line, lineOrigins[lineIndex], glyphRun)
                 }
             }
         }
@@ -336,72 +376,114 @@ extension TextLabel {
 
                 let lineStart = lineRange.location
                 let lineEnd = lineStart + lineRange.length
-                let selStart = range.location
-                let selEnd = selStart + range.length
-
-                if selEnd < lineStart || selStart > lineEnd {
-                    continue
-                }
-
-                let overlapStart = max(lineStart, selStart)
-                let overlapEnd = min(lineEnd, selEnd)
+                let overlapStart = max(lineStart, range.location)
+                let overlapEnd = min(lineEnd, range.location + range.length)
 
                 if overlapStart >= overlapEnd {
                     continue
                 }
 
-                calculateAndAddTextRect(
-                    for: line,
-                    origin: lineOrigins[i],
-                    metrics: lineMetrics[i],
+                let lineBox = lineMetrics[i].rect(at: lineOrigins[i])
+                for extent in horizontalExtents(
+                    of: line,
+                    width: lineMetrics[i].width,
                     overlapStart: overlapStart,
                     overlapEnd: overlapEnd,
                     lineStart: lineStart,
-                    lineEnd: lineEnd,
-                    using: block
-                )
+                    lineEnd: lineEnd
+                ) {
+                    block(CGRect(
+                        x: lineBox.minX + extent.lowerBound,
+                        y: lineBox.minY,
+                        width: extent.upperBound - extent.lowerBound,
+                        height: lineBox.height
+                    ))
+                }
             }
         }
 
-        private func calculateAndAddTextRect(
-            for line: CTLine,
-            origin: CGPoint,
-            metrics: LineMetrics,
+        /// The x-extents, relative to the line origin and in visual order, covered
+        /// by the characters in `overlapStart ..< overlapEnd`.
+        ///
+        /// Lines whose runs are all left-to-right in logical order map the range
+        /// to one span between two caret offsets. Bidirectional lines can show a
+        /// logically contiguous range as several visual segments, so those are
+        /// measured glyph by glyph.
+        private func horizontalExtents(
+            of line: CTLine,
+            width: CGFloat,
             overlapStart: CFIndex,
             overlapEnd: CFIndex,
             lineStart: CFIndex,
-            lineEnd: CFIndex,
-            using block: (CGRect) -> Void
-        ) {
-            var startOffset: CGFloat = 0
-            var endOffset: CGFloat = 0
-
-            if overlapStart > lineStart {
-                startOffset = CTLineGetOffsetForStringIndex(
-                    line,
-                    overlapStart,
-                    nil
-                )
+            lineEnd: CFIndex
+        ) -> [ClosedRange<CGFloat>] {
+            let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
+            if Self.runsAreVisuallyOrdered(glyphRuns) {
+                let startOffset = overlapStart > lineStart
+                    ? CTLineGetOffsetForStringIndex(line, overlapStart, nil)
+                    : 0
+                let endOffset = overlapEnd < lineEnd
+                    ? CTLineGetOffsetForStringIndex(line, overlapEnd, nil)
+                    : width
+                return [startOffset ... max(startOffset, endOffset)]
             }
 
-            if overlapEnd < lineEnd {
-                endOffset = CTLineGetOffsetForStringIndex(
-                    line,
-                    overlapEnd,
-                    nil
-                )
-            } else {
-                endOffset = metrics.width
+            var extents = [ClosedRange<CGFloat>]()
+            for runIndex in 0 ..< glyphRuns.count {
+                let glyphRun = glyphRuns[runIndex] as! CTRun
+                let runRange = CTRunGetStringRange(glyphRun)
+                guard runRange.location < overlapEnd,
+                      runRange.location + runRange.length > overlapStart
+                else { continue }
+
+                let glyphCount = CTRunGetGlyphCount(glyphRun)
+                guard glyphCount > 0 else { continue }
+                var stringIndices = [CFIndex](repeating: 0, count: glyphCount)
+                var positions = [CGPoint](repeating: .zero, count: glyphCount)
+                var advances = [CGSize](repeating: .zero, count: glyphCount)
+                let allGlyphs = CFRange(location: 0, length: 0)
+                CTRunGetStringIndices(glyphRun, allGlyphs, &stringIndices)
+                CTRunGetPositions(glyphRun, allGlyphs, &positions)
+                CTRunGetAdvances(glyphRun, allGlyphs, &advances)
+
+                for glyphIndex in 0 ..< glyphCount {
+                    let stringIndex = stringIndices[glyphIndex]
+                    guard stringIndex >= overlapStart, stringIndex < overlapEnd else { continue }
+                    let minX = positions[glyphIndex].x
+                    let maxX = minX + advances[glyphIndex].width
+                    extents.append(min(minX, maxX) ... max(minX, maxX))
+                }
             }
 
-            let rect = CGRect(
-                x: origin.x + startOffset,
-                y: origin.y - metrics.descent,
-                width: endOffset - startOffset,
-                height: metrics.ascent + metrics.descent + metrics.leading
-            )
+            // Glyphs that touch visually share one rect.
+            extents.sort { $0.lowerBound < $1.lowerBound }
+            var merged = [ClosedRange<CGFloat>]()
+            for extent in extents {
+                if let last = merged.last, extent.lowerBound <= last.upperBound + 0.5 {
+                    merged[merged.count - 1] = last.lowerBound ... max(last.upperBound, extent.upperBound)
+                } else {
+                    merged.append(extent)
+                }
+            }
+            return merged
+        }
 
-            block(rect)
+        /// Whether logical order matches visual order across `glyphRuns`: every run
+        /// is left-to-right and each starts after the previous one in the string.
+        private static func runsAreVisuallyOrdered(_ glyphRuns: NSArray) -> Bool {
+            var previousEnd = 0
+            for runIndex in 0 ..< glyphRuns.count {
+                let glyphRun = glyphRuns[runIndex] as! CTRun
+                if CTRunGetStatus(glyphRun).contains(.rightToLeft) {
+                    return false
+                }
+                let runRange = CTRunGetStringRange(glyphRun)
+                if runRange.location < previousEnd {
+                    return false
+                }
+                previousEnd = runRange.location + runRange.length
+            }
+            return true
         }
 
         // MARK: - Private Methods
@@ -413,12 +495,7 @@ extension TextLabel {
 
             // A measurement pass over the same width already laid out every line;
             // reuse it and translate the origins into the container's height.
-            if let fill = measurementFill,
-               fill.isComplete,
-               fill.pathSize.width == containerSize.width,
-               containerSize.height <= Self.maxLayoutDimension
-            {
-                adopt(fill)
+            if adoptMeasurementFillIfMatching() {
                 return
             }
 
@@ -429,12 +506,30 @@ extension TextLabel {
             // grown to whatever the text needs. Text stays anchored to the top of
             // `containerSize`, so lines past the container simply fall outside the
             // view and are clipped rather than lost.
+            let naturalHeight = naturalHeight(forWidth: containerSize.width)
+
+            // Measuring the natural height may itself have laid out a frame at this
+            // width; adopting it avoids typesetting the same text a second time.
+            if adoptMeasurementFillIfMatching() {
+                return
+            }
+
             var pathSize = containerSize
             pathSize.height = min(
-                max(containerSize.height, naturalHeight(forWidth: containerSize.width)),
+                max(containerSize.height, naturalHeight),
                 Self.maxLayoutDimension
             )
             adopt(makeFrameFill(constraint: pathSize, clampsToMaxLayoutDimension: false))
+        }
+
+        private func adoptMeasurementFillIfMatching() -> Bool {
+            guard let fill = measurementFill,
+                  fill.isComplete,
+                  fill.pathSize.width == containerSize.width,
+                  containerSize.height <= Self.maxLayoutDimension
+            else { return false }
+            adopt(fill)
+            return true
         }
 
         /// Takes a fill's lines and moves its origins into the current container,
@@ -527,21 +622,18 @@ extension TextLabel {
             // Frame-derived measurement reads the used width from line origins,
             // which only matches the framesetter's suggestion when x-origins do
             // not scale with the layout path width. Centered, right-aligned,
-            // justified, or right-to-left content keeps the suggestion pass.
-            var isSafe = true
-            attributedString.enumerateAttribute(
-                .paragraphStyle,
-                in: NSRange(location: 0, length: attributedString.length),
-                options: []
-            ) { value, _, stop in
-                guard let style = value as? NSParagraphStyle else { return }
+            // justified, or right-to-left content keeps the suggestion pass. A
+            // negative tail indent narrows every line without showing up in its
+            // origin or width, so the frame would under-report the width the text
+            // needs to stay on one line.
+            let hasUnsafeParagraphStyle = containsAttribute(.paragraphStyle) { value in
+                guard let style = value as? NSParagraphStyle else { return false }
                 let alignmentIsSafe = style.alignment == .left || style.alignment == .natural
-                if !alignmentIsSafe || style.baseWritingDirection == .rightToLeft {
-                    isSafe = false
-                    stop.pointee = true
-                }
+                return !alignmentIsSafe
+                    || style.baseWritingDirection == .rightToLeft
+                    || style.tailIndent < 0
             }
-            guard isSafe else { return false }
+            guard !hasUnsafeParagraphStyle else { return false }
 
             return !containsRightToLeftContent()
         }
@@ -569,20 +661,22 @@ extension TextLabel {
 
             // Line origins live in CoreText's bottom-left space; the visible rect
             // is top-left based against the same containerSize used by draw(in:).
-            let lowerBound = containerSize.height - visibleRect.maxY
-            let upperBound = containerSize.height - visibleRect.minY
+            let layoutRect = layoutRect(fromViewRect: visibleRect)
 
             var first = lines.count
             var lastExclusive = 0
             for index in 0 ..< lines.count {
-                let origin = lineOrigins[index]
-                let metrics = lineMetrics[index]
-                let lineTop = origin.y + metrics.ascent
-                let lineBottom = origin.y - metrics.descent - metrics.leading
-                if lineBottom > upperBound { continue }
+                let lineBox = lineMetrics[index].rect(at: lineOrigins[index])
+                if lineBox.minY > layoutRect.maxY {
+                    continue
+                }
                 // Lines only descend from here on, so the remainder is offscreen.
-                if lineTop < lowerBound { break }
-                if index < first { first = index }
+                if lineBox.maxY < layoutRect.minY {
+                    break
+                }
+                if index < first {
+                    first = index
+                }
                 lastExclusive = index + 1
             }
             guard first < lastExclusive else { return 0 ..< 0 }
@@ -593,23 +687,19 @@ extension TextLabel {
         }
 
         private func extractHighlightRegions() {
-            enumerateLines { line, _, lineOrigin in
-                let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
-                for runIndex in 0 ..< glyphRuns.count {
-                    let glyphRun = glyphRuns[runIndex] as! CTRun
-                    guard Self.runAttributeValue(glyphRun, Self.linkRunKey) != nil
-                        || Self.runAttributeValue(glyphRun, Self.attachmentRunKey) != nil
-                    else { continue }
-
-                    // Bridging the attribute dictionary into Swift is expensive, so
-                    // it is reserved for the few runs carrying highlight attributes.
-                    let attributes = CTRunGetAttributes(glyphRun) as? [NSAttributedString.Key: Any] ?? [:]
-                    processHighlightRegionForRun(
-                        glyphRun,
-                        attributes: attributes,
-                        lineOrigin: lineOrigin
-                    )
-                }
+            guard let lines else { return }
+            enumerateRuns(
+                inLines: 0 ..< lines.count,
+                carrying: [Self.linkRunKey, Self.attachmentRunKey]
+            ) { _, _, lineOrigin, glyphRun in
+                // Bridging the attribute dictionary into Swift is expensive, so
+                // it is reserved for the few runs carrying highlight attributes.
+                let attributes = CTRunGetAttributes(glyphRun) as? [NSAttributedString.Key: Any] ?? [:]
+                processHighlightRegionForRun(
+                    glyphRun,
+                    attributes: attributes,
+                    lineOrigin: lineOrigin
+                )
             }
         }
 
@@ -623,40 +713,38 @@ extension TextLabel {
             return Unmanaged<AnyObject>.fromOpaque(value).takeUnretainedValue()
         }
 
-        private func attributedStringHasHighlightAttributes() -> Bool {
-            guard attributedString.length > 0 else { return false }
-
-            let fullRange = NSRange(location: 0, length: attributedString.length)
-            // Enumerating one key at a time keeps CoreText's attribute dictionaries out
-            // of Swift; `enumerateAttributes` would bridge every run's full dictionary.
-            for key in [NSAttributedString.Key.link, .litextAttachment] {
-                var hasAttribute = false
-                attributedString.enumerateAttribute(key, in: fullRange, options: []) { value, _, stop in
-                    if value != nil {
-                        hasAttribute = true
-                        stop.pointee = true
-                    }
-                }
-                if hasAttribute { return true }
-            }
-            return false
+        private var fullRange: NSRange {
+            NSRange(location: 0, length: attributedString.length)
         }
 
-        private func attributedStringHasLineDrawingActions() -> Bool {
+        /// Whether any value of `key` in the string satisfies `predicate`.
+        ///
+        /// Enumerating one key at a time keeps CoreText's attribute dictionaries out
+        /// of Swift; `enumerateAttributes` would bridge every run's full dictionary.
+        private func containsAttribute(
+            _ key: NSAttributedString.Key,
+            where predicate: (Any) -> Bool
+        ) -> Bool {
             guard attributedString.length > 0 else { return false }
 
-            var hasAction = false
-            attributedString.enumerateAttribute(
-                .litextLineDrawingAction,
-                in: NSRange(location: 0, length: attributedString.length),
-                options: []
-            ) { value, _, stop in
-                if value is TextLabel.LineDrawingAction {
-                    hasAction = true
+            var found = false
+            attributedString.enumerateAttribute(key, in: fullRange, options: []) { value, _, stop in
+                if let value, predicate(value) {
+                    found = true
                     stop.pointee = true
                 }
             }
-            return hasAction
+            return found
+        }
+
+        private func attributedStringHasHighlightAttributes() -> Bool {
+            [NSAttributedString.Key.link, .litextAttachment].contains { key in
+                containsAttribute(key) { _ in true }
+            }
+        }
+
+        private func attributedStringHasLineDrawingActions() -> Bool {
+            containsAttribute(.litextLineDrawingAction) { $0 is TextLabel.LineDrawingAction }
         }
 
         private func processHighlightRegionForRun(
@@ -664,17 +752,8 @@ extension TextLabel {
             attributes: [NSAttributedString.Key: Any],
             lineOrigin: CGPoint
         ) {
-            let cfStringRange = CTRunGetStringRange(glyphRun)
-            let stringRange = NSRange(
-                location: cfStringRange.location,
-                length: cfStringRange.length
-            )
-
-            let runBounds = runBoundingRect(
-                glyphRun,
-                attributes: attributes,
-                lineOrigin: lineOrigin
-            )
+            let stringRange = NSRange(CTRunGetStringRange(glyphRun))
+            let runBounds = runBoundingRect(glyphRun, lineOrigin: lineOrigin)
 
             if attributes[.link] != nil {
                 var linkRange = NSRange()
@@ -682,7 +761,7 @@ extension TextLabel {
                     .link,
                     at: stringRange.location,
                     longestEffectiveRange: &linkRange,
-                    in: NSRange(location: 0, length: attributedString.length)
+                    in: fullRange
                 )
                 addHighlightRegion(
                     kind: .link,
@@ -698,7 +777,7 @@ extension TextLabel {
                     .litextAttachment,
                     at: stringRange.location,
                     longestEffectiveRange: &attachmentRange,
-                    in: NSRange(location: 0, length: attributedString.length)
+                    in: fullRange
                 )
                 addHighlightRegion(
                     kind: .attachment,
@@ -731,46 +810,61 @@ extension TextLabel {
             highlightRegion.addRect(rect)
         }
 
-        private func runBoundingRect(
-            _ glyphRun: CTRun,
-            attributes: [NSAttributedString.Key: Any],
-            lineOrigin: CGPoint
-        ) -> CGRect {
-            var runBounds = CTRunGetImageBounds(
-                glyphRun,
-                nil,
-                CFRange(location: 0, length: 0)
-            )
+        /// The run's typographic box in layout space: its advance width by its
+        /// ascent and descent. Ink bounds would skip spaces, trim side bearings and
+        /// vary in height from word to word; typographic bounds keep link regions
+        /// uniform and give attachments exactly their run delegate's metrics.
+        private func runBoundingRect(_ glyphRun: CTRun, lineOrigin: CGPoint) -> CGRect {
+            var ascent: CGFloat = 0
+            var descent: CGFloat = 0
+            let allGlyphs = CFRange(location: 0, length: 0)
+            let width = CGFloat(CTRunGetTypographicBounds(glyphRun, allGlyphs, &ascent, &descent, nil))
 
-            if let attachment = attributes[.litextAttachment] as? TextLabel.Attachment {
-                runBounds.size = attachment.size
-                runBounds.origin.y -= attachment.size.height * TextLabel.Attachment.descentFraction
+            // Glyphs in a right-to-left run need not be stored left to right, so the
+            // run's left edge is the smallest glyph position, not the first one.
+            let glyphCount = CTRunGetGlyphCount(glyphRun)
+            var minX: CGFloat = 0
+            if glyphCount > 0 {
+                var positions = [CGPoint](repeating: .zero, count: glyphCount)
+                CTRunGetPositions(glyphRun, allGlyphs, &positions)
+                minX = positions.lazy.map(\.x).min() ?? 0
             }
 
-            runBounds.origin.x += lineOrigin.x
-            runBounds.origin.y += lineOrigin.y
-            return runBounds
+            return CGRect(
+                x: lineOrigin.x + minX,
+                y: lineOrigin.y - descent,
+                width: width,
+                height: ascent + descent
+            )
         }
 
-        private func lineBoundingRect(origin: CGPoint, metrics: LineMetrics) -> CGRect {
+        // MARK: - Coordinate Conversion
+
+        // Layout geometry uses CoreText's lower-left origin; views, visible rects and
+        // attachment frames use a top-left origin. Both flip against
+        // `containerSize.height`, the same height `draw(in:)` flips the context by,
+        // so this is the only place the flip is written down.
+
+        /// Converts a rect from layout space to top-left view space.
+        func viewRect(fromLayoutRect rect: CGRect) -> CGRect {
+            var result = rect
+            result.origin.y = containerSize.height - rect.origin.y - rect.size.height
+            return result
+        }
+
+        /// Converts a rect from top-left view space to layout space.
+        func layoutRect(fromViewRect rect: CGRect) -> CGRect {
             CGRect(
-                x: origin.x,
-                y: origin.y - metrics.descent,
-                width: metrics.width,
-                height: metrics.ascent + metrics.descent
+                x: rect.minX,
+                y: containerSize.height - rect.maxY,
+                width: rect.width,
+                height: rect.height
             )
         }
 
-        private func enumerateLines(
-            using block: (CTLine, Int, CGPoint) -> Void
-        ) {
-            guard let lines, let lineOrigins else { return }
-
-            for i in 0 ..< lines.count {
-                let line = lines[i]
-                let origin = lineOrigins[i]
-                block(line, i, origin)
-            }
+        /// Converts a point from top-left view space to layout space.
+        func layoutPoint(fromViewPoint point: CGPoint) -> CGPoint {
+            CGPoint(x: point.x, y: containerSize.height - point.y)
         }
 
         // MARK: - Text Index Helpers
@@ -778,107 +872,81 @@ extension TextLabel {
         open func textIndex(at point: CGPoint) -> Int? {
             guard let lines, let lineOrigins else { return nil }
 
-            if let lineInfo = findLineContainingPoint(point) {
-                return findCharacterIndexInLine(point, lineInfo: lineInfo)
+            if let hit = findLineContainingPoint(point) {
+                return caretIndex(at: point, in: hit)
             }
 
             guard !lines.isEmpty else { return nil }
 
             guard point.y < lineOrigins[lines.count - 1].y else { return nil }
-            let lastLine = lines[lines.count - 1]
-            let range = CTLineGetStringRange(lastLine)
+            let range = CTLineGetStringRange(lines[lines.count - 1])
             return range.location + range.length
         }
 
         open func nearestTextIndex(at point: CGPoint) -> Int? {
-            guard let lines, let lineOrigins else { return nil }
+            guard let hit = findLineContainingPoint(point) ?? nearestLine(to: point) else { return nil }
+            return caretIndex(at: point, in: hit)
+        }
 
-            if let lineInfo = findLineContainingPoint(point) {
-                return findCharacterIndexInLine(point, lineInfo: lineInfo)
-            }
-
-            guard !lines.isEmpty else { return nil }
-
-            guard let lineInfo = nearestLineInfo(to: point, lines: lines, lineOrigins: lineOrigins) else {
-                return nil
-            }
-
-            return findCharacterIndexInLine(point, lineInfo: lineInfo)
+        /// The index of the character under `point` on the nearest line, for word
+        /// and line selection.
+        ///
+        /// `nearestTextIndex(at:)` returns a caret index, which past a line's
+        /// trailing edge is the first character of the next line. This one stays
+        /// on the hit line's last character instead.
+        func characterIndex(at point: CGPoint) -> Int? {
+            guard let hit = findLineContainingPoint(point) ?? nearestLine(to: point) else { return nil }
+            let lineRange = CTLineGetStringRange(hit.line)
+            let lastCharacter = lineRange.location + max(lineRange.length - 1, 0)
+            return min(caretIndex(at: point, in: hit), lastCharacter)
         }
 
         // MARK: - Private Text Index Helpers
 
-        private func nearestLineInfo(
-            to point: CGPoint,
-            lines: [CTLine],
-            lineOrigins: [CGPoint]
-        ) -> (line: CTLine, origin: CGPoint, index: Int)? {
+        private func nearestLine(to point: CGPoint) -> LineHit? {
+            guard let lines, let lineOrigins, !lines.isEmpty else { return nil }
+
             if point.y > lineOrigins[0].y {
-                return (line: lines[0], origin: lineOrigins[0], index: 0)
+                return LineHit(line: lines[0], origin: lineOrigins[0])
             }
 
             let lastIndex = lines.count - 1
             if point.y < lineOrigins[lastIndex].y {
-                return (line: lines[lastIndex], origin: lineOrigins[lastIndex], index: lastIndex)
+                return LineHit(line: lines[lastIndex], origin: lineOrigins[lastIndex])
             }
 
             var closestLineIndex = 0
-            var minDistance = CGFloat.greatestFiniteMagnitude
-
-            for i in 0 ..< lines.count {
-                let origin = lineOrigins[i]
-                guard let metrics = lineMetrics?[i] else { continue }
-
-                let lineMiddleY = origin.y - metrics.descent + (metrics.ascent + metrics.descent) / 2
-                let distance = abs(point.y - lineMiddleY)
-
-                if distance < minDistance {
-                    minDistance = distance
-                    closestLineIndex = i
+            if let lineMetrics {
+                var minDistance = CGFloat.greatestFiniteMagnitude
+                for i in 0 ..< lines.count {
+                    let distance = abs(point.y - lineMetrics[i].rect(at: lineOrigins[i]).midY)
+                    if distance < minDistance {
+                        minDistance = distance
+                        closestLineIndex = i
+                    }
                 }
             }
 
-            return (
-                line: lines[closestLineIndex],
-                origin: lineOrigins[closestLineIndex],
-                index: closestLineIndex
-            )
+            return LineHit(line: lines[closestLineIndex], origin: lineOrigins[closestLineIndex])
         }
 
-        private func findLineContainingPoint(
-            _ point: CGPoint
-        ) -> (line: CTLine, origin: CGPoint, index: Int)? {
+        private func findLineContainingPoint(_ point: CGPoint) -> LineHit? {
             guard let lines, let lineOrigins, let lineMetrics else { return nil }
 
             for i in 0 ..< lines.count {
-                let origin = lineOrigins[i]
-                let metrics = lineMetrics[i]
-                let lineHeight = metrics.ascent + metrics.descent + metrics.leading
-
-                let lineRect = CGRect(
-                    x: origin.x,
-                    y: origin.y - metrics.descent,
-                    width: metrics.width,
-                    height: lineHeight
-                )
-
-                if point.y >= lineRect.minY, point.y <= lineRect.maxY {
-                    return (line: lines[i], origin: origin, index: i)
+                let lineBox = lineMetrics[i].rect(at: lineOrigins[i])
+                if point.y >= lineBox.minY, point.y <= lineBox.maxY {
+                    return LineHit(line: lines[i], origin: lineOrigins[i])
                 }
             }
 
             return nil
         }
 
-        private func findCharacterIndexInLine(
-            _ point: CGPoint,
-            lineInfo: (line: CTLine, origin: CGPoint, index: Int)
-        ) -> Int {
-            let line = lineInfo.line
-            let lineOrigin = lineInfo.origin
-            let lineRange = CTLineGetStringRange(line)
-            let linePoint = CGPoint(x: point.x - lineOrigin.x, y: 0)
-            let index = CTLineGetStringIndexForPosition(line, linePoint)
+        private func caretIndex(at point: CGPoint, in hit: LineHit) -> Int {
+            let lineRange = CTLineGetStringRange(hit.line)
+            let linePoint = CGPoint(x: point.x - hit.origin.x, y: 0)
+            let index = CTLineGetStringIndexForPosition(hit.line, linePoint)
             return index == kCFNotFound ? lineRange.location + lineRange.length : index
         }
     }

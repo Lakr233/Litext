@@ -96,8 +96,8 @@ struct ContentView: View {
                 }
             #else
                 .popover(isPresented: $showSettings) {
-                        settingsPanel
-                    }
+                    settingsPanel
+                }
             #endif
         }
 

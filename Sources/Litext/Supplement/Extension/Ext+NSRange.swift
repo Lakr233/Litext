@@ -5,9 +5,14 @@
 //  Created by 秋星桥 on 3/26/25.
 //
 
+import CoreFoundation
 import Foundation
 
 extension NSRange {
+    init(_ cfRange: CFRange) {
+        self.init(location: cfRange.location, length: cfRange.length)
+    }
+
     func contains(_ index: Int) -> Bool {
         index >= location && index < (location + length)
     }

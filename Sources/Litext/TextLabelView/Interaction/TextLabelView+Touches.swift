@@ -30,7 +30,9 @@
                     didHandleEvent = true
                 }
             }
-            if !didHandleEvent { super.pressesBegan(presses, with: event) }
+            if !didHandleEvent {
+                super.pressesBegan(presses, with: event)
+            }
         }
 
         override var canBecomeFocused: Bool {
@@ -46,11 +48,15 @@
                             dx: -SelectionHandle.knobExtraResponsiveArea,
                             dy: -SelectionHandle.knobExtraResponsiveArea
                         )
-                    if rect.contains(point) { return true }
+                    if rect.contains(point) {
+                        return true
+                    }
                 }
             #endif
 
-            if !bounds.contains(point) { return false }
+            if !bounds.contains(point) {
+                return false
+            }
 
             for view in attachmentViews {
                 if view.frame.contains(point) {
@@ -91,7 +97,9 @@
             }
 
             bumpClickCountIfWithinTimeGap()
-            if !isSelectable { return }
+            if !isSelectable {
+                return
+            }
 
             if interactionState.clickCount <= 1 {
                 if isPointerDevice(touch: firstTouch) {
@@ -100,7 +108,7 @@
                     }
                 }
             } else if interactionState.clickCount == 2 {
-                if let index = nearestTextIndexAtPoint(location) {
+                if let index = characterIndexAtPoint(location) {
                     selectWordAtIndex(index)
                     // prevent touches did end discard the changes
                     DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
@@ -108,7 +116,7 @@
                     }
                 }
             } else {
-                if let index = nearestTextIndexAtPoint(location) {
+                if let index = characterIndexAtPoint(location) {
                     selectLineAtIndex(index)
                     // prevent touches did end discard the changes
                     DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
@@ -209,7 +217,9 @@
 
                 // Don't show the menu if another view controller is presented above ours
                 // (e.g. UIActivityViewController from shareMenuItemTapped)
-                if parentViewController?.presentedViewController != nil { return }
+                if parentViewController?.presentedViewController != nil {
+                    return
+                }
 
                 let rects: [CGRect] = textLayout.rects(for: range).map {
                     convertRectFromTextLayout($0, insetForInteraction: true)

@@ -250,7 +250,9 @@ private final class NestedLabelEventForwarder: NSObject, TextLabelViewDelegate {
     private func enclosingLabel(of label: TextLabelView) -> TextLabelView? {
         var view = label.superview
         while let current = view {
-            if let outer = current as? TextLabelView { return outer }
+            if let outer = current as? TextLabelView {
+                return outer
+            }
             view = current.superview
         }
         return nil

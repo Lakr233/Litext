@@ -17,10 +17,12 @@ import QuartzCore
         /// hit testing from the drawn text whenever the view is resized before the
         /// next layout pass runs.
         func convertRectFromTextLayout(_ rect: CGRect, insetForInteraction useInset: Bool) -> CGRect {
-            var result = rect
-            result.origin.y = textLayout.containerSize.height - result.origin.y - result.size.height
-            if useInset { result = result.insetBy(dx: -4, dy: -4) }
-            return result
+            let result = textLayout.viewRect(fromLayoutRect: rect)
+            return useInset ? result.insetBy(dx: -4, dy: -4) : result
+        }
+
+        func convertPointForTextLayout(_ point: CGPoint) -> CGPoint {
+            textLayout.layoutPoint(fromViewPoint: point)
         }
 
         var displayScale: CGFloat {

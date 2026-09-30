@@ -26,6 +26,11 @@ import QuartzCore
 
         open var attributedText: NSAttributedString = .init() {
             didSet {
+                // Keep an immutable snapshot, as UILabel and NSTextField do. Otherwise a
+                // caller that edits its mutable string and assigns the same object again
+                // would compare the object with itself below and the edit would be lost.
+                // Assigning inside `didSet` does not re-trigger the observer.
+                attributedText = attributedText.copy() as! NSAttributedString
                 // Reusing hosts (cells, SwiftUI updates) routinely reassign an equal
                 // string; rebuilding the framesetter for those costs a full measurement
                 // pass. Call `reloadTextLayout()` to force a rebuild when the string is
@@ -67,7 +72,11 @@ import QuartzCore
         }
 
         open var isSelectable: Bool = false {
-            didSet { if !isSelectable { clearSelection() } }
+            didSet {
+                if !isSelectable {
+                    clearSelection()
+                }
+            }
         }
 
         open var selectionBackgroundColor: PlatformColor? {

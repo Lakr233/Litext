@@ -49,14 +49,14 @@ import QuartzCore
             textLayout.nearestTextIndex(at: convertPointForTextLayout(point))
         }
 
-        func textIndexAtPoint(_ point: CGPoint) -> Int? {
-            textLayout.textIndex(at: convertPointForTextLayout(point))
+        /// The character under `point`, for word and line selection. Unlike
+        /// `nearestTextIndexAtPoint(_:)`, it never resolves to the next line.
+        func characterIndexAtPoint(_ point: CGPoint) -> Int? {
+            textLayout.characterIndex(at: convertPointForTextLayout(point))
         }
 
-        func convertPointForTextLayout(_ point: CGPoint) -> CGPoint {
-            // Must mirror convertRectFromTextLayout: flip against the layout
-            // container height, not the live view bounds.
-            CGPoint(x: point.x, y: textLayout.containerSize.height - point.y)
+        func textIndexAtPoint(_ point: CGPoint) -> Int? {
+            textLayout.textIndex(at: convertPointForTextLayout(point))
         }
 
         public func selectionContains(_ location: CGPoint) -> Bool {

@@ -270,18 +270,9 @@ import SwiftUI
                     let swiftUIView = attachment.swiftUIView,
                     let ctRect = region.rects.first
                 else { return nil }
-                let viewRect = ctRectToTopLeft(ctRect, in: layoutSize.height)
+                let viewRect = layout.viewRect(fromLayoutRect: ctRect)
                 return AttachmentItem(id: region.stringRange.location, view: swiftUIView, viewRect: viewRect)
             }
-        }
-
-        private func ctRectToTopLeft(_ ctRect: CGRect, in height: CGFloat) -> CGRect {
-            CGRect(
-                x: ctRect.origin.x,
-                y: height - ctRect.origin.y - ctRect.height,
-                width: ctRect.width,
-                height: ctRect.height
-            )
         }
 
         var body: some View {

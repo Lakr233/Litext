@@ -51,7 +51,9 @@ import Foundation
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
             defer { isInteractionInProgress = false }
-            if handleRightClick(with: event) { return }
+            if handleRightClick(with: event) {
+                return
+            }
             super.rightMouseDown(with: event)
         }
 
@@ -73,18 +75,20 @@ import Foundation
             }
 
             interactionState.clickCount = event.clickCount
-            if !isSelectable { return }
+            if !isSelectable {
+                return
+            }
 
             if interactionState.clickCount <= 1 {
                 if !selectionContains(location) {
                     clearSelection()
                 }
             } else if interactionState.clickCount == 2 {
-                if let index = nearestTextIndexAtPoint(location) {
+                if let index = characterIndexAtPoint(location) {
                     selectWordAtIndex(index)
                 }
             } else {
-                if let index = nearestTextIndexAtPoint(location) {
+                if let index = characterIndexAtPoint(location) {
                     selectLineAtIndex(index)
                 }
             }
@@ -129,7 +133,9 @@ import Foundation
             // conversion makes a label nested at a non-zero origin — e.g.
             // inside another label's attachment view — mouse-transparent.
             let localPoint = superview.map { convert(point, from: $0) } ?? point
-            if !bounds.contains(localPoint) { return nil }
+            if !bounds.contains(localPoint) {
+                return nil
+            }
 
             for view in attachmentViews {
                 if view.frame.contains(localPoint) {
@@ -248,7 +254,9 @@ import Foundation
             if isLocationAboveAttachmentView(location: point) {
                 // A nested TextLabelView runs this same tracking-area logic for
                 // its own surface; applying .arrow from here would fight it.
-                if nestedTextLabelView(at: point) != nil { return nil }
+                if nestedTextLabelView(at: point) != nil {
+                    return nil
+                }
                 return .arrow
             }
             if highlightRegionAtPoint(point) != nil {
@@ -269,7 +277,9 @@ import Foundation
                 // local point is already in the right space.
                 var hit = view.hitTest(point)
                 while let current = hit {
-                    if let label = current as? TextLabelView { return label }
+                    if let label = current as? TextLabelView {
+                        return label
+                    }
                     hit = current.superview
                 }
             }

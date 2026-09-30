@@ -231,7 +231,9 @@ import Testing
     let context = try #require(makeBitmapContext(size: layout.containerSize))
     layout.draw(in: context)
 
-    #expect(lineDrawingProbeInvocationCount >= lineCount)
+    // Probe lines wrap at this width; each laid-out line runs the action once.
+    #expect(layout.visibleLineCount(in: nil) >= lineCount)
+    #expect(lineDrawingProbeInvocationCount == layout.visibleLineCount(in: nil))
 }
 
 @MainActor
