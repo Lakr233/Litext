@@ -13,9 +13,36 @@ import Foundation
     private let kMultiClickTimeThreshold: TimeInterval = 0.25
 
     extension TextLabelView {
+        /// What a point in the label's own coordinates lands on, shared by UIKit
+        /// `point(inside:with:)` and AppKit `hitTest(_:)` so both platforms decide alike.
+        enum HitTarget {
+            /// Outside the label's bounds.
+            case outside
+            /// Over an attachment view, which should receive the event itself.
+            case attachment
+            /// Over text the label handles: any text when selectable, otherwise a link.
+            case interactiveText
+            /// Inside the bounds but over nothing the label reacts to.
+            case passThrough
+        }
+
+        func hitTarget(at localPoint: CGPoint) -> HitTarget {
+            if !bounds.contains(localPoint) {
+                return .outside
+            }
+            if isLocationAboveAttachmentView(location: localPoint) {
+                return .attachment
+            }
+            if isSelectable || highlightRegionAtPoint(localPoint) != nil {
+                return .interactiveText
+            }
+            return .passThrough
+        }
+
         func setInteractionStateToBegin(initialLocation: CGPoint) {
             interactionState.initialTouchLocation = initialLocation
             interactionState.isFirstMove = true
+            interactionState.clickCountAtBegin = 1
             interactionState.isForwardingToSuper = false
             isInteractionInProgress = true
         }

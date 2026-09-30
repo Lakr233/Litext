@@ -54,21 +54,14 @@
                 }
             #endif
 
-            if !bounds.contains(point) {
+            switch hitTarget(at: point) {
+            case .outside, .passThrough:
                 return false
-            }
-
-            for view in attachmentViews {
-                if view.frame.contains(point) {
-                    return super.point(inside: point, with: event)
-                }
-            }
-
-            if isSelectable || highlightRegionAtPoint(point) != nil {
+            case .attachment:
+                return super.point(inside: point, with: event)
+            case .interactiveText:
                 return true
             }
-
-            return false
         }
 
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -80,7 +73,7 @@
             }
 
             if isSelectable, !isFirstResponder {
-                // to received keyboard event from there
+                // Become first responder so the label receives keyboard shortcuts such as Copy.
                 _ = becomeFirstResponder()
             }
 
@@ -98,32 +91,38 @@
             }
 
             bumpClickCountIfWithinTimeGap()
+            interactionState.clickCountAtBegin = interactionState.clickCount
             if !isSelectable {
                 return
             }
 
             if interactionState.clickCount <= 1 {
-                if isPointerDevice(touch: firstTouch) {
+                // A pointer click inside the selection keeps it so touchesEnded can show the
+                // menu; a drag rebuilds the range from the initial location either way.
+                if isPointerDevice(touch: firstTouch), !selectionContains(location) {
                     if let index = textIndexAtPoint(location) {
                         selectionRange = NSRange(location: index, length: 0)
                     }
                 }
-            } else if interactionState.clickCount == 2 {
-                if let index = characterIndexAtPoint(location) {
-                    selectWordAtIndex(index)
-                    // prevent touches did end discard the changes
-                    DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
-                        self?.selectWordAtIndex(index)
-                    }
+            } else if let index = characterIndexAtPoint(location) {
+                let selectsLine = interactionState.clickCount > 2
+                selectWordOrLine(at: index, selectsLine: selectsLine)
+                // Apply the selection again on the next run-loop turn, in case UIKit
+                // reverts it while it finishes delivering this touch. Skip it if the text
+                // has been replaced since, as the index would then point into other text.
+                let text = attributedText
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, attributedText.isEqual(to: text) else { return }
+                    selectWordOrLine(at: index, selectsLine: selectsLine)
                 }
+            }
+        }
+
+        private func selectWordOrLine(at index: Int, selectsLine: Bool) {
+            if selectsLine {
+                selectLineAtIndex(index)
             } else {
-                if let index = characterIndexAtPoint(location) {
-                    selectLineAtIndex(index)
-                    // prevent touches did end discard the changes
-                    DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
-                        self?.selectLineAtIndex(index)
-                    }
-                }
+                selectWordAtIndex(index)
             }
         }
 
@@ -169,7 +168,7 @@
             defer { deactivateHighlightRegion() }
 
             if !isTouchReallyMoved(location),
-               interactionState.clickCount <= 1
+               interactionState.clickCountAtBegin <= 1
             {
                 if selectionContains(location) {
                     #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)

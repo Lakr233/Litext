@@ -9,7 +9,9 @@ import Foundation
 
     @MainActor
     protocol SelectionHandleDelegate: AnyObject {
+        func selectionHandleDidBeginDrag(_ kind: SelectionHandle.Kind)
         func selectionHandleDidMove(_ kind: SelectionHandle.Kind, toLocationInSuperView point: CGPoint)
+        func selectionHandleDidEndDrag(_ kind: SelectionHandle.Kind)
     }
 
     open class SelectionHandle: UIView {
@@ -110,6 +112,7 @@ import Foundation
             switch gesture.state {
             case .began:
                 frameAtGestureBegin = frame
+                delegate?.selectionHandleDidBeginDrag(kind)
                 fallthrough
             case .changed:
                 let translation = gesture.translation(in: superview)
@@ -120,6 +123,8 @@ import Foundation
                     height: frameAtGestureBegin.height
                 )
                 delegate?.selectionHandleDidMove(kind, toLocationInSuperView: .init(x: newFrame.midX, y: newFrame.midY))
+            case .ended, .cancelled, .failed:
+                delegate?.selectionHandleDidEndDrag(kind)
             default: return
             }
         }

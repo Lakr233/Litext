@@ -77,6 +77,11 @@ import Foundation
 
             interactionState.clickCount = event.clickCount
             if !isSelectable {
+                // Hit-testing normally routes these clicks past the label. When one arrives
+                // anyway, hand the whole sequence to the next responder so it gets a
+                // matching mouseDragged and mouseUp.
+                interactionState.isForwardingToSuper = true
+                super.mouseDown(with: event)
                 return
             }
 
@@ -143,20 +148,21 @@ import Foundation
             // conversion makes a label nested at a non-zero origin — e.g.
             // inside another label's attachment view — mouse-transparent.
             let localPoint = superview.map { convert(point, from: $0) } ?? point
-            if !bounds.contains(localPoint) {
+            switch hitTarget(at: localPoint) {
+            case .outside:
                 return nil
-            }
-
-            for view in attachmentViews {
-                if view.frame.contains(localPoint) {
-                    return super.hitTest(point)
-                }
-            }
-
-            if isSelectable || highlightRegionAtPoint(localPoint) != nil {
+            case .attachment:
+                // `super` expects the original, superview-space point.
+                return super.hitTest(point)
+            case .interactiveText:
                 return self
+            case .passThrough:
+                // Like `point(inside:with:)` on UIKit, a non-selectable label lets clicks
+                // away from its links reach the view behind it. A subview that claims the
+                // point still receives it.
+                let hit = super.hitTest(point)
+                return hit === self ? nil : hit
             }
-            return super.hitTest(point)
         }
 
         override func updateTrackingAreas() {

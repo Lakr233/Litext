@@ -36,7 +36,35 @@ import QuartzCore
                 // pass. Call `reloadTextLayout()` to force a rebuild when the string is
                 // unchanged but state a run delegate reads from is not.
                 guard !attributedText.isEqual(to: oldValue) else { return }
+                resetInteractionForNewText(replacing: oldValue)
                 textLayout = makeTextLayout(attributedText)
+            }
+        }
+
+        /// Drops interaction state that refers to the previous string.
+        ///
+        /// The pressed-link overlay and the multi-click sequence always belong to the old
+        /// text. The selection survives only when every character up to its end is
+        /// unchanged, which keeps a selection alive while a host streams text onto the
+        /// end of the label. `isInteractionInProgress` and the gesture phase flags are left
+        /// alone: the platform still delivers the rest of the touch or mouse sequence.
+        private func resetInteractionForNewText(replacing oldText: NSAttributedString) {
+            deactivateHighlightRegion()
+            NSObject.cancelPreviousPerformRequests(
+                withTarget: self,
+                selector: #selector(performContinuousStateReset),
+                object: nil
+            )
+            performContinuousStateReset()
+
+            guard let range = selectionRange else { return }
+            let selectionEnd = NSMaxRange(range)
+            let isPrefixUnchanged = selectionEnd <= oldText.length
+                && selectionEnd <= attributedText.length
+                && (oldText.string as NSString).substring(to: selectionEnd)
+                == (attributedText.string as NSString).substring(to: selectionEnd)
+            if !isPrefixUnchanged {
+                clearSelection()
             }
         }
 
@@ -109,12 +137,19 @@ import QuartzCore
                 _selectionRange
             }
             set {
-                let sanitizedRange = NSRange.sanitized(newValue, within: attributedText.length)
-                guard sanitizedRange != _selectionRange else { return }
-                _selectionRange = sanitizedRange
-                updateSelectionLayer()
-                delegate?.textLabelView(self, didChangeSelection: sanitizedRange)
+                setSelectionRange(newValue, presentsMenu: true)
             }
+        }
+
+        /// Sets the selection like the public setter, optionally without presenting the
+        /// menu or broadcasting the change to sibling labels, for use while a drag is
+        /// still moving the selection.
+        func setSelectionRange(_ newValue: NSRange?, presentsMenu: Bool) {
+            let sanitizedRange = NSRange.sanitized(newValue, within: attributedText.length)
+            guard sanitizedRange != _selectionRange else { return }
+            _selectionRange = sanitizedRange
+            updateSelectionLayer(presentsMenu: presentsMenu)
+            delegate?.textLabelView(self, didChangeSelection: sanitizedRange)
         }
 
         var selectedLinkForMenuAction: URL?
@@ -232,6 +267,10 @@ import QuartzCore
         struct InteractionState {
             var initialTouchLocation: CGPoint = .zero
             var clickCount: Int = 1
+            /// The click count as it stood when the current touch began. UIKit reads this
+            /// at touchesEnded, because the multi-click timer may reset `clickCount` while
+            /// a second or third tap is still held down.
+            var clickCountAtBegin: Int = 1
             var lastClickTime: TimeInterval = 0
             /// AppKit uses this to clear a pre-existing selection on the first drag event.
             var isFirstMove: Bool = false
