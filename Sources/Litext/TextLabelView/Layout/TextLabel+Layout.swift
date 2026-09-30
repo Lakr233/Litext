@@ -97,6 +97,11 @@ extension TextLabel {
         private var naturalSizeCache: CGSize?
         private var measurementFill: FrameFill?
 
+        /// Changes whenever the laid-out lines change. Values are unique across
+        /// layouts, so a stamp taken from one layout never matches another.
+        private(set) var generation: Int
+        private static var lastGeneration = 0
+
         private lazy var hasLineDrawingActions: Bool = attributedStringHasLineDrawingActions()
         private lazy var hasHighlightAttributes: Bool = attributedStringHasHighlightAttributes()
         private lazy var usesFrameDerivedMeasurement: Bool = frameDerivedMeasurementIsSafe()
@@ -111,8 +116,22 @@ extension TextLabel {
         /// real container while keeping line origins in a precise double range.
         private static let maxLayoutDimension: CGFloat = 1_000_000
 
-        private static let linkRunKey = NSAttributedString.Key.link.rawValue as CFString
-        private static let attachmentRunKey = NSAttributedString.Key.litextAttachment.rawValue as CFString
+        /// Attributes that produce highlight regions, in the order a run's regions
+        /// are added: a run carrying both a link and an attachment yields the link
+        /// region first.
+        private static let highlightAttributes: [(
+            key: NSAttributedString.Key,
+            runKey: CFString,
+            kind: TextLabel.HighlightRegion.Kind
+        )] = [
+            (.link, NSAttributedString.Key.link.rawValue as CFString, .link),
+            (
+                .litextAttachment,
+                NSAttributedString.Key.litextAttachment.rawValue as CFString,
+                .attachment
+            ),
+        ]
+        private static let highlightRunKeys = highlightAttributes.map(\.runKey)
         private static let lineDrawingRunKey = NSAttributedString.Key.litextLineDrawingAction.rawValue as CFString
 
         public init(attributedString: NSAttributedString) {
@@ -126,6 +145,7 @@ extension TextLabel {
             containerSize = .zero
             framesetter = CTFramesetterCreateWithAttributedString(snapshot)
             _highlightRegions = [:]
+            generation = Self.makeGeneration()
             super.init()
         }
 
@@ -370,14 +390,19 @@ extension TextLabel {
                   let lineMetrics
             else { return }
 
-            for i in 0 ..< lines.count {
+            let rangeEnd = range.location + range.length
+            for i in Self.firstLineIndex(endingAfter: range.location, in: lines) ..< lines.count {
                 let line = lines[i]
                 let lineRange = CTLineGetStringRange(line)
 
                 let lineStart = lineRange.location
                 let lineEnd = lineStart + lineRange.length
+                // Frame lines cover the string in order, so no later line can overlap.
+                if lineStart >= rangeEnd {
+                    break
+                }
                 let overlapStart = max(lineStart, range.location)
-                let overlapEnd = min(lineEnd, range.location + range.length)
+                let overlapEnd = min(lineEnd, rangeEnd)
 
                 if overlapStart >= overlapEnd {
                     continue
@@ -400,6 +425,24 @@ extension TextLabel {
                     ))
                 }
             }
+        }
+
+        /// The index of the first line whose string range ends after `index`, or
+        /// `lines.count` if none does. Frame lines hold consecutive, ascending string
+        /// ranges, so the lines before it cannot contain `index` or anything later.
+        private static func firstLineIndex(endingAfter index: Int, in lines: [CTLine]) -> Int {
+            var low = 0
+            var high = lines.count
+            while low < high {
+                let mid = (low + high) / 2
+                let lineRange = CTLineGetStringRange(lines[mid])
+                if lineRange.location + lineRange.length > index {
+                    high = mid
+                } else {
+                    low = mid + 1
+                }
+            }
+            return low
         }
 
         /// The x-extents, relative to the line origin and in visual order, covered
@@ -488,6 +531,11 @@ extension TextLabel {
 
         // MARK: - Private Methods
 
+        private static func makeGeneration() -> Int {
+            lastGeneration += 1
+            return lastGeneration
+        }
+
         private func generateLayout() {
             lines = nil
             lineOrigins = nil
@@ -535,6 +583,7 @@ extension TextLabel {
         /// Takes a fill's lines and moves its origins into the current container,
         /// keeping the first line anchored to the top of `containerSize`.
         private func adopt(_ fill: FrameFill) {
+            generation = Self.makeGeneration()
             lines = fill.lines
             lineMetrics = fill.lineMetrics
 
@@ -690,7 +739,7 @@ extension TextLabel {
             guard let lines else { return }
             enumerateRuns(
                 inLines: 0 ..< lines.count,
-                carrying: [Self.linkRunKey, Self.attachmentRunKey]
+                carrying: Self.highlightRunKeys
             ) { _, _, lineOrigin, glyphRun in
                 // Bridging the attribute dictionary into Swift is expensive, so
                 // it is reserved for the few runs carrying highlight attributes.
@@ -738,8 +787,8 @@ extension TextLabel {
         }
 
         private func attributedStringHasHighlightAttributes() -> Bool {
-            [NSAttributedString.Key.link, .litextAttachment].contains { key in
-                containsAttribute(key) { _ in true }
+            Self.highlightAttributes.contains { attribute in
+                containsAttribute(attribute.key) { _ in true }
             }
         }
 
@@ -755,34 +804,18 @@ extension TextLabel {
             let stringRange = NSRange(CTRunGetStringRange(glyphRun))
             let runBounds = runBoundingRect(glyphRun, lineOrigin: lineOrigin)
 
-            if attributes[.link] != nil {
-                var linkRange = NSRange()
+            for attribute in Self.highlightAttributes where attributes[attribute.key] != nil {
+                var effectiveRange = NSRange()
                 _ = attributedString.attribute(
-                    .link,
+                    attribute.key,
                     at: stringRange.location,
-                    longestEffectiveRange: &linkRange,
+                    longestEffectiveRange: &effectiveRange,
                     in: fullRange
                 )
                 addHighlightRegion(
-                    kind: .link,
+                    kind: attribute.kind,
                     attributes: attributes,
-                    stringRange: linkRange,
-                    rect: runBounds
-                )
-            }
-
-            if attributes[.litextAttachment] != nil {
-                var attachmentRange = NSRange()
-                _ = attributedString.attribute(
-                    .litextAttachment,
-                    at: stringRange.location,
-                    longestEffectiveRange: &attachmentRange,
-                    in: fullRange
-                )
-                addHighlightRegion(
-                    kind: .attachment,
-                    attributes: attributes,
-                    stringRange: attachmentRange,
+                    stringRange: effectiveRange,
                     rect: runBounds
                 )
             }

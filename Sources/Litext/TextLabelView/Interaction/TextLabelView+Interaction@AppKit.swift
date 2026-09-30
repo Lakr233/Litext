@@ -33,10 +33,7 @@ import Foundation
             let key = event.charactersIgnoringModifiers
 
             if key == "c", let range = selectionRange, range.length > 0 {
-                let copiedText = copySelection()
-                if copiedText.length <= 0 {
-                    _ = copyFromSubviewsRecursively()
-                }
+                copySelectionOrNestedSelection()
                 return true
             }
 
@@ -61,7 +58,7 @@ import Foundation
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
 
-            if isSelectable || highlightRegionAtPoint(location) != nil {
+            if isSelectable || linkRegion(at: location) != nil {
                 window?.makeFirstResponder(self)
             }
 
@@ -71,7 +68,7 @@ import Foundation
                 return
             }
 
-            if activateHighlightRegionAtPoint(location) {
+            if activateLinkRegion(at: location) {
                 return
             }
 
@@ -217,8 +214,8 @@ import Foundation
                 return true
             }
 
-            if let hitRegion = highlightRegionAtPoint(point),
-               let linkURL = hitRegion.attributes[.link] as? URL
+            if let hitRegion = linkRegion(at: point),
+               let linkURL = hitRegion.linkURL
             {
                 selectedLinkForMenuAction = linkURL
                 showLinkContextMenu()
@@ -275,7 +272,7 @@ import Foundation
                 }
                 return .arrow
             }
-            if highlightRegionAtPoint(point) != nil {
+            if linkRegion(at: point) != nil {
                 return .pointingHand
             }
             if isSelectable {
@@ -311,10 +308,7 @@ import Foundation
 
         @objc private func copyLink(_: Any) {
             guard let linkURL = selectedLinkForMenuAction else { return }
-
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString(linkURL.absoluteString, forType: .string)
+            writeToPasteboard(linkURL.absoluteString)
         }
 
         @objc private func openLink(_: Any) {
@@ -323,10 +317,7 @@ import Foundation
         }
 
         @objc func copyAction(_: Any?) {
-            let copiedText = copySelection()
-            if copiedText.length <= 0 {
-                _ = copyFromSubviewsRecursively()
-            }
+            copySelectionOrNestedSelection()
         }
     }
 #endif

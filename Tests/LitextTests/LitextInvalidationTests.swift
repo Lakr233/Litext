@@ -216,6 +216,58 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
     #expect(layout.highlightRegions.contains { $0.kind == .attachment })
 }
 
+@MainActor
+@Test func stringLinkValuesResolveToURLs() throws {
+    let text = NSMutableAttributedString(
+        string: "See ",
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+    )
+    text.append(NSAttributedString(
+        string: "this link",
+        attributes: [
+            .font: PlatformFont.systemFont(ofSize: 16),
+            .link: "https://example.com/string",
+        ]
+    ))
+
+    let layout = TextLabel.Layout(attributedString: text)
+    layout.containerSize = CGSize(width: 200, height: 80)
+    layout.updateHighlightRegions()
+
+    let region = try #require(layout.highlightRegions.first)
+    #expect(region.kind == .link)
+    #expect(region.linkURL == URL(string: "https://example.com/string"))
+}
+
+// MARK: - Selection rects
+
+/// `enumerateTextRects` skips lines before the range and stops after it. Every
+/// character must still map to exactly the line the full-text rects put it on.
+@MainActor
+@Test func selectionRectsForSubrangesMatchTheirLines() {
+    let text = NSAttributedString(
+        string: String(repeating: "wrap me across several lines please. ", count: 12),
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+    )
+    let layout = TextLabel.Layout(attributedString: text)
+    layout.containerSize = CGSize(width: 200, height: 2000)
+
+    let lineRects = layout.rects(for: NSRange(location: 0, length: text.length))
+    #expect(lineRects.count > 3)
+
+    for location in stride(from: 0, to: text.length, by: 7) {
+        let rects = layout.rects(for: NSRange(location: location, length: 1))
+        let rect = rects.first
+        #expect(rects.count == 1)
+        #expect(lineRects.contains { $0.minY == rect?.minY && $0.contains(CGPoint(x: rect?.midX ?? -1, y: rect?.midY ?? -1)) })
+    }
+
+    let lastLine = lineRects[lineRects.count - 1]
+    let tail = layout.rects(for: NSRange(location: text.length - 1, length: 1))
+    #expect(tail.first?.minY == lastLine.minY)
+    #expect(layout.rects(for: NSRange(location: 10, length: 0)).isEmpty)
+}
+
 // MARK: - Run delegate metrics
 
 @MainActor
@@ -355,6 +407,55 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
         let after = label.selectionLayer?.path?.boundingBox
         #expect(after != nil)
         #expect(after != before)
+    }
+
+    // MARK: - Layout passes that do not change the lines
+
+    @MainActor
+    @Test func invalidatingWithoutChangingTheLinesKeepsHighlightRegions() throws {
+        let label = try TextLabelView(attributedText: makeLinkedText())
+        label.frame = CGRect(x: 0, y: 0, width: 200, height: 60)
+        runLayoutPass(label)
+        let identitiesBefore = regionIdentities(label)
+        #expect(!identitiesBefore.isEmpty)
+
+        // Trait changes and window moves invalidate like this without touching the lines.
+        label.invalidateTextLayout()
+        runLayoutPass(label)
+        #expect(regionIdentities(label) == identitiesBefore)
+
+        label.reloadTextLayout()
+        runLayoutPass(label)
+        #expect(regionIdentities(label).isDisjoint(with: identitiesBefore))
+        #expect(!regionIdentities(label).isEmpty)
+    }
+
+    private final class IntrinsicSizeCountingLabel: TextLabelView {
+        var invalidationCount = 0
+
+        override func invalidateIntrinsicContentSize() {
+            invalidationCount += 1
+            super.invalidateIntrinsicContentSize()
+        }
+    }
+
+    @MainActor
+    @Test func heightOnlyResizesDoNotInvalidateTheIntrinsicSize() {
+        let label = IntrinsicSizeCountingLabel(attributedText: NSAttributedString(
+            string: String(repeating: "measure me. ", count: 20),
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        ))
+        label.frame = CGRect(x: 0, y: 0, width: 240, height: 100)
+        runLayoutPass(label)
+
+        label.invalidationCount = 0
+        label.frame = CGRect(x: 0, y: 0, width: 240, height: 400)
+        runLayoutPass(label)
+        #expect(label.invalidationCount == 0)
+
+        label.frame = CGRect(x: 0, y: 0, width: 180, height: 400)
+        runLayoutPass(label)
+        #expect(label.invalidationCount > 0)
     }
 
 #endif // !os(watchOS)

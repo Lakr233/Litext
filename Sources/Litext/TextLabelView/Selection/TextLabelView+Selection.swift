@@ -22,14 +22,7 @@ import QuartzCore
                 return .init()
             }
 
-            #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
-                UIPasteboard.general.string = selectedText.string
-            #elseif canImport(AppKit)
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(selectedText.string, forType: .string)
-            #endif
-
+            writeToPasteboard(selectedText.string)
             return selectedText.copy() as! NSAttributedString
         }
     }
@@ -98,6 +91,23 @@ import QuartzCore
 
         public func selectedPlainText() -> String? {
             selectedAttributedText()?.string
+        }
+
+        /// Copies this label's selection, or else the first nested label
+        /// selection found in its subviews. Returns whether anything was copied.
+        @discardableResult
+        func copySelectionOrNestedSelection() -> Bool {
+            copySelection().length > 0 || copyFromSubviewsRecursively()
+        }
+
+        func writeToPasteboard(_ string: String) {
+            #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
+                UIPasteboard.general.string = string
+            #elseif canImport(AppKit)
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(string, forType: .string)
+            #endif
         }
 
         func copyFromSubviewsRecursively() -> Bool {

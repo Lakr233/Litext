@@ -22,8 +22,7 @@
                 guard let key = press.key else { continue }
                 // Use keyCode instead of charactersIgnoringModifiers for keyboard layout independence
                 if key.keyCode == .keyboardC, key.modifierFlags.contains(.command) {
-                    let copiedText = copySelection()
-                    didHandleEvent = copiedText.length > 0 || copyFromSubviewsRecursively()
+                    didHandleEvent = copySelectionOrNestedSelection()
                 }
                 if key.keyCode == .keyboardA, key.modifierFlags.contains(.command) {
                     selectAll()
@@ -86,7 +85,7 @@
                 return
             }
 
-            if activateHighlightRegionAtPoint(location) {
+            if activateLinkRegion(at: location) {
                 return
             }
 
@@ -224,7 +223,10 @@
 
     #if !os(tvOS) && !os(watchOS)
         extension TextLabelView {
-            func showSelectionMenuController() {
+            /// Shows the selection menu over the selection. Pass `selectionRects`, the
+            /// selection's rects in layout space, when they are already at hand so they
+            /// need not be computed again.
+            func showSelectionMenuController(selectionRects: [CGRect]? = nil) {
                 guard let range = selectionRange, range.length > 0 else { return }
 
                 // Don't show the menu if another view controller is presented above ours
@@ -233,7 +235,7 @@
                     return
                 }
 
-                let rects: [CGRect] = textLayout.rects(for: range).map {
+                let rects: [CGRect] = (selectionRects ?? textLayout.rects(for: range)).map {
                     convertRectFromTextLayout($0, insetForInteraction: true)
                 }
                 guard !rects.isEmpty, var unionRect = rects.first else { return }
@@ -254,12 +256,9 @@
 
                 let menuController = UIMenuController.shared
 
-                let items = availableItems
-                    .compactMap { item -> UIMenuItem? in
-                        guard let selector = item.action else { return nil }
-                        return UIMenuItem(title: item.title, action: selector)
-                    }
-                menuController.menuItems = items
+                menuController.menuItems = availableItems.map { item in
+                    UIMenuItem(title: item.title, action: item.action)
+                }
 
                 Self.menuOwnerIdentifier = id
                 menuController.showMenu(
@@ -282,10 +281,7 @@
             }
 
             @objc func copyMenuItemTapped() {
-                let copiedText = copySelection()
-                if copiedText.length <= 0 {
-                    _ = copyFromSubviewsRecursively()
-                }
+                copySelectionOrNestedSelection()
                 clearSelection()
             }
 
@@ -324,10 +320,20 @@
                 return false
             }
 
-            fileprivate func availableTextSelectionMenuItems() -> [TextLabelMenuItem] {
-                TextLabelMenuItem.textSelectionMenu().filter { item in
-                    guard let selector = item.action else { return false }
-                    return canPerformAction(selector, withSender: nil)
+            func availableTextSelectionMenuItems() -> [TextLabelMenuItem] {
+                TextLabelMenuItem.allCases.filter { item in
+                    canPerformAction(item.action, withSender: nil)
+                }
+            }
+
+            /// The available selection menu items as actions, for the edit menu and
+            /// the Mac Catalyst context menu.
+            func makeSelectionMenuActions() -> [UIAction] {
+                availableTextSelectionMenuItems().map { item in
+                    let selector = item.action
+                    return UIAction(title: item.title, image: item.image) { [weak self] _ in
+                        self?.perform(selector)
+                    }
                 }
             }
 
@@ -373,12 +379,7 @@
                 menuFor _: UIEditMenuConfiguration,
                 suggestedActions _: [UIMenuElement]
             ) -> UIMenu? {
-                let actions = availableTextSelectionMenuItems().compactMap { item -> UIAction? in
-                    guard let selector = item.action else { return nil }
-                    return UIAction(title: item.title, image: item.image) { [weak self] _ in
-                        self?.perform(selector)
-                    }
-                }
+                let actions = makeSelectionMenuActions()
                 guard !actions.isEmpty else { return nil }
                 return UIMenu(children: actions)
             }

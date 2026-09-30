@@ -9,9 +9,10 @@ import QuartzCore
 #if !os(watchOS)
 
     extension TextLabelView {
-        func activateHighlightRegionAtPoint(_ location: CGPoint) -> Bool {
-            if let hitHighlightRegion = highlightRegionAtPoint(location) {
-                addActiveHighlightRegion(hitHighlightRegion)
+        /// Shows the press highlight on the link under `location`, if any.
+        func activateLinkRegion(at location: CGPoint) -> Bool {
+            if let hitRegion = linkRegion(at: location) {
+                addActiveHighlightRegion(hitRegion)
                 return true
             }
             return false
@@ -21,16 +22,13 @@ import QuartzCore
             removeActiveHighlightRegion()
         }
 
-        func highlightRegionAtPoint(_ point: CGPoint) -> TextLabel.HighlightRegion? {
-            for region in highlightRegions {
-                guard region.kind == .link else { continue }
-                if isHighlightRegion(region, containsPoint: point) {
-                    return region
-                }
-            }
-            return nil
+        /// The link region under `point`. Attachment regions are ignored.
+        func linkRegion(at point: CGPoint) -> TextLabel.HighlightRegion? {
+            highlightRegions.first { $0.kind == .link && isHighlightRegion($0, containsPoint: point) }
         }
 
+        /// The region a tap at `point` activates: an attachment wins over a link
+        /// that overlaps it, and otherwise any region under the point is returned.
         func highlightRegionForTap(at point: CGPoint) -> TextLabel.HighlightRegion? {
             if let attachmentRegion = highlightRegions.first(where: {
                 $0.kind == .attachment && isHighlightRegion($0, containsPoint: point)

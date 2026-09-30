@@ -100,7 +100,7 @@ import SwiftUI
                 didTapHighlightRegion region: TextLabel.HighlightRegion,
                 at _: CGPoint
             ) {
-                if let url = region.attributes[.link] as? URL {
+                if let url = region.linkURL {
                     if let onTapLink {
                         onTapLink(url)
                     } else {
@@ -212,7 +212,7 @@ import SwiftUI
                 didTapHighlightRegion region: TextLabel.HighlightRegion,
                 at _: CGPoint
             ) {
-                if let url = region.attributes[.link] as? URL {
+                if let url = region.linkURL {
                     if let onTapLink {
                         onTapLink(url)
                     } else {

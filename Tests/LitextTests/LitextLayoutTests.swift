@@ -176,7 +176,7 @@ import Testing
         let tapRect = label.convertRectFromTextLayout(rect, insetForInteraction: true)
         let tapPoint = CGPoint(x: tapRect.midX, y: tapRect.midY)
 
-        #expect(label.highlightRegionAtPoint(tapPoint)?.kind == .link)
+        #expect(label.linkRegion(at: tapPoint)?.kind == .link)
         let tappedRegion = try #require(label.highlightRegionForTap(at: tapPoint))
         #expect(ObjectIdentifier(tappedRegion) == ObjectIdentifier(attachmentRegion))
     }

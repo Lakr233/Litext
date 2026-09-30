@@ -102,7 +102,7 @@ func textLabelView(
     didTapHighlightRegion region: TextLabel.HighlightRegion,
     at location: CGPoint
 ) {
-    if let url = region.attributes[.link] as? URL {
+    if let url = region.linkURL {
         UIApplication.shared.open(url)
     }
 }

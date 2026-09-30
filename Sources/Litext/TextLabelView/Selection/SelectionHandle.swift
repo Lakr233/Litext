@@ -15,7 +15,17 @@ import Foundation
     }
 
     open class SelectionHandle: UIView {
-        static let knobRadius: CGFloat = 12
+        static let knobDiameter: CGFloat = 12
+        static var knobRadius: CGFloat {
+            knobDiameter / 2
+        }
+
+        /// The handle view's width. It is wider than the knob so the handle is
+        /// easier to grab, and the knob and stick are centred in it.
+        static let handleWidth: CGFloat = knobDiameter * 2
+        /// How far each handle's stick sits outside the selection edge, in points.
+        static let stickOutset: CGFloat = 1
+        static let stickWidth: CGFloat = 2
         static let knobExtraResponsiveArea: CGFloat = 20
 
         public enum Kind {
@@ -37,7 +47,7 @@ import Foundation
         private lazy var knobView: UIView = {
             let view = UIView()
             view.backgroundColor = handleColor
-            view.layer.cornerRadius = Self.knobRadius / 2
+            view.layer.cornerRadius = Self.knobRadius
             view.layer.shadowColor = UIColor.black.cgColor
             view.layer.shadowOffset = CGSize(width: 0, height: 1)
             view.layer.shadowOpacity = 0.25
@@ -79,31 +89,23 @@ import Foundation
 
         override open func layoutSubviews() {
             super.layoutSubviews()
-            let stickWidth = 2
             stickView.frame = .init(
-                x: bounds.midX - CGFloat(stickWidth) / 2,
+                x: bounds.midX - Self.stickWidth / 2,
                 y: bounds.minY,
-                width: CGFloat(stickWidth),
+                width: Self.stickWidth,
                 height: bounds.height
             )
 
-            let knobRadius: CGFloat = knobView.layer.cornerRadius
-            switch kind {
-            case .start:
-                knobView.frame = .init(
-                    x: bounds.midX - knobRadius,
-                    y: 0,
-                    width: knobRadius * 2,
-                    height: knobRadius * 2
-                )
-            case .end:
-                knobView.frame = .init(
-                    x: bounds.midX - knobRadius,
-                    y: bounds.height - knobRadius * 2,
-                    width: knobRadius * 2,
-                    height: knobRadius * 2
-                )
+            let knobY: CGFloat = switch kind {
+            case .start: 0
+            case .end: bounds.height - Self.knobDiameter
             }
+            knobView.frame = .init(
+                x: bounds.midX - Self.knobRadius,
+                y: knobY,
+                width: Self.knobDiameter,
+                height: Self.knobDiameter
+            )
         }
 
         private var frameAtGestureBegin: CGRect = .zero

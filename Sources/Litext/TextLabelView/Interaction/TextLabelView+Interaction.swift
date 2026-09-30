@@ -33,7 +33,7 @@ import Foundation
             if isLocationAboveAttachmentView(location: localPoint) {
                 return .attachment
             }
-            if isSelectable || highlightRegionAtPoint(localPoint) != nil {
+            if isSelectable || linkRegion(at: localPoint) != nil {
                 return .interactiveText
             }
             return .passThrough

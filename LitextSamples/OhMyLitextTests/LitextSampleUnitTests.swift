@@ -79,7 +79,7 @@ final class LitextSampleUnitTests: XCTestCase {
         let tapRect = label.convertRectFromTextLayout(rect, insetForInteraction: true)
         let tapPoint = CGPoint(x: tapRect.midX, y: tapRect.midY)
 
-        XCTAssertEqual(label.highlightRegionAtPoint(tapPoint)?.kind, .link)
+        XCTAssertEqual(label.linkRegion(at: tapPoint)?.kind, .link)
         let tappedRegion = try XCTUnwrap(label.highlightRegionForTap(at: tapPoint))
         XCTAssertEqual(ObjectIdentifier(tappedRegion), ObjectIdentifier(attachmentRegion))
     }

@@ -21,17 +21,7 @@ import QuartzCore
         }
 
         func invalidateTextLayout() {
-            if selectionRange != NSRange.sanitized(selectionRange, within: attributedText.length) {
-                clearSelection()
-            }
-
-            flags.layoutIsDirty = true
-            #if canImport(UIKit)
-                setNeedsLayout()
-            #elseif canImport(AppKit)
-                needsLayout = true
-            #endif
-            invalidateIntrinsicContentSize()
+            invalidateTextLayout(invalidatesIntrinsicSize: true)
         }
 
         override var intrinsicContentSize: CGSize {
@@ -89,14 +79,14 @@ import QuartzCore
                 let oldSize = frame.size
                 super.setFrameSize(newSize)
                 guard oldSize != newSize else { return }
-                invalidateTextLayout()
+                invalidateTextLayout(invalidatesIntrinsicSize: oldSize.width != newSize.width)
             }
 
             override func setBoundsSize(_ newSize: NSSize) {
                 let oldSize = bounds.size
                 super.setBoundsSize(newSize)
                 guard oldSize != newSize else { return }
-                invalidateTextLayout()
+                invalidateTextLayout(invalidatesIntrinsicSize: oldSize.width != newSize.width)
             }
 
             override func viewDidEndLiveResize() {
@@ -118,7 +108,14 @@ import QuartzCore
                 }
                 lastContainerSize = containerSize
                 textLayout.containerSize = containerSize
-                textLayout.updateHighlightRegions()
+                // Highlight regions depend only on the laid-out lines. Window moves and
+                // trait changes invalidate without changing them, so extraction is skipped
+                // then. Attachment frames are still re-placed: they snap to the display
+                // scale, which a window move can change.
+                if highlightRegionsGeneration != textLayout.generation {
+                    textLayout.updateHighlightRegions()
+                    highlightRegionsGeneration = textLayout.generation
+                }
                 updateAttachmentViews()
                 flags.layoutIsDirty = false
                 layoutUpdateWasMade = true
@@ -140,6 +137,28 @@ import QuartzCore
             #elseif canImport(AppKit)
                 needsDisplay = true
             #endif
+        }
+    }
+
+    extension TextLabelView {
+        /// Marks the text layout dirty. Pass `invalidatesIntrinsicSize: false` only when
+        /// nothing `intrinsicContentSize` reads can have changed: it depends on the
+        /// width, `preferredMaxLayoutWidth`, the text and the display scale, never on
+        /// the height or on colors.
+        func invalidateTextLayout(invalidatesIntrinsicSize: Bool) {
+            if selectionRange != NSRange.sanitized(selectionRange, within: attributedText.length) {
+                clearSelection()
+            }
+
+            flags.layoutIsDirty = true
+            #if canImport(UIKit)
+                setNeedsLayout()
+            #elseif canImport(AppKit)
+                needsLayout = true
+            #endif
+            if invalidatesIntrinsicSize {
+                invalidateIntrinsicContentSize()
+            }
         }
     }
 

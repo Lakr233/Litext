@@ -57,7 +57,7 @@ import QuartzCore
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 if presentsMenu {
-                    showSelectionMenuController()
+                    showSelectionMenuController(selectionRects: selectionRects)
                 }
 
                 selectionHandleStart.isHidden = false
@@ -73,20 +73,20 @@ import QuartzCore
                 ).first ?? .zero
                 beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
                 selectionHandleStart.frame = .init(
-                    x: beginRect.minX - SelectionHandle.knobRadius - 1,
-                    y: beginRect.minY - SelectionHandle.knobRadius,
-                    width: SelectionHandle.knobRadius * 2,
-                    height: beginRect.height + SelectionHandle.knobRadius
+                    x: beginRect.minX - SelectionHandle.handleWidth / 2 - SelectionHandle.stickOutset,
+                    y: beginRect.minY - SelectionHandle.knobDiameter,
+                    width: SelectionHandle.handleWidth,
+                    height: beginRect.height + SelectionHandle.knobDiameter
                 )
                 var endRect = textLayout.rects(
                     for: NSRange(location: range.location + range.length - 1, length: 1)
                 ).first ?? .zero
                 endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
                 selectionHandleEnd.frame = .init(
-                    x: endRect.maxX - SelectionHandle.knobRadius + 1,
+                    x: endRect.maxX - SelectionHandle.handleWidth / 2 + SelectionHandle.stickOutset,
                     y: endRect.minY,
-                    width: SelectionHandle.knobRadius * 2,
-                    height: endRect.height + SelectionHandle.knobRadius
+                    width: SelectionHandle.handleWidth,
+                    height: endRect.height + SelectionHandle.knobDiameter
                 )
             #endif
 

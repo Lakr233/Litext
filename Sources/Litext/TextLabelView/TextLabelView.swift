@@ -87,7 +87,8 @@ import QuartzCore
             get { super.frame }
             set {
                 guard newValue != super.frame else { return }
-                let sizeChanged = newValue.size != super.frame.size
+                let oldSize = super.frame.size
+                let sizeChanged = newValue.size != oldSize
                 super.frame = newValue
                 // Text layout follows `bounds.size`, the intrinsic size follows
                 // `preferredMaxLayoutWidth` / `lastContainerSize.width`, and selection
@@ -95,7 +96,7 @@ import QuartzCore
                 // so invalidating there would re-extract highlights, re-place attachment
                 // views, and repaint the whole backing store on every scroll step.
                 guard sizeChanged else { return }
-                invalidateTextLayout()
+                invalidateTextLayout(invalidatesIntrinsicSize: newValue.width != oldSize.width)
             }
         }
 
@@ -129,6 +130,8 @@ import QuartzCore
         nonisolated(unsafe) var pendingHighlightRemovalLayers: [CALayer] = []
         var activeHighlightRegion: TextLabel.HighlightRegion?
         var lastContainerSize: CGSize = .zero
+        /// The `textLayout.generation` whose highlight regions were last extracted.
+        var highlightRegionsGeneration: Int?
 
         private var _selectionRange: NSRange?
 
@@ -195,8 +198,9 @@ import QuartzCore
                 #endif
 
                 if #available(iOS 17.0, tvOS 17.0, visionOS 1.0, *) {
+                    // Only colors follow the interface style, so the intrinsic size stays valid.
                     registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in
-                        self.invalidateTextLayout()
+                        self.invalidateTextLayout(invalidatesIntrinsicSize: false)
                     }
                 }
             }
