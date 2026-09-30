@@ -53,6 +53,28 @@ import Testing
             }
             #expect(recorder.values == [nil])
         }
+
+        @Test("A deferred change never lands after a newer direct one")
+        func directChangeSupersedesADeferredOne() async {
+            let recorder = Recorder()
+            let coordinator = TextLabel.Coordinator(onTapLink: nil) { recorder.values.append($0) }
+            let label = makeLabel()
+            label.delegate = coordinator
+
+            coordinator.isApplyingUpdate = true
+            label.selectionRange = NSRange(location: 0, length: 5)
+            coordinator.isApplyingUpdate = false
+            label.selectionRange = NSRange(location: 6, length: 5)
+            #expect(recorder.values == ["world"])
+
+            for _ in 0 ..< 20 {
+                await Task.yield()
+            }
+            // Labels in parallel tests may clear this selection meanwhile; the deferred
+            // "Hello" must still never be reported.
+            #expect(recorder.values.first == "world")
+            #expect(!recorder.values.contains("Hello"))
+        }
     }
 
 #endif

@@ -21,8 +21,8 @@ extension TextLabel {
         /// After changing the size of an attachment that is already displayed, call
         /// `reloadTextLayout()` on the hosting label so the new size takes effect.
         ///
-        /// Subclasses that override this property must call `super` in the setter, because the
-        /// run delegate reads the value pushed through the base implementation.
+        /// A subclass may override this property with a computed getter. `TextLabel.Layout`
+        /// reads it again whenever it builds or rebuilds its framesetter.
         open var size: CGSize {
             didSet { runMetrics.size = size }
         }
@@ -92,8 +92,7 @@ extension TextLabel {
         /// keep measuring after the attachment is gone without keeping the attachment alive.
         /// The delegate is cached so repeated reads do not allocate additional delegates.
         open var runDelegate: CTRunDelegate {
-            // Sync through dynamic dispatch so a subclass getter override is honoured.
-            runMetrics.size = size
+            syncRunMetrics()
             if let cachedRunDelegate {
                 return cachedRunDelegate
             }
@@ -124,6 +123,12 @@ extension TextLabel {
             }
             cachedRunDelegate = delegate
             return delegate
+        }
+
+        /// Copies `size` into the box the run delegate reads. Going through dynamic dispatch
+        /// honours a subclass that computes `size` without calling `super`.
+        func syncRunMetrics() {
+            runMetrics.size = size
         }
     }
 }

@@ -133,7 +133,7 @@ import Foundation
             }
             let location = convert(event.locationInWindow, from: nil)
 
-            guard !isTouchReallyMoved(location) else { return }
+            guard !isTouchReallyMoved(location), !interactionState.isTapCancelled else { return }
 
             if let region = highlightRegionForTap(at: location) {
                 delegate?.textLabelView(self, didTapHighlightRegion: region, at: location)

@@ -152,7 +152,7 @@
         }
 
         override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-            isInteractionInProgress = false
+            endInteractionUnlessDraggingSelectionHandle()
             if interactionState.isForwardingToSuper {
                 interactionState.isForwardingToSuper = false
                 deactivateHighlightRegion()
@@ -180,14 +180,17 @@
                 }
             }
 
-            guard selectionRange == nil, !isTouchReallyMoved(location) else { return }
+            guard selectionRange == nil,
+                  !isTouchReallyMoved(location),
+                  !interactionState.isTapCancelled
+            else { return }
             if let region = highlightRegionForTap(at: location) {
                 delegate?.textLabelView(self, didTapHighlightRegion: region, at: location)
             }
         }
 
         override open func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-            isInteractionInProgress = false
+            endInteractionUnlessDraggingSelectionHandle()
             if interactionState.isForwardingToSuper {
                 interactionState.isForwardingToSuper = false
                 deactivateHighlightRegion()
@@ -205,6 +208,14 @@
             )
             performContinuousStateReset()
             deactivateHighlightRegion()
+        }
+
+        /// A selection handle drag owns the interaction until the handle reports its end,
+        /// even if touches the label receives meanwhile end or are cancelled.
+        private func endInteractionUnlessDraggingSelectionHandle() {
+            if !interactionState.isDraggingSelectionHandle {
+                isInteractionInProgress = false
+            }
         }
 
         #if !os(tvOS) && !os(watchOS)

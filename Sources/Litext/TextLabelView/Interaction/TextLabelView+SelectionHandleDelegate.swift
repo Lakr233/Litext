@@ -11,6 +11,7 @@
 
     extension TextLabelView: SelectionHandleDelegate {
         func selectionHandleDidBeginDrag(_: SelectionHandle.Kind) {
+            interactionState.isDraggingSelectionHandle = true
             isInteractionInProgress = true
             // Like the system text views, keep the menu out of the way while a handle moves
             // and bring it back once when the drag ends.
@@ -37,6 +38,7 @@
         }
 
         func selectionHandleDidEndDrag(_: SelectionHandle.Kind) {
+            interactionState.isDraggingSelectionHandle = false
             isInteractionInProgress = false
             guard selectionRange != nil else { return }
             // Presents the menu once and tells sibling labels to drop their selections.

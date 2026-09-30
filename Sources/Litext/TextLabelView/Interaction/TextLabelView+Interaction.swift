@@ -44,6 +44,7 @@ import Foundation
             interactionState.isFirstMove = true
             interactionState.clickCountAtBegin = 1
             interactionState.isForwardingToSuper = false
+            interactionState.isTapCancelled = false
             isInteractionInProgress = true
         }
 

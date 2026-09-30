@@ -68,9 +68,14 @@ import QuartzCore
                 selectionHandleStart.updateHandleColor(handleColor)
                 selectionHandleEnd.updateHandleColor(handleColor)
 
+                // A character drawn by another glyph can have no rect of its own; the
+                // caret at its edge keeps the handle on the text instead of at `.zero`.
+                let lastCharacter = range.location + range.length - 1
                 var beginRect = textLayout.rects(
                     for: NSRange(location: range.location, length: 1)
-                ).first ?? .zero
+                ).first
+                    ?? textLayout.caretRect(at: range.location, onLineOf: range.location)
+                    ?? .zero
                 beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
                 selectionHandleStart.frame = .init(
                     x: beginRect.minX - SelectionHandle.handleWidth / 2 - SelectionHandle.stickOutset,
@@ -79,8 +84,10 @@ import QuartzCore
                     height: beginRect.height + SelectionHandle.knobDiameter
                 )
                 var endRect = textLayout.rects(
-                    for: NSRange(location: range.location + range.length - 1, length: 1)
-                ).first ?? .zero
+                    for: NSRange(location: lastCharacter, length: 1)
+                ).first
+                    ?? textLayout.caretRect(at: lastCharacter + 1, onLineOf: lastCharacter)
+                    ?? .zero
                 endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
                 selectionHandleEnd.frame = .init(
                     x: endRect.maxX - SelectionHandle.handleWidth / 2 + SelectionHandle.stickOutset,

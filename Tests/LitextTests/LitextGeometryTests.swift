@@ -163,7 +163,12 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
     let lastLine = try #require(runs.first { $0.lineIndex == 1 }).lineRect
 
     let pastFirstLine = CGPoint(x: 390, y: firstLine.midY)
-    #expect(try #require(layout.characterIndex(at: pastFirstLine)) <= 11)
+    #expect(layout.characterIndex(at: pastFirstLine) == 11)
+
+    // The right half of a word's last letter still belongs to that letter.
+    let lastLetter = try #require(layout.rects(for: NSRange(location: 10, length: 1)).first)
+    let rightHalf = CGPoint(x: lastLetter.minX + lastLetter.width * 0.8, y: firstLine.midY)
+    #expect(layout.characterIndex(at: rightHalf) == 10)
 
     let pastLastLine = CGPoint(x: 390, y: lastLine.midY)
     #expect(layout.nearestTextIndex(at: pastLastLine) == text.length)
@@ -225,4 +230,79 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
     // An index on the terminator selects the paragraph it ends.
     let newline = "first\nsecond" as NSString
     #expect(newline.rangeOfLine(at: 5) == NSRange(location: 0, length: 5))
+}
+
+// MARK: - Clusters on bidirectional lines
+
+@MainActor
+@Test func bidiLinesGiveEveryClusterCharacterARect() {
+    let font = PlatformFont.systemFont(ofSize: 16)
+    // The emoji's low surrogate (index 6) has no glyph of its own.
+    let emoji = makeLaidOutLayout(
+        NSAttributedString(string: "שלום 😀 abc", attributes: [.font: font]),
+        width: 400
+    )
+    #expect(!emoji.rects(for: NSRange(location: 6, length: 1)).isEmpty)
+    #expect(emoji.rects(for: NSRange(location: 6, length: 1)) == emoji.rects(for: NSRange(location: 5, length: 1)))
+
+    // Lam-alef shapes into one ligature glyph that belongs to the lam.
+    let ligature = makeLaidOutLayout(
+        NSAttributedString(string: "x لا y", attributes: [.font: font]),
+        width: 400
+    )
+    #expect(!ligature.rects(for: NSRange(location: 3, length: 1)).isEmpty)
+}
+
+@MainActor
+@Test func caretRectFallsBackToTheLineWhenNoGlyphCoversTheIndex() throws {
+    let text = NSAttributedString(
+        string: "Hello world",
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+    )
+    let layout = makeLaidOutLayout(text, width: 400)
+    let glyph = try #require(layout.rects(for: NSRange(location: 4, length: 1)).first)
+
+    let leading = try #require(layout.caretRect(at: 4, onLineOf: 4))
+    #expect(leading.width == 0)
+    #expect(abs(leading.minX - glyph.minX) < 0.001)
+    #expect(abs(leading.height - glyph.height) < 0.001)
+
+    let trailing = try #require(layout.caretRect(at: 5, onLineOf: 4))
+    #expect(abs(trailing.minX - glyph.maxX) < 0.001)
+}
+
+// MARK: - Hit testing a character
+
+@MainActor
+@Test func characterIndexReturnsTheGlyphUnderThePoint() throws {
+    let text = NSAttributedString(
+        string: "abc שלום def",
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+    )
+    let layout = makeLaidOutLayout(text, width: 400)
+    for index in 0 ..< text.length {
+        let rect = try #require(layout.rects(for: NSRange(location: index, length: 1)).first)
+        for fraction in [0.2, 0.8] {
+            let point = CGPoint(x: rect.minX + rect.width * fraction, y: rect.midY)
+            #expect(layout.characterIndex(at: point) == index, "index \(index) at \(fraction)")
+        }
+    }
+}
+
+// MARK: - Last line box
+
+@MainActor
+@Test func lastLineBoxStaysInsideTheMeasuredSize() throws {
+    let font = try #require(fontWithLeading(size: 16))
+    let layout = makeLaidOutLayout(
+        NSAttributedString(string: "First line\nSecond line", attributes: [.font: font]),
+        width: 400
+    )
+    let lastLine = try #require(layout.rects(for: NSRange(location: 11, length: 6)).first)
+    #expect(lastLine.minY >= -0.001)
+    #expect(layout.viewRect(fromLayoutRect: lastLine).maxY <= layout.containerSize.height + 0.001)
+
+    // The first line keeps its leading, so the two lines still meet.
+    let firstLine = try #require(layout.rects(for: NSRange(location: 0, length: 5)).first)
+    #expect(abs(firstLine.minY - lastLine.maxY) < 0.001)
 }

@@ -302,6 +302,34 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
     #expect(after.width > before.width)
 }
 
+/// Reports its size from a computed getter and never calls `super` in the setter.
+@MainActor
+private final class ComputedSizeAttachment: TextLabel.Attachment {
+    var dynamicWidth: CGFloat = 20
+
+    override var size: CGSize {
+        get { CGSize(width: dynamicWidth, height: 20) }
+        set {}
+    }
+}
+
+@MainActor
+@Test func layoutHonoursAComputedAttachmentSize() {
+    let font = PlatformFont.systemFont(ofSize: 16)
+    let attachment = ComputedSizeAttachment()
+    let text = NSMutableAttributedString(string: "A", attributes: [.font: font])
+    text.append(attachment.attributedString(attributes: [.font: font]))
+
+    let constraint = CGSize(width: CGFloat.greatestFiniteMagnitude, height: unconstrainedHeight)
+    let layout = TextLabel.Layout(attributedString: text)
+    let before = layout.sizeThatFits(constraint)
+
+    attachment.dynamicWidth = 200
+    layout.invalidateLayout()
+    #expect(layout.sizeThatFits(constraint).width > before.width + 100)
+    #expect(TextLabel.Layout(attributedString: text).sizeThatFits(constraint).width > before.width + 100)
+}
+
 #if !os(watchOS)
 
     // MARK: - UIKit / AppKit phase separation

@@ -11,6 +11,11 @@ import QuartzCore
 #if !os(watchOS)
 
     public extension TextLabelView {
+        /// Removes the selection.
+        ///
+        /// A reusing host such as a table or collection view cell should call this in
+        /// `prepareForReuse()`: new text that shares a prefix with the old one would
+        /// otherwise keep the previous content's selection.
         @objc func clearSelection() {
             selectionRange = nil
             updateSelectionLayer()

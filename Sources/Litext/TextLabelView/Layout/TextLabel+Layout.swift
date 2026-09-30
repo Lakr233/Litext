@@ -31,6 +31,9 @@ private struct LineMetrics {
     /// spaces each following line by `descent + leading` below the previous one,
     /// so a line's leading belongs below its descent. Every consumer — selection
     /// rects, hit testing, draw culling — shares this box so they agree.
+    ///
+    /// The last line has no line below it, and the measured size stops at its
+    /// descent, so its `leading` is stored as zero to keep its box inside the text.
     func rect(at origin: CGPoint, includingLeading: Bool = true) -> CGRect {
         let trailingGap = includingLeading ? leading : 0
         return CGRect(
@@ -143,6 +146,7 @@ extension TextLabel {
             let snapshot = attributedString.copy() as! NSAttributedString
             self.attributedString = snapshot
             containerSize = .zero
+            Self.syncAttachmentRunMetrics(in: snapshot)
             framesetter = CTFramesetterCreateWithAttributedString(snapshot)
             _highlightRegions = [:]
             generation = Self.makeGeneration()
@@ -163,8 +167,22 @@ extension TextLabel {
             // Rebuilding lines from the existing one would pick up an attachment's new width
             // while keeping its old line height, so the framesetter is rebuilt too — this is
             // the only way a changed run delegate is observed.
+            Self.syncAttachmentRunMetrics(in: attributedString)
             framesetter = CTFramesetterCreateWithAttributedString(attributedString)
             generateLayout()
+        }
+
+        /// Pushes each attachment's current `size` into the metrics its run delegate
+        /// reports, so a subclass that computes `size` is measured with today's value.
+        private static func syncAttachmentRunMetrics(in string: NSAttributedString) {
+            guard string.length > 0 else { return }
+            string.enumerateAttribute(
+                .litextAttachment,
+                in: NSRange(location: 0, length: string.length),
+                options: []
+            ) { value, _, _ in
+                (value as? TextLabel.Attachment)?.syncRunMetrics()
+            }
         }
 
         open func sizeThatFits(_ size: CGSize) -> CGSize {
@@ -453,7 +471,9 @@ extension TextLabel {
         /// Lines whose runs are all left-to-right in logical order map the range
         /// to one span between two caret offsets. Bidirectional lines can show a
         /// logically contiguous range as several visual segments, so those are
-        /// measured glyph by glyph.
+        /// measured glyph by glyph. A glyph stands for its whole cluster: a
+        /// surrogate pair, a ZWJ sequence or a ligature has characters with no
+        /// glyph of their own, and those are covered by the glyph that draws them.
         private func horizontalExtents(
             of line: CTLine,
             width: CGFloat,
@@ -491,9 +511,12 @@ extension TextLabel {
                 CTRunGetPositions(glyphRun, allGlyphs, &positions)
                 CTRunGetAdvances(glyphRun, allGlyphs, &advances)
 
+                let clusterStarts = Array(Set(stringIndices)).sorted()
+                let runEnd = runRange.location + runRange.length
                 for glyphIndex in 0 ..< glyphCount {
-                    let stringIndex = stringIndices[glyphIndex]
-                    guard stringIndex >= overlapStart, stringIndex < overlapEnd else { continue }
+                    let clusterStart = stringIndices[glyphIndex]
+                    let clusterEnd = Self.clusterEnd(startingAt: clusterStart, in: clusterStarts) ?? runEnd
+                    guard clusterStart < overlapEnd, clusterEnd > overlapStart else { continue }
                     let minX = positions[glyphIndex].x
                     let maxX = minX + advances[glyphIndex].width
                     extents.append(min(minX, maxX) ... max(minX, maxX))
@@ -511,6 +534,22 @@ extension TextLabel {
                 }
             }
             return merged
+        }
+
+        /// The first cluster start after `start` in the sorted `clusterStarts`,
+        /// which is where the cluster beginning at `start` ends; `nil` for the last one.
+        private static func clusterEnd(startingAt start: CFIndex, in clusterStarts: [CFIndex]) -> CFIndex? {
+            var low = 0
+            var high = clusterStarts.count
+            while low < high {
+                let mid = (low + high) / 2
+                if clusterStarts[mid] > start {
+                    high = mid
+                } else {
+                    low = mid + 1
+                }
+            }
+            return low < clusterStarts.count ? clusterStarts[low] : nil
         }
 
         /// Whether logical order matches visual order across `glyphRuns`: every run
@@ -640,7 +679,13 @@ extension TextLabel {
                 var descent: CGFloat = 0
                 var leading: CGFloat = 0
                 let width = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, &leading))
-                metrics.append(LineMetrics(ascent: ascent, descent: descent, leading: leading, width: width))
+                let isLastLine = index == frameLines.count - 1
+                metrics.append(LineMetrics(
+                    ascent: ascent,
+                    descent: descent,
+                    leading: isLastLine ? 0 : leading,
+                    width: width
+                ))
 
                 let trailingWhitespace = CGFloat(CTLineGetTrailingWhitespaceWidth(line))
                 maxLineTrailingX = max(maxLineTrailingX, origins[index].x + width - trailingWhitespace)
@@ -930,14 +975,35 @@ extension TextLabel {
         /// The index of the character under `point` on the nearest line, for word
         /// and line selection.
         ///
-        /// `nearestTextIndex(at:)` returns a caret index, which past a line's
-        /// trailing edge is the first character of the next line. This one stays
-        /// on the hit line's last character instead.
+        /// `nearestTextIndex(at:)` returns a caret index, which rounds to the
+        /// nearer edge of a glyph: the right half of a letter yields the next
+        /// character. This one returns the start of the cluster whose glyph
+        /// contains the point, in either direction. Away from every glyph it falls
+        /// back to the caret index, kept on the hit line's last character.
         func characterIndex(at point: CGPoint) -> Int? {
             guard let hit = findLineContainingPoint(point) ?? nearestLine(to: point) else { return nil }
+            if let index = Self.clusterStart(atLineOffset: point.x - hit.origin.x, in: hit.line) {
+                return index
+            }
             let lineRange = CTLineGetStringRange(hit.line)
             let lastCharacter = lineRange.location + max(lineRange.length - 1, 0)
             return min(caretIndex(at: point, in: hit), lastCharacter)
+        }
+
+        /// A zero-width rect at the caret offset of `caretIndex`, spanning the box
+        /// of the line that holds `characterIndex`, in layout space.
+        ///
+        /// Selection handles use it when `rects(for:)` has nothing for the character
+        /// they sit on, rather than jumping to the view's origin.
+        func caretRect(at caretIndex: Int, onLineOf characterIndex: Int) -> CGRect? {
+            guard let lines, let lineOrigins, let lineMetrics, !lines.isEmpty else { return nil }
+            let lineIndex = min(Self.firstLineIndex(endingAfter: characterIndex, in: lines), lines.count - 1)
+            let line = lines[lineIndex]
+            let lineRange = CTLineGetStringRange(line)
+            let clampedIndex = min(max(caretIndex, lineRange.location), lineRange.location + lineRange.length)
+            let offset = CTLineGetOffsetForStringIndex(line, clampedIndex, nil)
+            let lineBox = lineMetrics[lineIndex].rect(at: lineOrigins[lineIndex])
+            return CGRect(x: lineBox.minX + offset, y: lineBox.minY, width: 0, height: lineBox.height)
         }
 
         // MARK: - Private Text Index Helpers
@@ -979,6 +1045,33 @@ extension TextLabel {
                 }
             }
 
+            return nil
+        }
+
+        /// The string index of the glyph whose advance contains `x`, measured from
+        /// the line origin, or `nil` when no glyph does.
+        private static func clusterStart(atLineOffset x: CGFloat, in line: CTLine) -> Int? {
+            let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
+            for runIndex in 0 ..< glyphRuns.count {
+                let glyphRun = glyphRuns[runIndex] as! CTRun
+                let glyphCount = CTRunGetGlyphCount(glyphRun)
+                guard glyphCount > 0 else { continue }
+                var stringIndices = [CFIndex](repeating: 0, count: glyphCount)
+                var positions = [CGPoint](repeating: .zero, count: glyphCount)
+                var advances = [CGSize](repeating: .zero, count: glyphCount)
+                let allGlyphs = CFRange(location: 0, length: 0)
+                CTRunGetStringIndices(glyphRun, allGlyphs, &stringIndices)
+                CTRunGetPositions(glyphRun, allGlyphs, &positions)
+                CTRunGetAdvances(glyphRun, allGlyphs, &advances)
+
+                for glyphIndex in 0 ..< glyphCount {
+                    let minX = positions[glyphIndex].x
+                    let maxX = minX + advances[glyphIndex].width
+                    if x >= min(minX, maxX), x < max(minX, maxX) {
+                        return stringIndices[glyphIndex]
+                    }
+                }
+            }
             return nil
         }
 

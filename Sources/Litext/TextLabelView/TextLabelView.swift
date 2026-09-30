@@ -24,6 +24,12 @@ import QuartzCore
 
         // MARK: - Public Properties
 
+        /// The text the label shows.
+        ///
+        /// Assigning new text keeps the current selection only when the text up to its end,
+        /// including the attachment objects there, is unchanged. A reusing host such as a table
+        /// or collection view cell should call `clearSelection()` in `prepareForReuse()`, since
+        /// unrelated content can still share a prefix with the previous one.
         open var attributedText: NSAttributedString = .init() {
             didSet {
                 // Keep an immutable snapshot, as UILabel and NSTextField do. Otherwise a
@@ -44,10 +50,13 @@ import QuartzCore
         /// Drops interaction state that refers to the previous string.
         ///
         /// The pressed-link overlay and the multi-click sequence always belong to the old
-        /// text. The selection survives only when every character up to its end is
-        /// unchanged, which keeps a selection alive while a host streams text onto the
-        /// end of the label. `isInteractionInProgress` and the gesture phase flags are left
-        /// alone: the platform still delivers the rest of the touch or mouse sequence.
+        /// text. The selection survives only when every character up to its end, and every
+        /// attachment object there, is unchanged, which keeps a selection alive while a
+        /// host streams text onto the end of the label. Other attributes may change: a
+        /// streaming markdown renderer restyles text it has already shown.
+        /// `isInteractionInProgress` and the gesture phase flags are left alone, since the
+        /// platform still delivers the rest of the touch or mouse sequence, but a gesture in
+        /// progress no longer taps a link when it ends: the link under it is new.
         private func resetInteractionForNewText(replacing oldText: NSAttributedString) {
             deactivateHighlightRegion()
             NSObject.cancelPreviousPerformRequests(
@@ -56,6 +65,9 @@ import QuartzCore
                 object: nil
             )
             performContinuousStateReset()
+            if isInteractionInProgress {
+                interactionState.isTapCancelled = true
+            }
 
             guard let range = selectionRange else { return }
             let selectionEnd = NSMaxRange(range)
@@ -63,9 +75,30 @@ import QuartzCore
                 && selectionEnd <= attributedText.length
                 && (oldText.string as NSString).substring(to: selectionEnd)
                 == (attributedText.string as NSString).substring(to: selectionEnd)
+                && Self.attachments(in: oldText, upTo: selectionEnd)
+                .elementsEqual(Self.attachments(in: attributedText, upTo: selectionEnd), by: ===)
             if !isPrefixUnchanged {
                 clearSelection()
             }
+        }
+
+        /// The attachment objects in the first `length` characters of `text`, in order.
+        private static func attachments(
+            in text: NSAttributedString,
+            upTo length: Int
+        ) -> [TextLabel.Attachment] {
+            var result = [TextLabel.Attachment]()
+            guard length > 0 else { return result }
+            text.enumerateAttribute(
+                .litextAttachment,
+                in: NSRange(location: 0, length: length),
+                options: []
+            ) { value, _, _ in
+                if let attachment = value as? TextLabel.Attachment {
+                    result.append(attachment)
+                }
+            }
+            return result
         }
 
         /// The layout built for every new `attributedText`. Override to hand the
@@ -282,6 +315,12 @@ import QuartzCore
             /// Set when the interaction began over an attachment view and was forwarded to
             /// `super`, so the remaining phases are forwarded too instead of driving selection.
             var isForwardingToSuper: Bool = false
+            /// Set when the text changes while the interaction is in progress, so its release
+            /// does not tap whatever link now lies under the pointer.
+            var isTapCancelled: Bool = false
+            /// Set while a selection handle is being dragged. Touches forwarded to the label
+            /// during the drag must not end the interaction the handle started.
+            var isDraggingSelectionHandle: Bool = false
         }
 
         struct Flags {

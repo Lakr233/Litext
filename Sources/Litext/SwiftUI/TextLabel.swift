@@ -188,6 +188,9 @@ import SwiftUI
             open func textLabelView(_ label: TextLabelView, didChangeSelection _: NSRange?) {
                 let selectedText = label.selectedPlainText()
                 guard isApplyingUpdate else {
+                    // This value is newer than any deferred one, which must not land after it.
+                    hasPendingSelectionChange = false
+                    pendingSelectedText = nil
                     onSelectionChange?(selectedText)
                     return
                 }
@@ -306,7 +309,13 @@ import SwiftUI
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 GeometryReader { geo in
-                    let key = LayoutKey(width: geo.size.width, text: resolved, scale: displayScale)
+                    // Snapshot the string: a key holding the caller's mutable string would
+                    // compare equal to itself after an in-place edit.
+                    let key = LayoutKey(
+                        width: geo.size.width,
+                        text: resolved.copy() as! NSAttributedString,
+                        scale: displayScale
+                    )
                     Color.clear
                         .onAppear { updateLayout(for: key) }
                         .onChange(of: key) { newKey in
