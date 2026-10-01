@@ -784,10 +784,22 @@ extension TextLabel {
             let pathHeight = naturalHeight <= Self.maxLayoutDimension
                 ? Self.maxLayoutDimension
                 : Self.maxLayoutHeight
-            adopt(makeFrameFill(
+            var fill = makeFrameFill(
                 constraint: CGSize(width: layoutPathWidth, height: pathHeight),
                 clampsToMaxLayoutDimension: false
-            ))
+            )
+            // CoreText can need more height than it measures: a maximum line height
+            // below the font's gives lines a negative descent, and the measured
+            // height then stops above the last baseline, which the frame requires.
+            // Text measured just under the shorter path can still overflow it, so
+            // rather than lose its last line, lay out once more in the tallest path.
+            if !fill.isComplete, pathHeight < Self.maxLayoutHeight {
+                fill = makeFrameFill(
+                    constraint: CGSize(width: layoutPathWidth, height: Self.maxLayoutHeight),
+                    clampsToMaxLayoutDimension: false
+                )
+            }
+            adopt(fill)
         }
 
         /// The path width lines are broken at. Like `sizeThatFits(_:)` and the
