@@ -107,12 +107,18 @@
 
         @available(macOS 14.4, *)
         @objc private func translateSelection(_: Any?) {
-            guard let range = selectionRange, let text = selectedPlainText(), !text.isEmpty,
+            // The popover cannot open in a hidden window, and its anchor would stay.
+            guard window?.isVisible == true,
+                  let range = selectionRange, let text = selectedPlainText(), !text.isEmpty,
                   let anchor = textLayout.rects(for: range).first
             else { return }
             // The system translation popover is SwiftUI-only; a hosting view over the
-            // first selected line anchors it and goes away when it closes.
-            let host = NSHostingView(rootView: TranslationPopoverAnchor(text: text))
+            // first selected line anchors it and goes away when it closes. Only the
+            // newest anchor is kept, in case an earlier one never saw its popover close.
+            for view in subviews where view is TranslationAnchorView {
+                view.removeFromSuperview()
+            }
+            let host = TranslationAnchorView(rootView: TranslationPopoverAnchor(text: text))
             host.rootView.onDismiss = { [weak host] in host?.removeFromSuperview() }
             host.frame = viewRect(fromLayoutRect: anchor)
             addSubview(host)
@@ -278,6 +284,15 @@
 
         func stop() {
             synthesizer.stopSpeaking(at: .immediate)
+        }
+    }
+
+    /// The view the translation popover hangs from. It never takes clicks, so the
+    /// label keeps receiving them on the line it covers.
+    @available(macOS 14.4, *)
+    private final class TranslationAnchorView: NSHostingView<TranslationPopoverAnchor> {
+        override func hitTest(_: NSPoint) -> NSView? {
+            nil
         }
     }
 
