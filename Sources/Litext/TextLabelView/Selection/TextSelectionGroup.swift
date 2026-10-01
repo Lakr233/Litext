@@ -109,7 +109,7 @@ import Foundation
         public var selectedSegments: [Segment] {
             guard let selection else { return [] }
             return (selection.start.member ... selection.end.member).compactMap { member in
-                guard let label = label(at: member), let range = range(of: member, in: selection) else { return nil }
+                guard let label = memberLabel(at: member), let range = part(of: member, in: selection) else { return nil }
                 return Segment(label: label, range: range)
             }
         }
@@ -134,7 +134,7 @@ import Foundation
             let result = NSMutableAttributedString()
             var previous: TextLabelView?
             for member in selection.start.member ... selection.end.member {
-                guard let label = label(at: member), label.isSelectable else { continue }
+                guard let label = memberLabel(at: member), label.isSelectable else { continue }
                 if let previous {
                     result.append(NSAttributedString(string: separator(previous, label)))
                 }
@@ -173,7 +173,7 @@ import Foundation
             return index
         }
 
-        func label(at member: Int) -> TextLabelView? {
+        func memberLabel(at member: Int) -> TextLabelView? {
             members.indices.contains(member) ? members[member].label : nil
         }
 
@@ -187,7 +187,7 @@ import Foundation
         /// The length of a member's text, or zero for a member that is not selectable,
         /// which the selection passes over.
         private func length(of member: Int) -> Int {
-            guard let label = label(at: member), label.isSelectable else { return 0 }
+            guard let label = memberLabel(at: member), label.isSelectable else { return 0 }
             return label.attributedText.length
         }
 
@@ -195,19 +195,19 @@ import Foundation
         /// have no text.
         private var entireSelection: Selection? {
             guard let last = members.indices.last else { return nil }
-            return selection(
+            return normalizedSelection(
                 from: Position(member: 0, offset: 0),
                 to: Position(member: last, offset: length(of: last)),
             )
         }
 
         /// The members a selection covers.
-        private func span(of selection: Selection?) -> ClosedRange<Int>? {
+        private func memberSpan(of selection: Selection?) -> ClosedRange<Int>? {
             selection.map { $0.start.member ... $0.end.member }
         }
 
         /// The part of `selection` in `member`, or nil when it has no selected text.
-        func range(of member: Int, in selection: Selection) -> NSRange? {
+        func part(of member: Int, in selection: Selection) -> NSRange? {
             guard (selection.start.member ... selection.end.member).contains(member) else { return nil }
             let lower = member == selection.start.member ? selection.start.offset : 0
             let upper = member == selection.end.member ? selection.end.offset : length(of: member)
@@ -218,7 +218,7 @@ import Foundation
         /// The ordered selection between two positions, with ends that sit at the edge
         /// of a member moved into the next one, so the first and last members always
         /// have selected text. Nil when the positions select nothing.
-        func selection(from anchor: Position, to focus: Position) -> Selection? {
+        func normalizedSelection(from anchor: Position, to focus: Position) -> Selection? {
             var start = min(anchor, focus)
             var end = max(anchor, focus)
             while start.member < end.member, start.offset >= length(of: start.member) {
@@ -233,7 +233,7 @@ import Foundation
 
         /// The member the selection ends in, which shows the menu.
         var menuLabel: TextLabelView? {
-            selection.flatMap { label(at: $0.end.member) }
+            selection.flatMap { memberLabel(at: $0.end.member) }
         }
 
         func showsHandle(_ isStart: Bool, in label: TextLabelView) -> Bool {
@@ -255,17 +255,17 @@ import Foundation
                 // Redraw only the members whose part changed and those that show or
                 // showed a handle; a drag keeps the members in the middle unchanged.
                 var affected = Set<Int>()
-                for span in [span(of: oldValue), span(of: newValue)].compactMap(\.self) {
-                    affected.formUnion(span)
+                for covered in [memberSpan(of: oldValue), memberSpan(of: newValue)].compactMap(\.self) {
+                    affected.formUnion(covered)
                 }
                 let handleMembers = Set([oldValue, newValue].compactMap(\.self).flatMap { [$0.start.member, $0.end.member] })
                 for member in affected.sorted() {
-                    guard let label = label(at: member) else { continue }
-                    let range = newValue.flatMap { range(of: member, in: $0) }
-                    if range == label.selectionRange, !handleMembers.contains(member) {
+                    guard let label = memberLabel(at: member) else { continue }
+                    let newPart = newValue.flatMap { part(of: member, in: $0) }
+                    if newPart == label.selectionRange, !handleMembers.contains(member) {
                         continue
                     }
-                    label.applyGroupSegment(range)
+                    label.applyGroupSegment(newPart)
                 }
                 delegate?.textSelectionGroupDidChangeSelection(self)
             }
@@ -288,7 +288,7 @@ import Foundation
                 return
             }
             setSelection(
-                selection(
+                normalizedSelection(
                     from: Position(member: member, offset: range.location),
                     to: Position(member: member, offset: NSMaxRange(range)),
                 ),
@@ -315,7 +315,7 @@ import Foundation
                     break
                 }
             }
-            guard let member = nearest?.member, let label = label(at: member),
+            guard let member = nearest?.member, let label = memberLabel(at: member),
                   let offset = label.nearestTextIndexAtPoint(label.convert(point, from: nil))
             else { return nil }
             return Position(member: member, offset: offset)
@@ -329,7 +329,7 @@ import Foundation
                   let focus = position(atWindowPoint: point)
             else { return }
             setSelection(
-                selection(from: Position(member: member, offset: anchorOffset), to: focus),
+                normalizedSelection(from: Position(member: member, offset: anchorOffset), to: focus),
                 presentsMenu: true,
             )
         }
@@ -345,7 +345,7 @@ import Foundation
             } else {
                 end = start < target ? target : position(after: start)
             }
-            setSelection(selection(from: start, to: end) ?? current, presentsMenu: false)
+            setSelection(normalizedSelection(from: start, to: end) ?? current, presentsMenu: false)
         }
 
         private func position(before position: Position) -> Position {
