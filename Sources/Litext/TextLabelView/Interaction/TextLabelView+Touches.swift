@@ -251,12 +251,6 @@
                 // alive for good. A selection set before the label is shown gets no menu.
                 guard window != nil else { return }
 
-                // Don't show the menu if another view controller is presented above ours
-                // (e.g. UIActivityViewController from shareMenuItemTapped)
-                if parentViewController?.presentedViewController != nil {
-                    return
-                }
-
                 let rects: [CGRect] = (selectionRects ?? textLayout.rects(for: range)).map {
                     convertRectFromTextLayout($0, insetForInteraction: true)
                 }
@@ -264,6 +258,20 @@
 
                 for rect in rects.dropFirst() {
                     unionRect = unionRect.union(rect)
+                }
+
+                // Keep the menu off a controller that covers the label, such as a form
+                // sheet or the share sheet, and off views laid over the label's screen.
+                // A visible menu can cover the selection itself, so moving it only
+                // checks for presented controllers.
+                #if targetEnvironment(macCatalyst)
+                    let isMenuVisible = false
+                #else
+                    let isMenuVisible = isEditMenuVisible
+                #endif
+                guard canPresentSelectionUI(from: unionRect, hitTests: !isMenuVisible) else {
+                    hideSelectionMenuController()
+                    return
                 }
 
                 if #available(iOS 16.0, macCatalyst 16.0, visionOS 1.0, *) {
@@ -315,9 +323,18 @@
 
             @objc func shareMenuItemTapped() {
                 guard let text = selectedPlainText(), !text.isEmpty else { return }
+                // Present from the label's own controller, and only while nothing covers
+                // the label. Presenting from another controller would put the sheet over
+                // whatever already covers the label.
+                let anchor = selectionRange.flatMap { textLayout.rects(for: $0).first }
+                    .map { convertRectFromTextLayout($0, insetForInteraction: false) } ?? bounds
+                guard let controller = parentViewController,
+                      canPresentSelectionUI(from: anchor)
+                else { return }
                 let activityController = UIActivityViewController(activityItems: [text], applicationActivities: nil)
                 activityController.popoverPresentationController?.sourceView = self
-                parentViewController?.present(activityController, animated: true)
+                activityController.popoverPresentationController?.sourceRect = anchor
+                controller.present(activityController, animated: true)
             }
 
             override open var canBecomeFirstResponder: Bool {

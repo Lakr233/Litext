@@ -90,9 +90,8 @@
 
             // Leave the touch alone when something outside the label's own screen lies
             // over the handle, such as a navigation bar, a presented sheet or the menu.
-            if let hitView = window.hitTest(point, with: nil) {
-                let screen = label.parentViewController?.view ?? window
-                guard hitView.isDescendant(of: screen) else { return nil }
+            if window.hitTest(point, with: nil) != nil, !label.isOnOwnScreen(atWindowPoint: point) {
+                return nil
             }
             return kind
         }

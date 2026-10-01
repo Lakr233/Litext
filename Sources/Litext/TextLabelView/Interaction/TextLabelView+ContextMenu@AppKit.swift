@@ -83,6 +83,7 @@
                   let origin = textLayout.baselineOrigin(at: range.location)
             else { return }
             let point = viewRect(fromLayoutRect: CGRect(origin: origin, size: .zero)).origin
+            guard canPresentSelectionUI(from: CGRect(origin: point, size: .zero)) else { return }
             showDefinition(for: text, at: point)
         }
 
@@ -108,9 +109,10 @@
         @available(macOS 14.4, *)
         @objc private func translateSelection(_: Any?) {
             // The popover cannot open in a hidden window, and its anchor would stay.
-            guard window?.isVisible == true,
-                  let range = selectionRange, let text = selectedPlainText(), !text.isEmpty,
-                  let anchor = textLayout.rects(for: range).first
+            // It must not open over a sheet or a view laid over the label either.
+            guard let range = selectionRange, let text = selectedPlainText(), !text.isEmpty,
+                  let anchor = textLayout.rects(for: range).first,
+                  canPresentSelectionUI(from: viewRect(fromLayoutRect: anchor))
             else { return }
             // The system translation popover is SwiftUI-only; a hosting view over the
             // first selected line anchors it and goes away when it closes. Only the
