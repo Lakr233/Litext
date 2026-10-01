@@ -480,8 +480,21 @@ import Testing
             }
 
             // 1,000 selections reach 200 observers each: about 0.08 s on an M4 Max.
-            withinBudget("selection deduplication across \(count) labels", seconds: 1) {
-                for round in 0 ..< 1000 {
+            //
+            // On iOS each selection in a window also presents the edit menu, and
+            // UIEditMenuInteraction.presentEditMenu(with:) takes 3 to 5 ms in UIKit when
+            // the delegate returns a menu, whatever Litext does (a bare UIView with a
+            // two-action menu measures the same; returning no menu, 0.08 ms). That cost is
+            // per selection, not per label: 2 labels take as long as 200. So the budget
+            // there allows 10 ms per selection on top of the deduplication's own second.
+            let rounds = 1000
+            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS)
+                let budget = 1 + Double(rounds) * 0.010
+            #else
+                let budget = 1.0
+            #endif
+            withinBudget("selection deduplication across \(count) labels", seconds: budget) {
+                for round in 0 ..< rounds {
                     let index = Int.random(in: 0 ..< count, using: &random)
                     switch round % 3 {
                     case 0: labels[index].selectAll()
