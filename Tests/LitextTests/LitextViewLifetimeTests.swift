@@ -24,8 +24,8 @@ import Testing
     struct LitextViewLifetimeTests {
         // MARK: - Plain use
 
-        @Test("A label that was laid out and drawn deallocates")
-        func plainUse() {
+        @Test
+        func `A label that was laid out and drawn deallocates`() {
             weak var weakLabel: TextLabelView?
             weak var weakLayout: TextLabel.Layout?
             autoreleasepool {
@@ -42,8 +42,8 @@ import Testing
             #expect(weakLayout == nil)
         }
 
-        @Test("A label with links and every interaction-free API exercised deallocates")
-        func linkedTextUse() {
+        @Test
+        func `A label with links and every interaction-free API exercised deallocates`() {
             weak var weakLabel: TextLabelView?
             var regions: [TextLabel.HighlightRegion] = []
             autoreleasepool {
@@ -62,8 +62,8 @@ import Testing
 
         // MARK: - Delegate
 
-        @Test("The delegate is weak, so a delegate that owns its label releases both")
-        func delegateIsWeak() {
+        @Test
+        func `The delegate is weak, so a delegate that owns its label releases both`() {
             weak var weakLabel: TextLabelView?
             weak var weakDelegate: OwningDelegate?
             autoreleasepool {
@@ -81,8 +81,8 @@ import Testing
             #expect(weakLabel == nil)
         }
 
-        @Test("A label does not keep its delegate alive")
-        func labelDoesNotRetainDelegate() {
+        @Test
+        func `A label does not keep its delegate alive`() {
             let label = makeLaidOutTestLabel(uniqueText())
             weak var weakDelegate: OwningDelegate?
             autoreleasepool {
@@ -96,8 +96,8 @@ import Testing
 
         // MARK: - Selection
 
-        @Test("A label with a live selection and selection layer deallocates, taking the layer with it")
-        func activeSelection() async {
+        @Test
+        func `A label with a live selection and selection layer deallocates, taking the layer with it`() async {
             weak var weakLabel: TextLabelView?
             weak var weakSelectionLayer: CAShapeLayer?
             autoreleasepool {
@@ -120,8 +120,8 @@ import Testing
 
         // MARK: - Attachments
 
-        @Test("A label with attachment views deallocates and leaves the views without a superview")
-        func attachmentViewsAreReleasedWithTheLabel() {
+        @Test
+        func `A label with attachment views deallocates and leaves the views without a superview`() {
             weak var weakLabel: TextLabelView?
             let views = (0 ..< 3).map { _ in PlatformView() }
             autoreleasepool {
@@ -138,8 +138,8 @@ import Testing
             #expect(views.allSatisfy { $0.superview == nil })
         }
 
-        @Test("Attachments and their views deallocate once the label and the string are gone")
-        func attachmentsDeallocateWithTheLabel() {
+        @Test
+        func `Attachments and their views deallocate once the label and the string are gone`() {
             weak var weakLabel: TextLabelView?
             weak var weakAttachment: TextLabel.Attachment?
             weak var weakView: PlatformView?
@@ -163,8 +163,8 @@ import Testing
 
         // MARK: - Window
 
-        @Test("A label that was shown in a window and removed again deallocates")
-        func addedToAndRemovedFromAWindow() {
+        @Test
+        func `A label that was shown in a window and removed again deallocates`() {
             weak var weakLabel: TextLabelView?
             autoreleasepool {
                 let window = makeWindow()
@@ -183,8 +183,8 @@ import Testing
             #expect(weakLabel == nil)
         }
 
-        @Test("A label still inside a window deallocates with the window")
-        func releasedWithItsWindow() {
+        @Test
+        func `A label still inside a window deallocates with the window`() {
             weak var weakLabel: TextLabelView?
             weak var weakWindow: PlatformWindowForTests?
             autoreleasepool {
@@ -201,8 +201,8 @@ import Testing
 
         // MARK: - Selection deduplication
 
-        @Test("Deduplication notifications from other labels neither keep a label alive nor reach it afterwards")
-        func selectionDeduplicationObserver() {
+        @Test
+        func `Deduplication notifications from other labels neither keep a label alive nor reach it afterwards`() {
             weak var weakLabel: TextLabelView?
             let other = makeLaidOutTestLabel(uniqueText())
             other.isSelectable = true
@@ -225,8 +225,8 @@ import Testing
             #expect(other.selectionRange != nil)
         }
 
-        @Test("Many labels that cleared each other's selections all deallocate")
-        func manyDeduplicatingLabels() {
+        @Test
+        func `Many labels that cleared each other's selections all deallocate`() {
             var weakLabels: [WeakBox<TextLabelView>] = []
             autoreleasepool {
                 let labels = (0 ..< 20).map { _ in makeLaidOutTestLabel(uniqueText()) }
@@ -242,8 +242,8 @@ import Testing
 
         // MARK: - Highlight regions
 
-        @Test("A pressed link's highlight region and layer do not keep the label alive")
-        func activeHighlightRegionDoesNotRetainTheLabel() {
+        @Test
+        func `A pressed link's highlight region and layer do not keep the label alive`() {
             weak var weakLabel: TextLabelView?
             var activeRegion: TextLabel.HighlightRegion?
             autoreleasepool {
@@ -262,8 +262,8 @@ import Testing
             #expect(weakLabel == nil)
         }
 
-        @Test("The deferred highlight fade-out does not keep the label alive", .timeLimit(.minutes(1)))
-        func highlightFadeOutHoldsTheLabelWeakly() async {
+        @Test(.timeLimit(.minutes(1)))
+        func `The deferred highlight fade-out does not keep the label alive`() async {
             weak var weakLabel: TextLabelView?
             weak var weakHighlightLayer: CALayer?
             autoreleasepool {
@@ -298,7 +298,7 @@ import Testing
                 contentRect: CGRect(x: 0, y: 0, width: 400, height: 200),
                 styleMask: [.titled],
                 backing: .buffered,
-                defer: false
+                defer: false,
             )
             window.isReleasedWhenClosed = false
             return window
@@ -319,7 +319,7 @@ import Testing
                 _ type: NSEvent.EventType,
                 at point: CGPoint,
                 in window: NSWindow,
-                clickCount: Int = 1
+                clickCount: Int = 1,
             ) throws -> NSEvent {
                 try #require(NSEvent.mouseEvent(
                     with: type,
@@ -330,14 +330,14 @@ import Testing
                     context: nil,
                     eventNumber: 0,
                     clickCount: clickCount,
-                    pressure: 1
+                    pressure: 1,
                 ))
             }
 
             /// Builds a selectable, linked label in a window and runs `interact` on it.
             /// Returns weak references once every strong one is gone.
             private func runInteraction(
-                _ interact: (TextLabelView, NSWindow) throws -> Void
+                _ interact: (TextLabelView, NSWindow) throws -> Void,
             ) rethrows -> (label: WeakBox<TextLabelView>, window: WeakBox<NSWindow>) {
                 var result: (WeakBox<TextLabelView>, WeakBox<NSWindow>)!
                 try autoreleasepool {
@@ -363,8 +363,8 @@ import Testing
                 return label.convert(CGPoint(x: x, y: rect.midY), to: nil)
             }
 
-            @Test("Mouse down, drag and up that select text leave nothing holding the label")
-            func dragSelection() async throws {
+            @Test
+            func `Mouse down, drag and up that select text leave nothing holding the label`() async throws {
                 let refs = try runInteraction { label, window in
                     let start = textPoint(label, x: 2)
                     let end = textPoint(label, x: 120)
@@ -378,8 +378,8 @@ import Testing
                 #expect(refs.label.value == nil)
             }
 
-            @Test("Double and triple clicks leave nothing holding the label")
-            func multiClickSelection() async throws {
+            @Test
+            func `Double and triple clicks leave nothing holding the label`() async throws {
                 let refs = try runInteraction { label, window in
                     let point = textPoint(label, x: 20)
                     for clickCount in 1 ... 3 {
@@ -393,8 +393,8 @@ import Testing
                 #expect(refs.label.value == nil)
             }
 
-            @Test("Clicking a link schedules a fade-out that holds the label weakly")
-            func linkClick() async throws {
+            @Test
+            func `Clicking a link schedules a fade-out that holds the label weakly`() async throws {
                 let refs = try runInteraction { label, window in
                     let run = try #require(label.layoutRuns(matching: .link).first)
                     let rect = label.textLayout.viewRect(fromLayoutRect: run.rect)
@@ -410,8 +410,8 @@ import Testing
                 #expect(refs.label.value == nil)
             }
 
-            @Test("A label dropped mid-press, between mouse down and mouse up, deallocates")
-            func droppedMidPress() throws {
+            @Test
+            func `A label dropped mid-press, between mouse down and mouse up, deallocates`() throws {
                 let refs = try runInteraction { label, window in
                     let point = textPoint(label, x: 10)
                     try label.mouseDown(with: mouseEvent(.leftMouseDown, at: point, in: window))
@@ -420,8 +420,8 @@ import Testing
                 #expect(refs.label.value == nil)
             }
 
-            @Test("A label that was first responder and copied its selection deallocates")
-            func firstResponderAndCopy() {
+            @Test
+            func `A label that was first responder and copied its selection deallocates`() {
                 let refs = runInteraction { label, window in
                     #expect(window.makeFirstResponder(label))
                     label.selectAll()
@@ -431,8 +431,8 @@ import Testing
                 #expect(refs.label.value == nil)
             }
 
-            @Test("Deferred work that runs after the label is gone is harmless")
-            func deferredWorkAfterDeallocation() async throws {
+            @Test
+            func `Deferred work that runs after the label is gone is harmless`() async throws {
                 let refs = try runInteraction { label, window in
                     let run = try #require(label.layoutRuns(matching: .link).first)
                     let rect = label.textLayout.viewRect(fromLayoutRect: run.rect)
@@ -480,7 +480,7 @@ import Testing
             /// UIKit could never show the edit menu a selection asks for, and its pending
             /// presentation would hold the view; outside a window the label asks for none.
             private func runInteraction(
-                _ interact: (TextLabelView) throws -> Void
+                _ interact: (TextLabelView) throws -> Void,
             ) rethrows -> WeakBox<TextLabelView> {
                 var result: WeakBox<TextLabelView>!
                 try autoreleasepool {
@@ -497,8 +497,8 @@ import Testing
                 return result
             }
 
-            @Test("A selection set outside a window presents no menu and does not keep the label alive")
-            func offscreenSelection() {
+            @Test
+            func `A selection set outside a window presents no menu and does not keep the label alive`() {
                 let ref = runInteraction { label in
                     label.selectionRange = NSRange(location: 0, length: 5)
                     label.selectAll()
@@ -507,8 +507,8 @@ import Testing
                 #expect(ref.value == nil)
             }
 
-            @Test("A double tap's multi-click bookkeeping releases the label once its reset fires")
-            func doubleTap() async {
+            @Test
+            func `A double tap's multi-click bookkeeping releases the label once its reset fires`() async {
                 let ref = runInteraction { label in
                     label.setInteractionStateToBegin(initialLocation: CGPoint(x: 10, y: 10))
                     // Each tap schedules `performContinuousStateReset` 0.25 s out, which
@@ -522,8 +522,8 @@ import Testing
                 #expect(await waitUntil { ref.value == nil })
             }
 
-            @Test("Pressing and releasing a link holds the label weakly")
-            func linkPress() async {
+            @Test
+            func `Pressing and releasing a link holds the label weakly`() async {
                 let ref = runInteraction { label in
                     let region = label.highlightRegions.first { $0.kind == .link }
                     if let region {
@@ -537,8 +537,8 @@ import Testing
             }
 
             #if !targetEnvironment(macCatalyst) && !os(tvOS)
-                @Test("Dragging a selection handle does not keep the label or its handles alive")
-                func selectionHandlesAndMenu() async {
+                @Test
+                func `Dragging a selection handle does not keep the label or its handles alive`() async {
                     weak var weakHandle: SelectionHandle?
                     let ref = runInteraction { label in
                         label.selectionRange = NSRange(location: 0, length: 5)

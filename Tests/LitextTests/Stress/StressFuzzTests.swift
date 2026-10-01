@@ -134,12 +134,12 @@ struct FuzzCase: CustomStringConvertible {
                 attachment: (30 ..< 40).contains(roll)
                     ? CGSize(
                         width: [0, 1, 20, 300, 5000].randomElement(using: &random)!,
-                        height: [0, 1, 20, 300].randomElement(using: &random)!
+                        height: [0, 1, 20, 300].randomElement(using: &random)!,
                     )
                     : nil,
                 paragraph: (40 ..< 60).contains(roll) ? randomParagraph(using: &random) : nil,
                 kern: roll % 7 == 0 ? CGFloat.random(in: -20 ... 20, using: &random) : nil,
-                baselineOffset: roll % 11 == 0 ? CGFloat.random(in: -50 ... 50, using: &random) : nil
+                baselineOffset: roll % 11 == 0 ? CGFloat.random(in: -50 ... 50, using: &random) : nil,
             ))
         }
         let widthChoices: [CGFloat] = [0.5, 1, 7, 33, 100, 200, 320, 375, 1000, 100_000]
@@ -171,7 +171,7 @@ struct FuzzCase: CustomStringConvertible {
         fuzzCase.points = (0 ..< 12).map { _ in
             CGPoint(
                 x: CGFloat.random(in: -50 ... 900, using: &random),
-                y: CGFloat.random(in: -50 ... 900, using: &random)
+                y: CGFloat.random(in: -50 ... 900, using: &random),
             )
         } + [
             CGPoint(x: CGFloat.nan, y: 10),
@@ -191,15 +191,15 @@ struct FuzzCase: CustomStringConvertible {
         case 4: .rightToLeft
         case 5: .indented(
                 head: CGFloat.random(in: -200 ... 400, using: &random),
-                tail: CGFloat.random(in: -400 ... 400, using: &random)
+                tail: CGFloat.random(in: -400 ... 400, using: &random),
             )
         case 6: .spaced(
                 line: CGFloat.random(in: 0 ... 100, using: &random),
-                paragraph: CGFloat.random(in: 0 ... 100, using: &random)
+                paragraph: CGFloat.random(in: 0 ... 100, using: &random),
             )
         default: .heights(
                 min: CGFloat.random(in: 0 ... 80, using: &random),
-                max: CGFloat.random(in: 0 ... 80, using: &random)
+                max: CGFloat.random(in: 0 ... 80, using: &random),
             )
         }
     }
@@ -292,7 +292,7 @@ struct FuzzCase: CustomStringConvertible {
                 ranges: ranges,
                 context: context,
                 visibleRect: CGRect(x: 0, y: 20, width: width, height: 50),
-                drawsEverything: width == widths[0]
+                drawsEverything: width == widths[0],
             )
             // Some text may lie outside a short container, but none is dropped.
             if length > 0 {
@@ -414,7 +414,7 @@ struct FuzzCase: CustomStringConvertible {
             if let range = label.selectionRange {
                 check(
                     range.location >= 0 && range.length > 0 && range.location + range.length <= length,
-                    "selectionRange \(range) outside length \(length)"
+                    "selectionRange \(range) outside length \(length)",
                 )
             } else {
                 check(label.selectionLayer == nil, "selection layer without a selection")
@@ -428,7 +428,7 @@ struct FuzzCase: CustomStringConvertible {
 struct StressFuzzTests {
     /// About 7.5 ms per iteration on an M4 Max: 15 s for the quick mode's 2,000. The
     /// budget allows 40 ms per iteration, and no single iteration may take 2 s.
-    @Test func randomAttributedStrings() {
+    @Test func `random attributed strings`() {
         let iterations = StressMode.fuzzIterations
         let base = StressMode.fuzzSeed
         var failures = 0
@@ -464,7 +464,7 @@ struct StressFuzzTests {
     }
 
     /// The shrinker keeps only what a failure needs: here, one character with a link.
-    @Test func shrinkerFindsAMinimalInput() throws {
+    @Test func `shrinker finds A minimal input`() throws {
         let seed = try #require((0 ..< 500).map { StressMode.fuzzSeed &+ UInt64($0) }.first { seed in
             FuzzCase.generate(seed: seed).segments.filter { $0.link != nil }.count >= 2
         })
@@ -479,7 +479,7 @@ struct StressFuzzTests {
     }
 
     /// The fuzzer itself is deterministic: a seed always builds the same input.
-    @Test func seedsReproduce() {
+    @Test func `seeds reproduce`() {
         for seed: UInt64 in [0, 1, 42, StressMode.fuzzSeed] {
             let first = FuzzCase.generate(seed: seed)
             let second = FuzzCase.generate(seed: seed)

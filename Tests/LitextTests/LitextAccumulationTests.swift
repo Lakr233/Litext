@@ -46,7 +46,7 @@ import Testing
             _ content: Content,
             index: Int,
             sharedAttachments: [TextLabel.Attachment],
-            createdViews: inout [PlatformView]
+            createdViews: inout [PlatformView],
         ) -> NSAttributedString {
             let text = uniqueText("Update \(index)", length: 60)
             let count = index % 4
@@ -74,8 +74,8 @@ import Testing
             return text
         }
 
-        @Test("500 reassignments leave the state the last string needs", arguments: Content.allCases)
-        func repeatedAssignmentsStayBounded(content: Content) async throws {
+        @Test(arguments: Content.allCases)
+        func `500 reassignments leave the state the last string needs`(content: Content) async throws {
             let sharedViews = (0 ..< 4).map { _ in PlatformView() }
             let sharedAttachments = sharedViews.map {
                 TextLabel.Attachment(size: CGSize(width: 14, height: 14), view: $0)
@@ -94,7 +94,7 @@ import Testing
                         content,
                         index: index,
                         sharedAttachments: sharedAttachments,
-                        createdViews: &createdViews
+                        createdViews: &createdViews,
                     )
                     label.attributedText = lastText
                     performLayoutPass(label)
@@ -152,8 +152,8 @@ import Testing
             #expect(strayViews.isEmpty)
         }
 
-        @Test("Views of dropped attachments deallocate after repeated updates")
-        func droppedAttachmentViewsDeallocate() async {
+        @Test
+        func `Views of dropped attachments deallocate after repeated updates`() async {
             let label = makeLaidOutTestLabel(uniqueText())
             var weakViews: [WeakBox<PlatformView>] = []
             for _ in 0 ..< 100 {

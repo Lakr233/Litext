@@ -61,18 +61,18 @@ extension TextLabel {
         #endif
 
         open func attributedString(
-            attributes: [NSAttributedString.Key: Any] = [:]
+            attributes: [NSAttributedString.Key: Any] = [:],
         ) -> NSAttributedString {
             let result = NSMutableAttributedString(
                 string: Self.replacementText,
-                attributes: attributes
+                attributes: attributes,
             )
             let range = NSRange(location: 0, length: result.length)
             result.addAttribute(.litextAttachment, value: self, range: range)
             result.addAttribute(
                 kCTRunDelegateAttributeName as NSAttributedString.Key,
                 value: runDelegate,
-                range: range
+                range: range,
             )
             return result
         }
@@ -113,7 +113,7 @@ extension TextLabel {
                 getWidth: { refCon in
                     let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
                     return metrics.size.width
-                }
+                },
             )
 
             let unmanagedMetrics = Unmanaged.passRetained(runMetrics)

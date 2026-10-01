@@ -39,7 +39,7 @@ import QuartzCore
             else { return }
             selectionRange = NSRange(
                 location: min(startIndex, endIndex),
-                length: abs(endIndex - startIndex)
+                length: abs(endIndex - startIndex),
             )
         }
 
@@ -68,7 +68,7 @@ import QuartzCore
         public func selectedAttributedText() -> NSAttributedString? {
             guard let safeRange = NSRange.sanitized(
                 selectionRange,
-                within: textLayout.attributedString.length
+                within: textLayout.attributedString.length,
             ) else {
                 return nil
             }
@@ -81,12 +81,12 @@ import QuartzCore
             mutableResult.enumerateAttribute(
                 .litextAttachment,
                 in: NSRange(location: 0, length: mutableResult.length),
-                options: []
+                options: [],
             ) { value, range, _ in
                 if let attachment = value as? TextLabel.Attachment {
                     mutableResult.replaceCharacters(
                         in: range,
-                        with: attachment.attributedStringRepresentation()
+                        with: attachment.attributedStringRepresentation(),
                     )
                 }
             }

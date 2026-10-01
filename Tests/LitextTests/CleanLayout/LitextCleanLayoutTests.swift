@@ -62,7 +62,7 @@ struct LitextCleanLayoutTests {
     // MARK: 2. Measurement
 
     @Test(arguments: CleanLayoutCorpus.allCases, CleanLayout.widths)
-    func measurementIsDeterministic(corpus: CleanLayoutCorpus, width: CGFloat) {
+    func `measurement is deterministic`(corpus: CleanLayoutCorpus, width: CGFloat) {
         let text = CleanLayout.probed(corpus.makeText())
         let proposal = CleanLayout.proposal(width)
         let layout = TextLabel.Layout(attributedString: text)
@@ -97,7 +97,7 @@ struct LitextCleanLayoutTests {
     // MARK: 1, 3-9. Layout
 
     @Test(arguments: CleanLayoutCorpus.allCases, CleanLayout.widths)
-    func layoutInTheMeasuredSizeIsClean(corpus: CleanLayoutCorpus, width: CGFloat) {
+    func `layout in the measured size is clean`(corpus: CleanLayoutCorpus, width: CGFloat) {
         let text = corpus.makeText()
         let prepared = PreparedLayout(text, width: width)
         withKnownIssue(Self.unmeasuredWrapIssue, isIntermittent: true) {
@@ -121,7 +121,7 @@ struct LitextCleanLayoutTests {
         withKnownIssue(Self.unmeasuredWrapIssue, isIntermittent: true) {
             #expect(
                 CleanLayoutSnapshot(prepared.layout).lines.map(\.range) == shrinkWrapped,
-                "shrink-wrapping the container re-broke the lines"
+                "shrink-wrapping the container re-broke the lines",
             )
         } when: {
             Self.wrapsUnmeasuredWhitespace(text, width: width)
@@ -131,7 +131,7 @@ struct LitextCleanLayoutTests {
     // MARK: 11. Stability
 
     @Test(arguments: CleanLayoutCorpus.allCases, CleanLayout.widths)
-    func geometryIsStable(corpus: CleanLayoutCorpus, width: CGFloat) {
+    func `geometry is stable`(corpus: CleanLayoutCorpus, width: CGFloat) {
         let text = corpus.makeText()
         let first = PreparedLayout(text, width: width)
         let reference = CleanLayoutSnapshot(first.layout)
@@ -157,7 +157,7 @@ struct LitextCleanLayoutTests {
         // MARK: 10, 11. View level
 
         @Test(arguments: CleanLayoutCorpus.allCases, CleanLayout.widths)
-        func labelViewIsClean(corpus: CleanLayoutCorpus, width: CGFloat) throws {
+        func `label view is clean`(corpus: CleanLayoutCorpus, width: CGFloat) throws {
             let text = CleanLayout.probed(corpus.makeText())
             let label = TextLabelView(attributedText: text)
             if !CleanLayout.isUnconstrained(width) {
@@ -167,7 +167,7 @@ struct LitextCleanLayoutTests {
             let measured = TextLabel.Layout(attributedString: text).sizeThatFits(CleanLayout.proposal(width))
             let expected = CGSize(
                 width: CleanLayout.pixelCeil(measured.width, scale: scale),
-                height: CleanLayout.pixelCeil(measured.height, scale: scale)
+                height: CleanLayout.pixelCeil(measured.height, scale: scale),
             )
 
             let intrinsic = label.intrinsicContentSize
@@ -198,15 +198,15 @@ struct LitextCleanLayoutTests {
                 ink.outsideExtent.isNull
                     || bounds.insetBy(dx: -Self.glyphOverhangLimit, dy: -Self.glyphOverhangLimit)
                     .contains(ink.outsideExtent),
-                "ink spans \(ink.outsideExtent), far outside the \(intrinsic) bounds"
+                "ink spans \(ink.outsideExtent), far outside the \(intrinsic) bounds",
             )
             withKnownIssue(
                 "Glyph ink outside its typographic box draws past a frame sized to typographic bounds",
-                isIntermittent: true
+                isIntermittent: true,
             ) {
                 #expect(
                     ink.outside == 0,
-                    "\(ink.outside) ink pixels outside the \(intrinsic) bounds, spanning \(ink.outsideExtent) in view points"
+                    "\(ink.outside) ink pixels outside the \(intrinsic) bounds, spanning \(ink.outsideExtent) in view points",
                 )
             } when: {
                 corpus.hasGlyphOverhang
@@ -269,7 +269,7 @@ struct LitextCleanLayoutTests {
             bitsPerComponent: 8,
             bytesPerRow: pixelWidth * 4,
             space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
         ) else { return nil }
 
         // Top-left origin, one view point per `scale` pixels, offset by the margin.
@@ -306,7 +306,7 @@ struct LitextCleanLayoutTests {
                         x: CGFloat(column) / scale - margin,
                         y: CGFloat(row) / scale - margin,
                         width: 1 / scale,
-                        height: 1 / scale
+                        height: 1 / scale,
                     ))
                 }
             }

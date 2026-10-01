@@ -33,7 +33,7 @@ extension Tag {
 @MainActor
 func waitUntil(
     timeout: Duration = .seconds(5),
-    _ condition: () -> Bool
+    _ condition: () -> Bool,
 ) async -> Bool {
     let clock = ContinuousClock()
     let deadline = clock.now.advanced(by: timeout)
@@ -94,7 +94,7 @@ func uniqueText(_ prefix: String = "Memory", length: Int = 0) -> NSMutableAttrib
     }
     return NSMutableAttributedString(
         string: string,
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
 }
 
@@ -105,7 +105,7 @@ func appendLink(to text: NSMutableAttributedString, _ title: String = "link") {
         attributes: [
             .font: PlatformFont.systemFont(ofSize: 16),
             .link: URL(string: "https://example.com/\(UUID().uuidString)")!,
-        ]
+        ],
     ))
 }
 
@@ -173,7 +173,7 @@ func runMetricsRetainCount(_ attachment: TextLabel.Attachment) throws -> CFIndex
     @MainActor
     func makeLaidOutTestLabel(
         _ text: NSAttributedString,
-        size: CGSize = CGSize(width: 320, height: 120)
+        size: CGSize = CGSize(width: 320, height: 120),
     ) -> TextLabelView {
         let label = TextLabelView(attributedText: text)
         label.frame = CGRect(origin: .zero, size: size)
@@ -242,7 +242,7 @@ func runMetricsRetainCount(_ attachment: TextLabel.Attachment) throws -> CFIndex
 func physicalFootprint() -> UInt64? {
     var info = task_vm_info_data_t()
     var count = mach_msg_type_number_t(
-        MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size
+        MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size,
     )
     let result = withUnsafeMutablePointer(to: &info) { pointer in
         pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {

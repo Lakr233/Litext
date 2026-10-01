@@ -35,7 +35,7 @@ import SwiftUI
         private func apply(
             to label: TextLabelView,
             environment: EnvironmentValues,
-            coordinator: Coordinator
+            coordinator: Coordinator,
         ) {
             coordinator.onTapLink = onTapLink
             coordinator.onSelectionChange = onSelectionChange
@@ -58,7 +58,7 @@ import SwiftUI
         private func fittingSize(for proposal: ProposedViewSize, label: TextLabelView) -> CGSize? {
             guard let width = proposal.width, width.isValidLayoutDimension, width > 0 else { return nil }
             let suggested = label.textLayout.sizeThatFits(
-                CGSize(width: width, height: .greatestFiniteMagnitude)
+                CGSize(width: width, height: .greatestFiniteMagnitude),
             )
             // Horizontal hugging is low, so the label takes the proposed width; the
             // height is rounded the same way `intrinsicContentSize` rounds it.
@@ -80,7 +80,7 @@ import SwiftUI
             public func sizeThatFits(
                 _ proposal: ProposedViewSize,
                 uiView: TextLabelView,
-                context _: Context
+                context _: Context,
             ) -> CGSize? {
                 fittingSize(for: proposal, label: uiView)
             }
@@ -104,7 +104,7 @@ import SwiftUI
             public func sizeThatFits(
                 _ proposal: ProposedViewSize,
                 nsView: TextLabelView,
-                context _: Context
+                context _: Context,
             ) -> CGSize? {
                 fittingSize(for: proposal, label: nsView)
             }
@@ -175,7 +175,7 @@ import SwiftUI
             open func textLabelView(
                 _: TextLabelView,
                 didTapHighlightRegion region: TextLabel.HighlightRegion,
-                at _: CGPoint
+                at _: CGPoint,
             ) {
                 guard let url = region.linkURL else { return }
                 if let onTapLink {
@@ -314,7 +314,7 @@ import SwiftUI
                     let key = LayoutKey(
                         width: geo.size.width,
                         text: resolved.copy() as! NSAttributedString,
-                        scale: displayScale
+                        scale: displayScale,
                     )
                     Color.clear
                         .onAppear { updateLayout(for: key) }
@@ -331,7 +331,7 @@ import SwiftUI
             guard width.isValidLayoutDimension, width > 0 else { return }
             let newLayout = TextLabel.Layout(attributedString: key.text)
             let suggested = newLayout.sizeThatFits(
-                CGSize(width: width, height: .greatestFiniteMagnitude)
+                CGSize(width: width, height: .greatestFiniteMagnitude),
             )
             let size = CGSize(width: width, height: max(1, suggested.height))
             newLayout.containerSize = size
@@ -345,7 +345,7 @@ import SwiftUI
         private func renderToImage(
             layout: TextLabel.Layout,
             size: CGSize,
-            scale: CGFloat
+            scale: CGFloat,
         ) -> CGImage? {
             guard size.isValidLayoutSize, scale.isFinite, scale > 0 else { return nil }
             // Round up so the last pixel row and column of glyphs are never clipped.
@@ -362,7 +362,7 @@ import SwiftUI
                 bytesPerRow: 0,
                 space: colorSpace,
                 bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
-                    | CGBitmapInfo.byteOrder32Little.rawValue
+                    | CGBitmapInfo.byteOrder32Little.rawValue,
             ) else { return nil }
 
             ctx.scaleBy(x: scale, y: scale)
@@ -386,7 +386,7 @@ public extension TextLabel {
     ///   - attributes: Text attributes to apply.
     init(
         _ key: LocalizedStringKey,
-        attributes: [NSAttributedString.Key: Any] = [:]
+        attributes: [NSAttributedString.Key: Any] = [:],
     ) {
         content = .localizedKey(key, attributes: attributes)
     }
@@ -398,7 +398,7 @@ public extension TextLabel {
     @_disfavoredOverload
     init(
         _ string: String,
-        attributes: [NSAttributedString.Key: Any] = [:]
+        attributes: [NSAttributedString.Key: Any] = [:],
     ) {
         content = .string(string, attributes: attributes)
     }
@@ -432,19 +432,19 @@ private enum Content {
             let resolvedString = key.resolve(in: environment)
             return NSAttributedString(
                 string: resolvedString,
-                attributes: Self.withDefaults(attributes)
+                attributes: Self.withDefaults(attributes),
             )
 
         case let .string(string, attributes):
             return NSAttributedString(
                 string: string,
-                attributes: Self.withDefaults(attributes)
+                attributes: Self.withDefaults(attributes),
             )
         }
     }
 
     private static func withDefaults(
-        _ attributes: [NSAttributedString.Key: Any]
+        _ attributes: [NSAttributedString.Key: Any],
     ) -> [NSAttributedString.Key: Any] {
         #if os(watchOS)
             // On watchOS, PlatformFont/PlatformColor are not available.

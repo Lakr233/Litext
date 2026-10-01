@@ -135,14 +135,14 @@ enum CleanLayoutCorpus: String, CaseIterable, Sendable, CustomTestStringConverti
         case .longUnbreakableWord:
             return plain(
                 "See https://example.com/averyveryverylongpathsegmentwithoutanybreakopportunity"
-                    + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz for details"
+                    + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz for details",
             )
         case .latinParagraphs:
             return plain(latin + "\n" + latin + " Waltz, bad nymph, for quick jigs vex.")
         case .cjk:
             return plain(
                 "日本語のテキストは単語の間にスペースを入れません。"
-                    + "中文排版也是如此，标点符号「引号」需要避头尾。한국어 문장도 함께 포함합니다."
+                    + "中文排版也是如此，标点符号「引号」需要避头尾。한국어 문장도 함께 포함합니다.",
             )
         case .arabic:
             return plain("مرحبا بالعالم، هذا نص عربي طويل لاختبار التفاف الأسطر في التخطيط. لا إله إلا الله")
@@ -159,11 +159,11 @@ enum CleanLayoutCorpus: String, CaseIterable, Sendable, CustomTestStringConverti
             for index in 0 ..< 3 {
                 text.append(NSAttributedString(
                     string: "Heading \(index) ",
-                    attributes: [.font: PlatformFont.boldSystemFont(ofSize: 32)]
+                    attributes: [.font: PlatformFont.boldSystemFont(ofSize: 32)],
                 ))
                 text.append(NSAttributedString(
                     string: "followed by small body text that keeps going for a while. ",
-                    attributes: [.font: PlatformFont.systemFont(ofSize: 11)]
+                    attributes: [.font: PlatformFont.systemFont(ofSize: 11)],
                 ))
             }
             return text
@@ -202,7 +202,7 @@ enum CleanLayoutCorpus: String, CaseIterable, Sendable, CustomTestStringConverti
             text.append(plain(" or follow "))
             text.append(NSAttributedString(
                 string: "this considerably longer link that is likely to wrap across several lines",
-                attributes: [.font: body, .link: URL(string: "https://example.com/long")!]
+                attributes: [.font: body, .link: URL(string: "https://example.com/long")!],
             ))
             text.append(plain(" before the end."))
             return text

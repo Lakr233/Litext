@@ -25,7 +25,7 @@ struct LitextLayoutLifetimeTests {
             bitsPerComponent: 8,
             bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
         )
     }
 
@@ -43,8 +43,8 @@ struct LitextLayoutLifetimeTests {
 
     // MARK: - Layout
 
-    @Test("A layout deallocates together with its framesetter and lines")
-    func layoutReleasesCoreTextObjects() throws {
+    @Test
+    func `A layout deallocates together with its framesetter and lines`() throws {
         weak var weakLayout: TextLabel.Layout?
         weak var weakFramesetter: CTFramesetter?
         weak var weakLine: CTLine?
@@ -62,8 +62,8 @@ struct LitextLayoutLifetimeTests {
         #expect(weakLine == nil)
     }
 
-    @Test("Rebuilding a layout releases each previous framesetter")
-    func invalidateLayoutReleasesOldFramesetters() throws {
+    @Test
+    func `Rebuilding a layout releases each previous framesetter`() throws {
         let layout = TextLabel.Layout(attributedString: uniqueText(length: 200))
         exercise(layout)
         var oldFramesetters: [WeakBox<CTFramesetter>] = []
@@ -79,8 +79,8 @@ struct LitextLayoutLifetimeTests {
         #expect(oldFramesetters.allSatisfy { $0.value !== current })
     }
 
-    @Test("Many short-lived layouts leave no framesetter or layout behind")
-    func manyLayoutsReleaseEverything() throws {
+    @Test
+    func `Many short-lived layouts leave no framesetter or layout behind`() throws {
         var layouts: [WeakBox<TextLabel.Layout>] = []
         var framesetters: [WeakBox<CTFramesetter>] = []
         try autoreleasepool {
@@ -97,8 +97,8 @@ struct LitextLayoutLifetimeTests {
         #expect(framesetters.allSatisfy { $0.value == nil })
     }
 
-    @Test("A layout with attachments deallocates, and so do its attachments")
-    func layoutWithAttachmentsDeallocates() {
+    @Test
+    func `A layout with attachments deallocates, and so do its attachments`() {
         weak var weakLayout: TextLabel.Layout?
         weak var weakAttachment: TextLabel.Attachment?
         autoreleasepool {
@@ -117,8 +117,8 @@ struct LitextLayoutLifetimeTests {
         #expect(weakAttachment == nil)
     }
 
-    @Test("Highlight regions outlive their layout without keeping it alive")
-    func highlightRegionsDoNotRetainTheLayout() {
+    @Test
+    func `Highlight regions outlive their layout without keeping it alive`() {
         weak var weakLayout: TextLabel.Layout?
         var regions: [TextLabel.HighlightRegion] = []
         autoreleasepool {
@@ -135,8 +135,8 @@ struct LitextLayoutLifetimeTests {
 
     // MARK: - Measurement cache
 
-    @Test("Measuring at 1,000 widths keeps the measurement cache capped")
-    func measurementCacheIsBounded() throws {
+    @Test
+    func `Measuring at 1,000 widths keeps the measurement cache capped`() throws {
         let layout = TextLabel.Layout(attributedString: uniqueText(length: 400))
         for index in 0 ..< 1000 {
             _ = layout.sizeThatFits(CGSize(width: 100 + CGFloat(index) * 0.5, height: .greatestFiniteMagnitude))
@@ -147,8 +147,8 @@ struct LitextLayoutLifetimeTests {
     }
 
     #if !os(watchOS)
-        @Test("A label measured at 1,000 widths keeps its layout's measurement cache capped")
-        func labelMeasurementCacheIsBounded() throws {
+        @Test
+        func `A label measured at 1,000 widths keeps its layout's measurement cache capped`() throws {
             let label = makeLaidOutTestLabel(uniqueText(length: 400))
             for index in 0 ..< 1000 {
                 label.preferredMaxLayoutWidth = 100 + CGFloat(index)
@@ -173,8 +173,8 @@ struct LitextLayoutLifetimeTests {
         }
     }
 
-    @Test("An attachment subclass with a computed size is measured with its current size and deallocates")
-    func computedSizeAttachment() throws {
+    @Test
+    func `An attachment subclass with a computed size is measured with its current size and deallocates`() throws {
         weak var weakAttachment: ComputedAttachment?
         try autoreleasepool {
             let attachment = ComputedAttachment()
@@ -194,8 +194,8 @@ struct LitextLayoutLifetimeTests {
         #expect(weakAttachment == nil)
     }
 
-    @Test("One attachment shared by many strings and layouts survives them all and still measures")
-    func sharedAttachmentAcrossLayouts() throws {
+    @Test
+    func `One attachment shared by many strings and layouts survives them all and still measures`() throws {
         let attachment = TextLabel.Attachment(size: CGSize(width: 21, height: 13))
         let unretainedCount = try runMetricsRetainCount(attachment)
         let delegate = attachment.runDelegate
@@ -233,8 +233,8 @@ struct LitextLayoutLifetimeTests {
     @MainActor
     @Suite("Attachment lifetime in labels", .tags(.memory))
     struct LitextAttachmentLifetimeTests {
-        @Test("An attachment removed from the text has its view removed from the label")
-        func removedAttachmentViewLeavesTheLabel() {
+        @Test
+        func `An attachment removed from the text has its view removed from the label`() {
             let view = PlatformView()
             let attachment = TextLabel.Attachment(size: CGSize(width: 20, height: 20), view: view)
             let text = uniqueText()
@@ -250,8 +250,8 @@ struct LitextLayoutLifetimeTests {
             #expect(!label.subviews.contains(view))
         }
 
-        @Test("An attachment the host keeps stays alive and works when added again")
-        func keptAttachmentWorksWhenReadded() async throws {
+        @Test
+        func `An attachment the host keeps stays alive and works when added again`() async throws {
             let view = PlatformView()
             let attachment = TextLabel.Attachment(size: CGSize(width: 26, height: 18), view: view)
             func text() -> NSAttributedString {
@@ -286,8 +286,8 @@ struct LitextLayoutLifetimeTests {
             #expect(region.attributes[.litextAttachment] as? TextLabel.Attachment === attachment)
         }
 
-        @Test("One attachment shared by 100 labels survives them all and can be reused")
-        func sharedAttachmentStress() async throws {
+        @Test
+        func `One attachment shared by 100 labels survives them all and can be reused`() async throws {
             let view = PlatformView()
             let attachment = TextLabel.Attachment(size: CGSize(width: 19, height: 15), view: view)
             let unretainedCount = try runMetricsRetainCount(attachment)
@@ -329,8 +329,8 @@ struct LitextLayoutLifetimeTests {
             #expect(run.rect.width == 31)
         }
 
-        @Test("A label that drops a shared attachment leaves its view in the label that shows it")
-        func droppingASharedAttachmentKeepsItInTheOtherLabel() {
+        @Test
+        func `A label that drops a shared attachment leaves its view in the label that shows it`() {
             let view = PlatformView()
             let attachment = TextLabel.Attachment(size: CGSize(width: 20, height: 20), view: view)
             func text() -> NSAttributedString {

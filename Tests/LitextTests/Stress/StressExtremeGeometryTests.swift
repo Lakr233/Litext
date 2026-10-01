@@ -51,11 +51,11 @@ struct StressExtremeGeometryTests {
         let font = PlatformFont.systemFont(ofSize: 16)
         let text = NSMutableAttributedString(
             string: "Hello world, this is Litext with words to wrap. ",
-            attributes: [.font: font]
+            attributes: [.font: font],
         )
         text.append(NSAttributedString(
             string: "A link here",
-            attributes: [.font: font, .link: URL(string: "https://example.com")!]
+            attributes: [.font: font, .link: URL(string: "https://example.com")!],
         ))
         text.append(NSAttributedString(string: "\nSecond paragraph ", attributes: [.font: font]))
         text.append(TextLabel.Attachment(size: CGSize(width: 20, height: 20)).attributedString(attributes: [.font: font]))
@@ -65,7 +65,7 @@ struct StressExtremeGeometryTests {
 
     /// Every width and height combination, including NaN and infinities, lays
     /// out, draws and answers queries with finite geometry.
-    @Test func containerSizesKeepGeometryFinite() {
+    @Test func `container sizes keep geometry finite`() {
         let text = sample()
         let context = makeStressContext()
         // 100 combinations: about 0.02 s on an M4 Max; invalid sizes skip CoreText.
@@ -81,7 +81,7 @@ struct StressExtremeGeometryTests {
                         samplePoints: samplePoints(in: size, count: 16),
                         ranges: [NSRange(location: 3, length: 20), NSRange(location: text.length - 1, length: 1)],
                         context: context,
-                        visibleRect: CGRect(x: 0, y: 0, width: 50, height: 50)
+                        visibleRect: CGRect(x: 0, y: 0, width: 50, height: 50),
                     )
                     audit.record("container \(size)")
                 }
@@ -104,7 +104,7 @@ struct StressExtremeGeometryTests {
         }
     }
 
-    @Test func degenerateContainersLayOutAsDocumented() {
+    @Test func `degenerate containers lay out as documented`() {
         let text = sample()
         func lineCount(_ size: CGSize) -> Int {
             let layout = TextLabel.Layout(attributedString: text)
@@ -145,7 +145,7 @@ struct StressExtremeGeometryTests {
 
     /// An invalid container lays out and draws nothing, and the layout recovers
     /// as soon as the container is valid again.
-    @Test func invalidContainersLayOutAndDrawNothing() {
+    @Test func `invalid containers lay out and draw nothing`() {
         let text = sample()
         let valid = CGSize(width: 200, height: 100)
         let reference = TextLabel.Layout(attributedString: text)
@@ -187,7 +187,7 @@ struct StressExtremeGeometryTests {
     /// CoreText then measures less height than its frame needs for the last line.
     /// The fuzzer found the last line dropped from right-to-left, centred and
     /// re-measured text.
-    @Test func lineHeightCapsNeverDropTheLastLine() {
+    @Test func `line height caps never drop the last line`() {
         let cases: [(String, NSTextAlignment, CGFloat, CGFloat)] = [
             ("Ελληνικά κείμενο εδώ", .left, 50, 69),
             ("\u{202E}한국어 텍스트", .left, 19, 4.5),
@@ -201,7 +201,7 @@ struct StressExtremeGeometryTests {
             style.maximumLineHeight = maximum
             let text = NSMutableAttributedString(
                 string: string,
-                attributes: [.font: PlatformFont.systemFont(ofSize: 40), .paragraphStyle: style]
+                attributes: [.font: PlatformFont.systemFont(ofSize: 40), .paragraphStyle: style],
             )
             text.addAttribute(.stressCoverage, value: true, range: NSRange(location: 0, length: text.length))
             for width: CGFloat in [1, 60, 200, 100_000] {
@@ -218,7 +218,7 @@ struct StressExtremeGeometryTests {
         }
     }
 
-    @Test func sizeThatFitsRejectsInvalidProposals() {
+    @Test func `size that fits rejects invalid proposals`() {
         let layout = TextLabel.Layout(attributedString: sample())
         let natural = layout.sizeThatFits(CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
         #expect(natural.isFiniteSize && natural.width > 0)
@@ -233,12 +233,12 @@ struct StressExtremeGeometryTests {
         #expect(wrapped.isFiniteSize && wrapped.width <= 50 && wrapped.height > natural.height)
     }
 
-    @Test func extremeFontSizes() {
+    @Test func `extreme font sizes`() {
         let context = makeStressContext()
         for pointSize: CGFloat in [0.01, 0.5, 2000, 5000] {
             let text = NSAttributedString(
                 string: "Hello wrapping world",
-                attributes: [.font: PlatformFont.systemFont(ofSize: pointSize)]
+                attributes: [.font: PlatformFont.systemFont(ofSize: pointSize)],
             )
             for size in [CGSize(width: 300, height: 100), CGSize(width: 300, height: 1e6)] {
                 let layout = TextLabel.Layout(attributedString: text)
@@ -248,7 +248,7 @@ struct StressExtremeGeometryTests {
                     containerSize: size,
                     samplePoints: samplePoints(in: size, count: 16),
                     context: context,
-                    visibleRect: CGRect(x: 0, y: 0, width: 300, height: 100)
+                    visibleRect: CGRect(x: 0, y: 0, width: 300, height: 100),
                 )
                 audit.record("font \(pointSize) in \(size)")
                 // Every character is laid out even when the container is too short.
@@ -258,13 +258,13 @@ struct StressExtremeGeometryTests {
         // A line taller than the proposal measures as zero, as CoreText does.
         let huge = TextLabel.Layout(attributedString: NSAttributedString(
             string: "Hi",
-            attributes: [.font: PlatformFont.systemFont(ofSize: 2000)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 2000)],
         ))
         #expect(huge.sizeThatFits(CGSize(width: 300, height: 100)) == .zero)
         #expect(huge.sizeThatFits(CGSize(width: 300, height: CGFloat.greatestFiniteMagnitude)).height > 2000)
     }
 
-    @Test func extremeParagraphStyles() {
+    @Test func `extreme paragraph styles`() {
         let styles: [(String, (NSMutableParagraphStyle) -> Void)] = [
             ("head indent +1e6", { $0.headIndent = 1e6
                 $0.firstLineHeadIndent = 1e6
@@ -300,7 +300,7 @@ struct StressExtremeGeometryTests {
                 configure(style)
                 let text = NSAttributedString(
                     string: "Hello world wrap a lot of words here\nSecond paragraph\nThird",
-                    attributes: [.font: PlatformFont.systemFont(ofSize: 16), .paragraphStyle: style]
+                    attributes: [.font: PlatformFont.systemFont(ofSize: 16), .paragraphStyle: style],
                 )
                 for size in [CGSize(width: 300, height: 100), CGSize(width: 0.5, height: 100), CGSize(width: 300, height: 1e9)] {
                     let layout = TextLabel.Layout(attributedString: text)
@@ -311,7 +311,7 @@ struct StressExtremeGeometryTests {
                         samplePoints: samplePoints(in: size, count: 16),
                         ranges: [NSRange(location: 5, length: 30)],
                         context: context,
-                        visibleRect: CGRect(x: 0, y: 0, width: 300, height: 100)
+                        visibleRect: CGRect(x: 0, y: 0, width: 300, height: 100),
                     )
                     audit.record("\(name) in \(size)")
                 }
@@ -323,7 +323,7 @@ struct StressExtremeGeometryTests {
         style.lineSpacing = 1e6
         let text = NSAttributedString(
             string: "First\nSecond\nThird",
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16), .paragraphStyle: style]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16), .paragraphStyle: style],
         )
         let layout = TextLabel.Layout(attributedString: text)
         layout.containerSize = CGSize(width: 300, height: 100)
@@ -331,7 +331,7 @@ struct StressExtremeGeometryTests {
     }
 
     #if !os(watchOS)
-        @Test func viewSurvivesExtremeFrames() throws {
+        @Test func `view survives extreme frames`() throws {
             var frames: [CGRect] = [
                 .zero,
                 CGRect(x: 0, y: 0, width: -100, height: -50),
@@ -375,7 +375,7 @@ struct StressExtremeGeometryTests {
         /// Invalid geometry on a view: whatever size each platform lets through,
         /// a label draws text only while its bounds are valid, drops attachment
         /// views while they are not, and recovers afterwards.
-        @Test func viewDrawsNothingWhileItsSizeIsInvalid() {
+        @Test func `view draws nothing while its size is invalid`() {
             let text = NSMutableAttributedString(attributedString: sample())
             let attachment = TextLabel.Attachment(size: CGSize(width: 20, height: 20), view: PlatformView(frame: .zero))
             text.append(attachment.attributedString(attributes: [.font: PlatformFont.systemFont(ofSize: 16)]))
@@ -440,7 +440,7 @@ struct StressExtremeGeometryTests {
             }
         }
 
-        @Test func preferredMaxLayoutWidthExtremes() {
+        @Test func `preferred max layout width extremes`() {
             let label = TextLabelView(attributedText: sample())
             for width: CGFloat in [0, -1, 0.1, 1, 1e7, .greatestFiniteMagnitude, .infinity, .nan] {
                 label.preferredMaxLayoutWidth = width

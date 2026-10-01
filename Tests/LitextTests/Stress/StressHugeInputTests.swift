@@ -48,7 +48,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
                 return NSAttributedString(string: string, attributes: [.font: font])
             },
             typesetBudget: (2, 5),
-            queryBudget: (3, 15)
+            queryBudget: (3, 15),
         ),
         // One paragraph with no newline: 1 MB full, 50 KB default. CoreText's
         // line breaking is quadratic in paragraph length (see
@@ -70,7 +70,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
                 return NSAttributedString(string: string, attributes: [.font: font])
             },
             typesetBudget: (3, 600),
-            queryBudget: (2, 5)
+            queryBudget: (2, 5),
         ),
         // A token CoreText can only break character by character. Full: 0.2 s.
         HugeInput(
@@ -80,7 +80,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
                 return NSAttributedString(string: string, attributes: [.font: font])
             },
             typesetBudget: (2, 3),
-            queryBudget: (2, 3)
+            queryBudget: (2, 3),
         ),
         // Separate links, each its own highlight region.
         HugeInput(
@@ -98,7 +98,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
                 return result
             },
             typesetBudget: (2, 4),
-            queryBudget: (2, 4)
+            queryBudget: (2, 4),
         ),
         // Attachments, every tenth one with a view.
         HugeInput(
@@ -107,7 +107,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
                 let result = NSMutableAttributedString()
                 for index in 0 ..< (full ? 2000 : 500) {
                     let attachment = TextLabel.Attachment(
-                        size: CGSize(width: CGFloat(8 + index % 20), height: CGFloat(8 + index % 30))
+                        size: CGSize(width: CGFloat(8 + index % 20), height: CGFloat(8 + index % 30)),
                     )
                     #if !os(watchOS)
                         if index % 10 == 0 {
@@ -120,7 +120,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
                 return result
             },
             typesetBudget: (2, 4),
-            queryBudget: (2, 4)
+            queryBudget: (2, 4),
         ),
         // A new font and colour on every character.
         HugeInput(
@@ -129,7 +129,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
                 mixedAttributeString(length: full ? 50000 : 10000, link: nil)
             },
             typesetBudget: (2, 4),
-            queryBudget: (2, 4)
+            queryBudget: (2, 4),
         ),
         // The same, all inside one link: one CoreText run, and once one highlight
         // lookup, per character. This was quadratic (15 s at 20k characters).
@@ -139,7 +139,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
                 mixedAttributeString(length: full ? 50000 : 10000, link: URL(string: "https://example.com")!)
             },
             typesetBudget: (2, 4),
-            queryBudget: (2, 4)
+            queryBudget: (2, 4),
         ),
     ]
 
@@ -170,7 +170,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
 @Suite("Stress: huge inputs", .tags(.stress), StressMode.enabled, .serialized)
 struct StressHugeInputTests {
     @Test(arguments: HugeInput.all)
-    func hugeInputStaysBounded(_ input: HugeInput) {
+    func `huge input stays bounded`(_ input: HugeInput) {
         let full = StressMode.isFull
         let typesetBudget = full ? input.typesetBudget.full : input.typesetBudget.standard
         let queryBudget = full ? input.queryBudget.full : input.queryBudget.standard
@@ -270,7 +270,7 @@ struct StressHugeInputTests {
     /// 250k characters takes 0.37, 1.45 and 5.8 s. Litext cannot change that,
     /// but it must not add to it: its measurement stays within 1.5x of
     /// CoreText's own `CTFramesetterSuggestFrameSizeWithConstraints`.
-    @Test func longParagraphCostMatchesCoreText() {
+    @Test func `long paragraph cost matches core text`() {
         let font = PlatformFont.systemFont(ofSize: 14)
         let length = StressMode.pick(30000, full: 120_000)
         var string = ""
@@ -301,7 +301,7 @@ struct StressHugeInputTests {
     /// 2n and 4n characters. Linear work grows 4x from n to 4n. The quadratic
     /// version measured 0.99, 3.7 and 15.3 s for 5k, 10k and 20k characters
     /// (15x); it now takes about 10, 20 and 38 ms.
-    @Test func highlightExtractionScalesLinearly() throws {
+    @Test func `highlight extraction scales linearly`() throws {
         let base = StressMode.pick(5000, full: 20000)
         var timings = [Double]()
         for length in [base, base * 2, base * 4] {
@@ -322,12 +322,12 @@ struct StressHugeInputTests {
     /// Text more than a million points tall is laid out to the end. The final
     /// layout used to stop at 1e6 points, so 100k lines laid out only 55,555 and
     /// the rest, with its links, was never drawn or hit-testable.
-    @Test func textTallerThanAMillionPointsIsLaidOutInFull() throws {
+    @Test func `text taller than A million points is laid out in full`() throws {
         let font = PlatformFont.systemFont(ofSize: 400)
         let count = 3000
         let text = NSMutableAttributedString(
             string: (0 ..< count).map { "L\($0)" }.joined(separator: "\n"),
-            attributes: [.font: font]
+            attributes: [.font: font],
         )
         try text.addAttribute(.link, value: #require(URL(string: "https://example.com/last")), range: NSRange(location: text.length - 2, length: 2))
         let layout = withinBudget("layout taller than 1e6 points", seconds: 1) {
@@ -344,7 +344,7 @@ struct StressHugeInputTests {
     }
 
     /// Laying out n, 2n and 4n lines stays linear.
-    @Test func lineCountScalesLinearly() {
+    @Test func `line count scales linearly`() {
         // 4n lines stay under 1e6 points. Past that, the 1e6-point measurement
         // frame comes back incomplete and the text is typeset about three times
         // (25k, 50k, 100k lines: 0.07, 0.14, 0.94 s), a step, not a curve.
@@ -354,7 +354,7 @@ struct StressHugeInputTests {
         for count in [base, base * 2, base * 4] {
             let string = NSAttributedString(
                 string: (0 ..< count).map { "Line \($0)" }.joined(separator: "\n"),
-                attributes: [.font: font]
+                attributes: [.font: font],
             )
             let clock = ContinuousClock()
             let start = clock.now

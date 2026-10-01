@@ -232,7 +232,7 @@ import Foundation
             menu.addItem(
                 withTitle: LocalizedText.copy,
                 action: #selector(copyAction(_:)),
-                keyEquivalent: "c"
+                keyEquivalent: "c",
             )
 
             if let event = NSApp.currentEvent {
@@ -246,13 +246,13 @@ import Foundation
             menu.addItem(
                 withTitle: LocalizedText.openLink,
                 action: #selector(openLink(_:)),
-                keyEquivalent: ""
+                keyEquivalent: "",
             )
 
             menu.addItem(
                 withTitle: LocalizedText.copyLink,
                 action: #selector(copyLink(_:)),
-                keyEquivalent: ""
+                keyEquivalent: "",
             )
 
             if let event = NSApp.currentEvent {

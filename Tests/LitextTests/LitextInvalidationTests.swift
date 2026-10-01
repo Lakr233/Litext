@@ -26,18 +26,18 @@ import Testing
         let url = try #require(URL(string: "https://example.com/moved"))
         let text = NSMutableAttributedString(
             string: "Leading ",
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
         )
         text.append(NSAttributedString(
             string: "link",
             attributes: [
                 .font: PlatformFont.systemFont(ofSize: 16),
                 .link: url,
-            ]
+            ],
         ))
         text.append(NSAttributedString(
             string: " trailing",
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
         ))
         return text
     }
@@ -50,7 +50,7 @@ import Testing
     // MARK: - Frame invalidation granularity
 
     @MainActor
-    @Test func movingTheFrameWithoutResizingKeepsTheExistingLayout() throws {
+    @Test func `moving the frame without resizing keeps the existing layout`() throws {
         let label = try TextLabelView(attributedText: makeLinkedText())
         label.frame = CGRect(x: 0, y: 0, width: 200, height: 60)
         runLayoutPass(label)
@@ -69,7 +69,7 @@ import Testing
     }
 
     @MainActor
-    @Test func resizingTheFrameStillRebuildsTheLayout() throws {
+    @Test func `resizing the frame still rebuilds the layout`() throws {
         let label = try TextLabelView(attributedText: makeLinkedText())
         label.frame = CGRect(x: 0, y: 0, width: 200, height: 60)
         runLayoutPass(label)
@@ -87,10 +87,10 @@ import Testing
     // MARK: - attributedText equality guard
 
     @MainActor
-    @Test func reassigningAnEqualAttributedStringKeepsTheLayout() {
+    @Test func `reassigning an equal attributed string keeps the layout`() {
         let font = PlatformFont.systemFont(ofSize: 16)
         let label = TextLabelView(
-            attributedText: NSAttributedString(string: "Hello Litext", attributes: [.font: font])
+            attributedText: NSAttributedString(string: "Hello Litext", attributes: [.font: font]),
         )
         let layoutBefore = label.textLayout
 
@@ -103,7 +103,7 @@ import Testing
     }
 
     @MainActor
-    @Test func reloadTextLayoutSchedulesARebuildForAnUnchangedString() {
+    @Test func `reload text layout schedules A rebuild for an unchanged string`() {
         let label = TextLabelView(attributedText: NSAttributedString(string: "Hello Litext"))
         label.frame = CGRect(x: 0, y: 0, width: 200, height: 60)
         runLayoutPass(label)
@@ -123,10 +123,10 @@ import Testing
 private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 
 @MainActor
-@Test func sizeThatFitsStaysCorrectWhenWidthsAlternate() {
+@Test func `size that fits stays correct when widths alternate`() {
     let text = NSAttributedString(
         string: String(repeating: "The quick brown fox jumps over the lazy dog. ", count: 8),
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     let layout = TextLabel.Layout(attributedString: text)
 
@@ -146,10 +146,10 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 }
 
 @MainActor
-@Test func measurementCacheEvictsBeyondItsLimitWithoutReturningStaleSizes() {
+@Test func `measurement cache evicts beyond its limit without returning stale sizes`() {
     let text = NSAttributedString(
         string: String(repeating: "Litext measures text with CoreText. ", count: 10),
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     let layout = TextLabel.Layout(attributedString: text)
 
@@ -166,10 +166,10 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 // MARK: - Highlight extraction guard
 
 @MainActor
-@Test func textWithoutLinksOrAttachmentsHasNoHighlightRegions() {
+@Test func `text without links or attachments has no highlight regions`() {
     let layout = TextLabel.Layout(attributedString: NSAttributedString(
         string: "Plain text carries no links and no attachments.",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     ))
     layout.containerSize = CGSize(width: 200, height: 80)
 
@@ -179,18 +179,18 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 }
 
 @MainActor
-@Test func textWithLinksStillProducesHighlightRegions() throws {
+@Test func `text with links still produces highlight regions`() throws {
     let url = try #require(URL(string: "https://example.com/kept"))
     let text = NSMutableAttributedString(
         string: "See ",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     text.append(NSAttributedString(
         string: "this link",
         attributes: [
             .font: PlatformFont.systemFont(ofSize: 16),
             .link: url,
-        ]
+        ],
     ))
 
     let layout = TextLabel.Layout(attributedString: text)
@@ -204,11 +204,11 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 }
 
 @MainActor
-@Test func attachmentOnlyTextStillProducesHighlightRegions() {
+@Test func `attachment only text still produces highlight regions`() {
     let attachment = TextLabel.Attachment()
     attachment.size = CGSize(width: 24, height: 16)
     let layout = TextLabel.Layout(attributedString: attachment.attributedString(
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     ))
     layout.containerSize = CGSize(width: 200, height: 80)
     layout.updateHighlightRegions()
@@ -217,17 +217,17 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 }
 
 @MainActor
-@Test func stringLinkValuesResolveToURLs() throws {
+@Test func `string link values resolve to UR ls`() throws {
     let text = NSMutableAttributedString(
         string: "See ",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     text.append(NSAttributedString(
         string: "this link",
         attributes: [
             .font: PlatformFont.systemFont(ofSize: 16),
             .link: "https://example.com/string",
-        ]
+        ],
     ))
 
     let layout = TextLabel.Layout(attributedString: text)
@@ -244,10 +244,10 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 /// `enumerateTextRects` skips lines before the range and stops after it. Every
 /// character must still map to exactly the line the full-text rects put it on.
 @MainActor
-@Test func selectionRectsForSubrangesMatchTheirLines() {
+@Test func `selection rects for subranges match their lines`() {
     let text = NSAttributedString(
         string: String(repeating: "wrap me across several lines please. ", count: 12),
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     let layout = TextLabel.Layout(attributedString: text)
     layout.containerSize = CGSize(width: 200, height: 2000)
@@ -271,17 +271,17 @@ private let unconstrainedHeight = CGFloat.greatestFiniteMagnitude
 // MARK: - Run delegate metrics
 
 @MainActor
-@Test func invalidateLayoutObservesChangedAttachmentMetrics() {
+@Test func `invalidate layout observes changed attachment metrics`() {
     let attachment = TextLabel.Attachment()
     attachment.size = CGSize(width: 60, height: 40)
     let text = NSMutableAttributedString(
         string: "before ",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     text.append(attachment.attributedString(attributes: [.font: PlatformFont.systemFont(ofSize: 16)]))
     text.append(NSAttributedString(
         string: " after",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     ))
 
     let constraint = CGSize(width: 300, height: unconstrainedHeight)
@@ -314,7 +314,7 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
 }
 
 @MainActor
-@Test func layoutHonoursAComputedAttachmentSize() {
+@Test func `layout honours A computed attachment size`() {
     let font = PlatformFont.systemFont(ofSize: 16)
     let attachment = ComputedSizeAttachment()
     let text = NSMutableAttributedString(string: "A", attributes: [.font: font])
@@ -335,10 +335,10 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
     // MARK: - UIKit / AppKit phase separation
 
     @MainActor
-    @Test func drawingIsSkippedWhileTheLayoutTrailsTheBounds() {
+    @Test func `drawing is skipped while the layout trails the bounds`() {
         let text = NSAttributedString(
             string: String(repeating: "wrap me across several lines please. ", count: 12),
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
         )
         let label = TextLabelView(attributedText: text)
         label.frame = CGRect(x: 0, y: 0, width: 300, height: 200)
@@ -361,10 +361,10 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
     /// size is not observable from here — `invalidateIntrinsicContentSize()` changes no public
     /// state — so that half is covered by the instrumented benchmark rather than this test.
     @MainActor
-    @Test func heightOnlyChangesDoNotDisturbTheIntrinsicSize() {
+    @Test func `height only changes do not disturb the intrinsic size`() {
         let text = NSAttributedString(
             string: String(repeating: "measure me. ", count: 20),
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
         )
         let label = TextLabelView(attributedText: text)
         label.preferredMaxLayoutWidth = 240
@@ -389,7 +389,7 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
     /// practice. Suppressing the menu during layout is the part that matters, and it lives
     /// behind `canImport(UIKit)` — unreachable from a macOS test run.
     @MainActor
-    @Test func aLayoutPassDoesNotClearASiblingSelection() {
+    @Test func `a layout pass does not clear A sibling selection`() {
         let font = PlatformFont.systemFont(ofSize: 16)
         let first = TextLabelView(attributedText: NSAttributedString(string: "first label text", attributes: [.font: font]))
         let second = TextLabelView(attributedText: NSAttributedString(string: "second label text", attributes: [.font: font]))
@@ -415,10 +415,10 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
     }
 
     @MainActor
-    @Test func selectionHighlightFollowsAReflow() {
+    @Test func `selection highlight follows A reflow`() {
         let text = NSAttributedString(
             string: String(repeating: "wrap me across several lines please. ", count: 12),
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
         )
         let label = TextLabelView(attributedText: text)
         label.isSelectable = true
@@ -440,7 +440,7 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
     // MARK: - Layout passes that do not change the lines
 
     @MainActor
-    @Test func invalidatingWithoutChangingTheLinesKeepsHighlightRegions() throws {
+    @Test func `invalidating without changing the lines keeps highlight regions`() throws {
         let label = try TextLabelView(attributedText: makeLinkedText())
         label.frame = CGRect(x: 0, y: 0, width: 200, height: 60)
         runLayoutPass(label)
@@ -468,10 +468,10 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
     }
 
     @MainActor
-    @Test func heightOnlyResizesDoNotInvalidateTheIntrinsicSize() {
+    @Test func `height only resizes do not invalidate the intrinsic size`() {
         let label = IntrinsicSizeCountingLabel(attributedText: NSAttributedString(
             string: String(repeating: "measure me. ", count: 20),
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
         ))
         label.frame = CGRect(x: 0, y: 0, width: 240, height: 100)
         runLayoutPass(label)

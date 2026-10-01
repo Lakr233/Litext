@@ -35,7 +35,7 @@ import Testing
         #if canImport(UIKit)
             /// Hosts `Host` in a window, runs `body` with the hosted label, and tears it all down.
             private func hostAndTearDown(
-                _ body: (TextLabelView) -> Void
+                _ body: (TextLabelView) -> Void,
             ) throws -> (label: WeakBox<TextLabelView>, coordinator: WeakBox<TextLabel.Coordinator>) {
                 var result: (WeakBox<TextLabelView>, WeakBox<TextLabel.Coordinator>)!
                 try autoreleasepool {
@@ -59,7 +59,7 @@ import Testing
         #elseif canImport(AppKit)
             /// Hosts `Host` in a window, runs `body` with the hosted label, and tears it all down.
             private func hostAndTearDown(
-                _ body: (TextLabelView) -> Void
+                _ body: (TextLabelView) -> Void,
             ) throws -> (label: WeakBox<TextLabelView>, coordinator: WeakBox<TextLabel.Coordinator>) {
                 var result: (WeakBox<TextLabelView>, WeakBox<TextLabel.Coordinator>)!
                 try autoreleasepool {
@@ -80,8 +80,8 @@ import Testing
             }
         #endif
 
-        @Test("A hosted TextLabel's view and coordinator deallocate after the host is torn down")
-        func hostedLabelDeallocates() async throws {
+        @Test
+        func `A hosted TextLabel's view and coordinator deallocate after the host is torn down`() async throws {
             let refs = try hostAndTearDown { label in
                 #expect(label.attributedText.length > 0)
                 #expect(label.isSelectable)
@@ -91,8 +91,8 @@ import Testing
             #expect(await waitUntil { refs.coordinator.value == nil })
         }
 
-        @Test("A hosted label with a selection and a pending deferred report deallocates")
-        func hostedLabelWithDeferredSelection() async throws {
+        @Test
+        func `A hosted label with a selection and a pending deferred report deallocates`() async throws {
             let refs = try hostAndTearDown { label in
                 label.selectionRange = NSRange(location: 0, length: 6)
                 if let coordinator = label.delegate as? TextLabel.Coordinator {
@@ -106,8 +106,8 @@ import Testing
             #expect(await waitUntil { refs.coordinator.value == nil })
         }
 
-        @Test("The deferred selection flush holds the coordinator weakly")
-        func deferredFlushIsWeak() async {
+        @Test
+        func `The deferred selection flush holds the coordinator weakly`() async {
             weak var weakCoordinator: TextLabel.Coordinator?
             var reports = 0
             let label = makeLaidOutTestLabel(uniqueText())
@@ -126,8 +126,8 @@ import Testing
             #expect(reports == 0)
         }
 
-        @Test("A coordinator does not keep the label it serves alive")
-        func coordinatorDoesNotRetainTheLabel() {
+        @Test
+        func `A coordinator does not keep the label it serves alive`() {
             weak var weakLabel: TextLabelView?
             let coordinator = TextLabel.Coordinator(onTapLink: nil, onSelectionChange: nil)
             autoreleasepool {

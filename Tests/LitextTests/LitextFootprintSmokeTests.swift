@@ -45,8 +45,8 @@ import Testing
             return sample
         }
 
-        @Test("Creating, using and dropping 1,000 labels does not grow the footprint")
-        func thousandLabels() throws {
+        @Test
+        func `Creating, using and dropping 1,000 labels does not grow the footprint`() throws {
             _ = createUseAndDrop(count: 100)
             let before = try #require(physicalFootprint())
             let sample = createUseAndDrop(count: 1000, sampleAt: 500)
@@ -56,7 +56,7 @@ import Testing
             let growth = after > before ? after - before : 0
             #expect(
                 growth < Self.thresholdBytes,
-                "Footprint grew by \(growth / 1024) KB over 1,000 labels"
+                "Footprint grew by \(growth / 1024) KB over 1,000 labels",
             )
         }
     }

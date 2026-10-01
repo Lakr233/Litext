@@ -52,11 +52,11 @@ struct HostileString: CustomTestStringConvertible, Sendable {
             HostileString("only lone surrogates", units: (0 ..< 200).map { $0 % 2 == 0 ? 0xD800 : 0xDFFF }),
             HostileString(
                 "unpaired bidi controls",
-                "abc \u{202E}RLO without PDF \u{2067}RLI \u{2066}LRI \u{202C}\u{202C}\u{2069}\u{2069} \u{202B}\u{202A} שלום عربي end"
+                "abc \u{202E}RLO without PDF \u{2067}RLI \u{2066}LRI \u{202C}\u{202C}\u{2069}\u{2069} \u{202B}\u{202A} שלום عربي end",
             ),
             HostileString(
                 "200 nested embeddings",
-                String(repeating: "\u{202B}a\u{202A}b", count: 100) + "x" + String(repeating: "\u{202C}", count: 50)
+                String(repeating: "\u{202B}a\u{202A}b", count: 100) + "x" + String(repeating: "\u{202C}", count: 50),
             ),
             HostileString("combining marks on one base", units: [0x61] + combining + Array(" next word".utf16)),
             HostileString("combining marks with no base", units: combining),
@@ -75,11 +75,11 @@ struct HostileString: CustomTestStringConvertible, Sendable {
             HostileString("tabs and soft hyphens", String(repeating: "\t\u{00AD}a\u{00AD}\t", count: 300)),
             HostileString(
                 "noncharacters and private use",
-                units: [0xFFFE, 0xFFFF, 0xDBFF, 0xDFFF, 0xE000, 0xF8FF, 0xFDD0, 0xFDEF, 0x20, 0x41]
+                units: [0xFFFE, 0xFFFF, 0xDBFF, 0xDFFF, 0xE000, 0xF8FF, 0xFDD0, 0xFDEF, 0x20, 0x41],
             ),
             HostileString(
                 "Zalgo",
-                String(repeating: "Z\u{0351}\u{0352}\u{0357}\u{035B}\u{0346}a\u{0344}\u{0310}\u{0352}l\u{0350}g\u{0363}o", count: 200)
+                String(repeating: "Z\u{0351}\u{0352}\u{0357}\u{035B}\u{0346}a\u{0344}\u{0310}\u{0352}l\u{0350}g\u{0363}o", count: 200),
             ),
             HostileString("Thai and Devanagari clusters", String(repeating: "क्षत्रिय ฟ้้้้้้ ", count: 200)),
             HostileString("empty", ""),
@@ -113,7 +113,7 @@ struct StressHostileStringTests {
                     NSRange(location: max(0, length - 2), length: 2),
                 ],
                 context: context,
-                visibleRect: CGRect(x: 0, y: size.height / 3, width: width, height: 40)
+                visibleRect: CGRect(x: 0, y: size.height / 3, width: width, height: 40),
             )
             audit.record("\(name) at width \(width)")
             // Every character index has a caret rect when there are lines.
@@ -166,7 +166,7 @@ struct StressHostileStringTests {
     /// At most 0.25 s per string on an M4 Max in the quick mode; the full mode's longer
     /// clusters take up to 3 s (the flag run).
     @Test(arguments: HostileString.all)
-    func hostileStringsLayOutSafely(_ hostile: HostileString) {
+    func `hostile strings lay out safely`(_ hostile: HostileString) {
         let text = NSAttributedString(string: hostile.nsString as String, attributes: [.font: Self.font])
         #expect(text.length == hostile.units.count, "lone surrogates must survive bridging")
         withinBudget("hostile: \(hostile.name)", seconds: StressMode.pick(2, full: 20)) {
@@ -176,7 +176,7 @@ struct StressHostileStringTests {
 
     /// The same strings with attributes changing at every UTF-16 unit, so runs
     /// split inside surrogate pairs and grapheme clusters.
-    @Test func attributesSplittingClusters() {
+    @Test func `attributes splitting clusters`() {
         // About 0.5 s on an M4 Max.
         withinBudget("attributes splitting clusters", seconds: 4) {
             for hostile in HostileString.all where hostile.units.count < 2000 {
@@ -198,11 +198,11 @@ struct StressHostileStringTests {
     /// 4.9 and 38 s for 600, 1,200 and 2,400 indicators: a few kilobytes of
     /// flags can stall any CoreText label. Litext cannot avoid that cost, but
     /// must not add to it.
-    @Test func regionalIndicatorRunCostMatchesCoreText() {
+    @Test func `regional indicator run cost matches core text`() {
         let count = StressMode.pick(100, full: 200)
         let text = NSAttributedString(
             string: String(repeating: "\u{1F1EF}\u{1F1F5}\u{1F1FA}", count: count),
-            attributes: [.font: Self.font]
+            attributes: [.font: Self.font],
         )
         let constraint = CGSize(width: 37, height: CGFloat.greatestFiniteMagnitude)
         let clock = ContinuousClock()
@@ -224,7 +224,7 @@ struct StressHostileStringTests {
     }
 
     /// `.link` holds whatever the caller put there.
-    @Test func oddLinkValues() throws {
+    @Test func `odd link values`() throws {
         let values: [(String, Any)] = try [
             ("NSNumber", NSNumber(value: 42)),
             ("empty string", ""),
@@ -258,7 +258,7 @@ struct StressHostileStringTests {
     }
 
     /// Attachment attributes spanning more than the U+FFFC they belong to.
-    @Test func attachmentAttributeOnLongerRanges() {
+    @Test func `attachment attribute on longer ranges`() {
         let attachment = TextLabel.Attachment(size: CGSize(width: 24, height: 18))
         #if !os(watchOS)
             attachment.view = PlatformView(frame: .zero)
@@ -286,7 +286,7 @@ struct StressHostileStringTests {
                 text.addAttribute(
                     kCTRunDelegateAttributeName as NSAttributedString.Key,
                     value: attachment.runDelegate,
-                    range: NSRange(location: 0, length: 3)
+                    range: NSRange(location: 0, length: 3),
                 )
                 return text
             }()),
@@ -339,7 +339,7 @@ struct StressHostileStringTests {
                 contentRect: CGRect(x: 0, y: 0, width: 300, height: 100),
                 styleMask: [.titled],
                 backing: .buffered,
-                defer: false
+                defer: false,
             )
             let label = TextLabelView(attributedText: text)
             label.frame = CGRect(x: 0, y: 0, width: 300, height: 100)
@@ -361,7 +361,7 @@ struct StressHostileStringTests {
                     context: nil,
                     eventNumber: 0,
                     clickCount: 1,
-                    pressure: 1
+                    pressure: 1,
                 ))
                 if type == .leftMouseDown {
                     label.mouseDown(with: event)

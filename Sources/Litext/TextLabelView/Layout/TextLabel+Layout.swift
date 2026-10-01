@@ -47,7 +47,7 @@ private struct LineMetrics {
             x: origin.x + minX,
             y: origin.y - descent - trailingGap,
             width: width,
-            height: ascent + descent + trailingGap
+            height: ascent + descent + trailingGap,
         )
     }
 
@@ -182,13 +182,13 @@ extension TextLabel {
         private static let highlightAttributes: [(
             key: NSAttributedString.Key,
             runKey: CFString,
-            kind: TextLabel.HighlightRegion.Kind
+            kind: TextLabel.HighlightRegion.Kind,
         )] = [
             (.link, NSAttributedString.Key.link.rawValue as CFString, .link),
             (
                 .litextAttachment,
                 NSAttributedString.Key.litextAttachment.rawValue as CFString,
-                .attachment
+                .attachment,
             ),
         ]
         private static let highlightRunKeys = highlightAttributes.map(\.runKey)
@@ -237,7 +237,7 @@ extension TextLabel {
             string.enumerateAttribute(
                 .litextAttachment,
                 in: NSRange(location: 0, length: string.length),
-                options: []
+                options: [],
             ) { value, _, _ in
                 (value as? TextLabel.Attachment)?.syncRunMetrics()
             }
@@ -275,7 +275,7 @@ extension TextLabel {
                 // mirror that before building the frame.
                 let constraint = CGSize(
                     width: size.width > 0 ? size.width : Self.maxLayoutDimension,
-                    height: size.height > 0 ? size.height : Self.maxLayoutDimension
+                    height: size.height > 0 ? size.height : Self.maxLayoutDimension,
                 )
                 let fill = makeFrameFill(constraint: constraint, clampsToMaxLayoutDimension: true)
 
@@ -301,7 +301,7 @@ extension TextLabel {
                     CFRange(location: 0, length: 0),
                     nil,
                     size,
-                    nil
+                    nil,
                 )
             }
             if size.width == CGFloat.greatestFiniteMagnitude, size.height == CGFloat.greatestFiniteMagnitude {
@@ -382,7 +382,7 @@ extension TextLabel {
             var result = [TextLabel.LayoutRun]()
             enumerateRuns(
                 inLines: 0 ..< lines.count,
-                carrying: [key.rawValue as CFString]
+                carrying: [key.rawValue as CFString],
             ) { lineIndex, _, lineOrigin, glyphRun in
                 let attributes = CTRunGetAttributes(glyphRun) as? [NSAttributedString.Key: Any] ?? [:]
                 result.append(TextLabel.LayoutRun(
@@ -393,8 +393,8 @@ extension TextLabel {
                     lineRect: lineMetrics[lineIndex].clippedRect(
                         at: lineOrigin,
                         containerWidth: containerSize.width,
-                        includingLeading: false
-                    )
+                        includingLeading: false,
+                    ),
                 ))
             }
             return result
@@ -409,7 +409,7 @@ extension TextLabel {
             var invokedActions: [ObjectIdentifier] = []
             enumerateRuns(
                 inLines: lineIndices,
-                carrying: [Self.lineDrawingRunKey]
+                carrying: [Self.lineDrawingRunKey],
             ) { lineIndex, line, lineOrigin, glyphRun in
                 guard let action = Self.runAttributeValue(glyphRun, Self.lineDrawingRunKey)
                     as? TextLabel.LineDrawingAction
@@ -436,7 +436,7 @@ extension TextLabel {
         private func enumerateRuns(
             inLines lineIndices: Range<Int>,
             carrying keys: [CFString],
-            _ body: (_ lineIndex: Int, _ line: CTLine, _ lineOrigin: CGPoint, _ run: CTRun) -> Void
+            _ body: (_ lineIndex: Int, _ line: CTLine, _ lineOrigin: CGPoint, _ run: CTRun) -> Void,
         ) {
             guard let lines, let lineOrigins else { return }
 
@@ -507,13 +507,13 @@ extension TextLabel {
                     overlapStart: overlapStart,
                     overlapEnd: overlapEnd,
                     lineStart: lineStart,
-                    lineEnd: lineEnd
+                    lineEnd: lineEnd,
                 ) {
                     block(CGRect(
                         x: lineOrigin.x + extent.lowerBound,
                         y: lineBox.minY,
                         width: extent.upperBound - extent.lowerBound,
-                        height: lineBox.height
+                        height: lineBox.height,
                     ).clippedHorizontally(to: lineBox))
                 }
             }
@@ -551,7 +551,7 @@ extension TextLabel {
             overlapStart: CFIndex,
             overlapEnd: CFIndex,
             lineStart: CFIndex,
-            lineEnd: CFIndex
+            lineEnd: CFIndex,
         ) -> [ClosedRange<CGFloat>] {
             let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
             let extents: [ClosedRange<CGFloat>]
@@ -570,7 +570,7 @@ extension TextLabel {
                     glyphRuns: glyphRuns,
                     overlapStart: overlapStart,
                     overlapEnd: overlapEnd,
-                    lineStart: lineStart
+                    lineStart: lineStart,
                 )
             case .glyphs:
                 extents = Self.glyphExtents(of: glyphRuns, overlapStart: overlapStart, overlapEnd: overlapEnd)
@@ -600,7 +600,7 @@ extension TextLabel {
             glyphRuns: NSArray,
             overlapStart: CFIndex,
             overlapEnd: CFIndex,
-            lineStart: CFIndex
+            lineStart: CFIndex,
         ) -> [ClosedRange<CGFloat>] {
             let edges = Self.caretEdges(of: line)
             let string = attributedString.string as NSString
@@ -635,7 +635,7 @@ extension TextLabel {
 
         private static func union(
             of edges: [CFIndex: ClosedRange<CGFloat>],
-            in indices: Range<CFIndex>
+            in indices: Range<CFIndex>,
         ) -> ClosedRange<CGFloat>? {
             var result: ClosedRange<CGFloat>?
             for index in indices {
@@ -653,7 +653,7 @@ extension TextLabel {
         private static func glyphExtents(
             of glyphRuns: NSArray,
             overlapStart: CFIndex,
-            overlapEnd: CFIndex
+            overlapEnd: CFIndex,
         ) -> [ClosedRange<CGFloat>] {
             var extents = [ClosedRange<CGFloat>]()
             for runIndex in 0 ..< glyphRuns.count {
@@ -757,7 +757,7 @@ extension TextLabel {
                     pathSize: .zero,
                     measuredSize: .zero,
                     unbrokenWidth: 0,
-                    isComplete: false
+                    isComplete: false,
                 ))
                 return
             }
@@ -774,7 +774,7 @@ extension TextLabel {
             // which still reports its full height here.
             let naturalHeight = sizeThatFits(CGSize(
                 width: containerSize.width,
-                height: Self.maxLayoutHeight
+                height: Self.maxLayoutHeight,
             )).height
             if adoptMeasurementFillIfMatching() {
                 return
@@ -795,7 +795,7 @@ extension TextLabel {
                 : Self.maxLayoutHeight
             var fill = makeFrameFill(
                 constraint: CGSize(width: layoutPathWidth, height: pathHeight),
-                clampsToMaxLayoutDimension: false
+                clampsToMaxLayoutDimension: false,
             )
             // CoreText can need more height than it measures: a maximum line height
             // below the font's gives lines a negative descent, and the measured
@@ -805,7 +805,7 @@ extension TextLabel {
             if !fill.isComplete, pathHeight < Self.maxLayoutHeight {
                 fill = makeFrameFill(
                     constraint: CGSize(width: layoutPathWidth, height: Self.maxLayoutHeight),
-                    clampsToMaxLayoutDimension: false
+                    clampsToMaxLayoutDimension: false,
                 )
             }
             adopt(fill)
@@ -855,13 +855,13 @@ extension TextLabel {
             }
             let containerPath = CGPath(
                 rect: CGRect(origin: .zero, size: pathSize),
-                transform: nil
+                transform: nil,
             )
             let ctFrame = CTFramesetterCreateFrame(
                 framesetter,
                 CFRange(location: 0, length: 0),
                 containerPath,
-                nil
+                nil,
             )
 
             let frameLines = (CTFrameGetLines(ctFrame) as? [CTLine]) ?? []
@@ -895,7 +895,7 @@ extension TextLabel {
                     leading: isLastLine ? 0 : leading,
                     width: width,
                     trailingWhitespaceWidth: trailingWhitespace,
-                    minX: minX
+                    minX: minX,
                 ))
 
                 maxLineTrailingX = max(maxLineTrailingX, origins[index].x + width - trailingWhitespace)
@@ -920,7 +920,7 @@ extension TextLabel {
                 pathSize: pathSize,
                 measuredSize: measuredSize,
                 unbrokenWidth: maxLineEndX,
-                isComplete: isComplete
+                isComplete: isComplete,
             )
         }
 
@@ -1003,7 +1003,7 @@ extension TextLabel {
             var effectiveRanges: [NSAttributedString.Key: NSRange] = [:]
             enumerateRuns(
                 inLines: 0 ..< lines.count,
-                carrying: Self.highlightRunKeys
+                carrying: Self.highlightRunKeys,
             ) { lineIndex, _, lineOrigin, glyphRun in
                 // Bridging the attribute dictionary into Swift is expensive, so
                 // it is reserved for the few runs carrying highlight attributes.
@@ -1013,7 +1013,7 @@ extension TextLabel {
                     attributes: attributes,
                     lineOrigin: lineOrigin,
                     lineBox: lineMetrics[lineIndex].clippedRect(at: lineOrigin, containerWidth: containerSize.width),
-                    effectiveRanges: &effectiveRanges
+                    effectiveRanges: &effectiveRanges,
                 )
             }
         }
@@ -1023,7 +1023,7 @@ extension TextLabel {
             let attributes = CTRunGetAttributes(run)
             guard let value = CFDictionaryGetValue(
                 attributes,
-                Unmanaged.passUnretained(key).toOpaque()
+                Unmanaged.passUnretained(key).toOpaque(),
             ) else { return nil }
             return Unmanaged<AnyObject>.fromOpaque(value).takeUnretainedValue()
         }
@@ -1038,7 +1038,7 @@ extension TextLabel {
         /// of Swift; `enumerateAttributes` would bridge every run's full dictionary.
         private func containsAttribute(
             _ key: NSAttributedString.Key,
-            where predicate: (Any) -> Bool
+            where predicate: (Any) -> Bool,
         ) -> Bool {
             guard attributedString.length > 0 else { return false }
 
@@ -1067,7 +1067,7 @@ extension TextLabel {
             attributes: [NSAttributedString.Key: Any],
             lineOrigin: CGPoint,
             lineBox: CGRect,
-            effectiveRanges: inout [NSAttributedString.Key: NSRange]
+            effectiveRanges: inout [NSAttributedString.Key: NSRange],
         ) {
             let stringRange = NSRange(CTRunGetStringRange(glyphRun))
             // A link ending a wrapped line includes the whitespace hanging past the
@@ -1085,7 +1085,7 @@ extension TextLabel {
                         attribute.key,
                         at: stringRange.location,
                         longestEffectiveRange: &effectiveRange,
-                        in: fullRange
+                        in: fullRange,
                     )
                     effectiveRanges[attribute.key] = effectiveRange
                 }
@@ -1093,7 +1093,7 @@ extension TextLabel {
                     kind: attribute.kind,
                     attributes: attributes,
                     stringRange: effectiveRange,
-                    rect: runBounds
+                    rect: runBounds,
                 )
             }
         }
@@ -1102,7 +1102,7 @@ extension TextLabel {
             kind: TextLabel.HighlightRegion.Kind,
             attributes: [NSAttributedString.Key: Any],
             stringRange: NSRange,
-            rect: CGRect
+            rect: CGRect,
         ) {
             let key = RegionKey(kind: kind, location: stringRange.location)
             let highlightRegion: TextLabel.HighlightRegion
@@ -1112,7 +1112,7 @@ extension TextLabel {
                 highlightRegion = TextLabel.HighlightRegion(
                     kind: kind,
                     attributes: attributes,
-                    stringRange: stringRange
+                    stringRange: stringRange,
                 )
                 _highlightRegions[key] = highlightRegion
             }
@@ -1144,7 +1144,7 @@ extension TextLabel {
                 x: lineOrigin.x + minX,
                 y: lineOrigin.y - descent,
                 width: width,
-                height: ascent + descent
+                height: ascent + descent,
             )
         }
 
@@ -1184,7 +1184,7 @@ extension TextLabel {
                 x: rect.minX,
                 y: anchorHeight - rect.maxY,
                 width: rect.width,
-                height: rect.height
+                height: rect.height,
             )
         }
 

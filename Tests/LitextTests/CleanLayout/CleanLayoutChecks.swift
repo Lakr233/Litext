@@ -72,7 +72,7 @@ struct PreparedLayout {
         overflows = !CleanLayout.isUnconstrained(width) && measured.width > width + CleanLayout.epsilon
         layout.containerSize = CGSize(
             width: overflows ? width : CleanLayout.pixelCeil(measured.width),
-            height: CleanLayout.pixelCeil(measured.height)
+            height: CleanLayout.pixelCeil(measured.height),
         )
         layout.updateHighlightRegions()
     }
@@ -106,7 +106,7 @@ func cleanLayoutLines(_ layout: TextLabel.Layout, log: CleanLayoutLog) -> [Clean
     for line in lines {
         log.check(
             runLengths[line.index] == line.range.length,
-            "line \(line.index): its runs overlap or leave a gap inside \(line.range)"
+            "line \(line.index): its runs overlap or leave a gap inside \(line.range)",
         )
     }
     return lines
@@ -192,7 +192,7 @@ func cleanLayoutClusters(_ string: NSString) -> [CleanLayoutCluster] {
             range: range,
             isNewline: scalars.allSatisfy { CharacterSet.newlines.contains($0) },
             isWhitespace: scalars.allSatisfy { CharacterSet.whitespacesAndNewlines.contains($0) },
-            isNoBreakPunctuation: scalars.allSatisfy { noBreakPunctuation.contains($0) }
+            isNoBreakPunctuation: scalars.allSatisfy { noBreakPunctuation.contains($0) },
         ))
         index = NSMaxRange(range)
     }
@@ -214,7 +214,7 @@ func assertCleanLayout(
     width: CGFloat,
     corpus: CleanLayoutCorpus,
     context: String = "",
-    sourceLocation: SourceLocation = #_sourceLocation
+    sourceLocation: SourceLocation = #_sourceLocation,
 ) {
     let log = CleanLayoutLog("\(corpus) @ \(width)\(context)", sourceLocation: sourceLocation)
     let string = layout.attributedString.string as NSString
@@ -241,18 +241,18 @@ func assertCleanLayout(
     log.check(!lines.isEmpty, "non-empty text produced no lines")
     log.check(
         layout.visibleLineCount(in: nil) == lines.count,
-        "visibleLineCount(in: nil) = \(layout.visibleLineCount(in: nil)) but \(lines.count) lines carry runs"
+        "visibleLineCount(in: nil) = \(layout.visibleLineCount(in: nil)) but \(lines.count) lines carry runs",
     )
     log.check(
         layout.visibleLineCount(in: container) == lines.count,
-        "only \(layout.visibleLineCount(in: container)) of \(lines.count) lines intersect the container"
+        "only \(layout.visibleLineCount(in: container)) of \(lines.count) lines intersect the container",
     )
     var expectedLocation = 0
     for (position, line) in lines.enumerated() {
         log.check(line.index == position, "line indices skip: found \(line.index) at position \(position)")
         log.check(
             line.range.location == expectedLocation && line.range.length > 0,
-            "line \(line.index) covers \(line.range), expected it to start at \(expectedLocation)"
+            "line \(line.index) covers \(line.range), expected it to start at \(expectedLocation)",
         )
         expectedLocation = NSMaxRange(line.range)
     }
@@ -273,7 +273,7 @@ func assertCleanLayout(
         guard let owner = line(containing: cluster.range.location) else { continue }
         log.check(
             NSMaxRange(cluster.range) <= NSMaxRange(owner.range),
-            "cluster \(cluster.range) is split across lines"
+            "cluster \(cluster.range) is split across lines",
         )
         clustersByLine[owner.index, default: []].append((cluster, visibleRects(cluster)))
     }
@@ -298,7 +298,7 @@ func assertCleanLayout(
             overflows && units.count <= 1,
             "line \(line.index) \(line.range) "
                 + "'\(string.substring(with: line.range).debugDescription)' overflows the container "
-                + "(ink \(extent.minX)...\(extent.maxX), width \(container.width)) with \(units.count) break units"
+                + "(ink \(extent.minX)...\(extent.maxX), width \(container.width)) with \(units.count) break units",
         )
     }
     if overflows {
@@ -313,21 +313,21 @@ func assertCleanLayout(
         let horizontallyExempt = overflowingLines.contains(line.index)
         log.check(
             line.lineRect.minY >= -px && line.lineRect.maxY <= container.maxY + px,
-            "line \(line.index) box \(line.lineRect) leaves the container vertically (height \(container.height))"
+            "line \(line.index) box \(line.lineRect) leaves the container vertically (height \(container.height))",
         )
         log.check(
             horizontallyExempt || (line.lineRect.minX >= -px && line.lineRect.maxX <= container.maxX + px),
-            "line \(line.index) box \(line.lineRect) leaves the container horizontally (width \(container.width))"
+            "line \(line.index) box \(line.lineRect) leaves the container horizontally (width \(container.width))",
         )
         if position > 0 {
             let previous = lines[position - 1]
             log.check(
                 line.lineRect.midY < previous.lineRect.midY,
-                "line \(line.index) is not below line \(previous.index)"
+                "line \(line.index) is not below line \(previous.index)",
             )
             log.check(
                 line.lineRect.maxY <= previous.lineRect.minY + CleanLayout.lineOverlapTolerance,
-                "line \(line.index) box \(line.lineRect) overlaps line \(previous.index) box \(previous.lineRect)"
+                "line \(line.index) box \(line.lineRect) overlaps line \(previous.index) box \(previous.lineRect)",
             )
         }
     }
@@ -336,7 +336,7 @@ func assertCleanLayout(
         let topGap = container.maxY - first.lineRect.maxY
         log.check(
             topGap >= -px && topGap <= corpus.topSpacingAllowance + CleanLayout.fallbackFontTolerance,
-            "first line starts \(topGap)pt below the top of the container"
+            "first line starts \(topGap)pt below the top of the container",
         )
     }
     if let last = lines.last {
@@ -357,7 +357,7 @@ func assertCleanLayout(
         log.check(
             rect.minY >= -px && rect.maxY <= container.maxY + px
                 && (exempt || (rect.minX >= -px && rect.maxX <= container.maxX + px)),
-            "selection rect \(rect) leaves the container \(container.size)"
+            "selection rect \(rect) leaves the container \(container.size)",
         )
     }
 
@@ -367,7 +367,7 @@ func assertCleanLayout(
         log.check(!band.isNull, "line \(line.index) has no selection rects")
         log.check(
             band.isNull || abs(band.maxY - line.lineRect.maxY) <= eps && band.minY <= line.lineRect.minY + eps,
-            "line \(line.index) selection band \(band) does not match its box \(line.lineRect)"
+            "line \(line.index) selection band \(band) does not match its box \(line.lineRect)",
         )
 
         // Whitespace after the line's last visible character hangs past the line end.
@@ -380,18 +380,18 @@ func assertCleanLayout(
             if entry.cluster.isNewline || isHanging {
                 log.check(
                     !isHanging || entry.cluster.isNewline || !entry.rects.isEmpty,
-                    "hanging whitespace \(description) on line \(line.index) has no rect"
+                    "hanging whitespace \(description) on line \(line.index) has no rect",
                 )
                 log.check(
                     entry.rects.allSatisfy {
                         $0.minX >= line.lineRect.minX - eps && $0.maxX <= line.lineRect.maxX + eps
                     },
-                    "hanging \(description) rects \(entry.rects) leave line \(line.index) box \(line.lineRect)"
+                    "hanging \(description) rects \(entry.rects) leave line \(line.index) box \(line.lineRect)",
                 )
                 guard entry.cluster.isNewline else { continue }
                 log.check(
                     entry.rects.allSatisfy { $0.width <= eps },
-                    "newline \(description) on line \(line.index) has a wide rect \(entry.rects)"
+                    "newline \(description) on line \(line.index) has a wide rect \(entry.rects)",
                 )
                 continue
             }
@@ -401,7 +401,7 @@ func assertCleanLayout(
                 log.check(
                     rect.minX >= line.lineRect.minX - eps && rect.maxX <= line.lineRect.maxX + eps
                         && rect.minY >= band.minY - eps && rect.maxY <= band.maxY + eps,
-                    "\(description) rect \(rect) leaves line \(line.index) box \(line.lineRect)"
+                    "\(description) rect \(rect) leaves line \(line.index) box \(line.lineRect)",
                 )
             }
         }
@@ -416,7 +416,7 @@ func assertCleanLayout(
                         log.check(
                             lhs.horizontalOverlap(with: rhs) <= px,
                             "rects of \(drawn[lhsIndex].cluster.range) \(lhs) and "
-                                + "\(drawn[rhsIndex].cluster.range) \(rhs) overlap on line \(line.index)"
+                                + "\(drawn[rhsIndex].cluster.range) \(rhs) overlap on line \(line.index)",
                         )
                     }
                 }
@@ -436,13 +436,13 @@ func assertCleanLayout(
             let character = layout.characterIndex(at: center)
             log.check(
                 character.map { NSLocationInRange($0, range) || sharesGlyph($0) } ?? false,
-                "characterIndex at the centre of \(range) returned \(String(describing: character))"
+                "characterIndex at the centre of \(range) returned \(String(describing: character))",
             )
             let caret = layout.textIndex(at: center)
             log.check(
                 caret.map { ($0 >= range.location && $0 <= NSMaxRange(range)) || sharesGlyph($0) || sharesGlyph($0 - 1) }
                     ?? false,
-                "textIndex at the centre of \(range) returned \(String(describing: caret))"
+                "textIndex at the centre of \(range) returned \(String(describing: caret))",
             )
         }
 
@@ -454,12 +454,12 @@ func assertCleanLayout(
         case .center:
             log.check(
                 abs(extent.midX - container.midX) <= CleanLayout.alignmentTolerance,
-                "centered line \(line.index) spans \(extent.minX)...\(extent.maxX) in width \(container.width)"
+                "centered line \(line.index) spans \(extent.minX)...\(extent.maxX) in width \(container.width)",
             )
         case .right:
             log.check(
                 abs(extent.maxX - container.maxX) <= CleanLayout.alignmentTolerance,
-                "right-aligned line \(line.index) ends at \(extent.maxX) in width \(container.width)"
+                "right-aligned line \(line.index) ends at \(extent.maxX) in width \(container.width)",
             )
         case .justified:
             let isParagraphEnd = line.index == lines.count - 1
@@ -474,7 +474,7 @@ func assertCleanLayout(
             log.check(
                 extent.minX <= container.minX + CleanLayout.alignmentTolerance
                     && extent.maxX >= container.maxX - CleanLayout.alignmentTolerance,
-                "justified line \(line.index) spans \(extent.minX)...\(extent.maxX) in width \(container.width)"
+                "justified line \(line.index) spans \(extent.minX)...\(extent.maxX) in width \(container.width)",
             )
         default:
             break
@@ -490,14 +490,14 @@ func assertCleanLayout(
             log.check(
                 rect.minY >= -px && rect.maxY <= container.maxY + px
                     && (exempt || (rect.minX >= -px && rect.maxX <= container.maxX + px)),
-                "\(region.kind) region rect \(rect) leaves the container \(container.size)"
+                "\(region.kind) region rect \(rect) leaves the container \(container.size)",
             )
             log.check(
                 lines.contains { line in
                     rect.minY >= line.lineRect.minY - eps && rect.maxY <= line.lineRect.maxY + eps
                         && rect.minX >= line.lineRect.minX - eps && rect.maxX <= line.lineRect.maxX + eps
                 },
-                "\(region.kind) region rect \(rect) is not inside any line box"
+                "\(region.kind) region rect \(rect) is not inside any line box",
             )
         }
         guard region.kind == .link else { continue }
@@ -506,19 +506,19 @@ func assertCleanLayout(
             .link,
             at: region.stringRange.location,
             longestEffectiveRange: &effective,
-            in: NSRange(location: 0, length: attributed.length)
+            in: NSRange(location: 0, length: attributed.length),
         )
         log.check(value != nil, "link region \(region.stringRange) has no link attribute")
         log.check(
             effective == region.stringRange,
-            "link region \(region.stringRange) differs from the attribute's range \(effective)"
+            "link region \(region.stringRange) differs from the attribute's range \(effective)",
         )
         let regionUnion = region.rects
         for index in region.stringRange.location ..< NSMaxRange(region.stringRange) {
             for rect in layout.rects(for: NSRange(location: index, length: 1)) where rect.width > eps {
                 log.check(
                     regionUnion.contains { $0.horizontalOverlap(with: rect) >= rect.width - eps && $0.midY > rect.minY && $0.midY < rect.maxY },
-                    "link character \(index) rect \(rect) is not covered by the link region"
+                    "link character \(index) rect \(rect) is not covered by the link region",
                 )
             }
         }
@@ -531,7 +531,7 @@ func assertCleanLayout(
     }
     log.check(
         Set(layout.highlightRegions.filter { $0.kind == .link }.map(\.stringRange.location)) == linkLocations,
-        "link regions do not match the link attributes"
+        "link regions do not match the link attributes",
     )
 
     // 9. Attachments.
@@ -542,17 +542,17 @@ func assertCleanLayout(
         }
         log.check(
             abs(run.rect.width - attachment.size.width) <= 0.5 && abs(run.rect.height - attachment.size.height) <= 0.5,
-            "attachment \(run.stringRange) rect \(run.rect) does not have its size \(attachment.size)"
+            "attachment \(run.stringRange) rect \(run.rect) does not have its size \(attachment.size)",
         )
         let exempt = overflowingLines.contains(run.lineIndex)
         log.check(
             run.rect.minY >= -px && run.rect.maxY <= container.maxY + px
                 && (exempt || (run.rect.minX >= -px && run.rect.maxX <= container.maxX + px)),
-            "attachment \(run.stringRange) rect \(run.rect) leaves the container \(container.size)"
+            "attachment \(run.stringRange) rect \(run.rect) leaves the container \(container.size)",
         )
         log.check(
             run.rect.minY >= run.lineRect.minY - eps && run.rect.maxY <= run.lineRect.maxY + eps,
-            "attachment \(run.stringRange) rect \(run.rect) leaves its line box \(run.lineRect)"
+            "attachment \(run.stringRange) rect \(run.rect) leaves its line box \(run.lineRect)",
         )
         for neighbour in [run.stringRange.location - 1, NSMaxRange(run.stringRange)] {
             guard neighbour >= 0, neighbour < string.length,
@@ -561,7 +561,7 @@ func assertCleanLayout(
             for rect in layout.rects(for: NSRange(location: neighbour, length: 1)) {
                 log.check(
                     rect.horizontalOverlap(with: run.rect) <= px,
-                    "attachment \(run.stringRange) rect \(run.rect) overlaps neighbour \(neighbour) rect \(rect)"
+                    "attachment \(run.stringRange) rect \(run.rect) overlaps neighbour \(neighbour) rect \(rect)",
                 )
             }
         }

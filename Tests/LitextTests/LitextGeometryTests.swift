@@ -31,13 +31,13 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 }
 
 @MainActor
-@Test func lineLeadingSitsBelowTheDescent() throws {
+@Test func `line leading sits below the descent`() throws {
     let font = try #require(fontWithLeading(size: 16))
     let leading = CTFontGetLeading(font)
     let marker = NSAttributedString.Key("LineBoxProbe")
     let text = NSAttributedString(
         string: "First line\nSecond line",
-        attributes: [.font: font, marker: true]
+        attributes: [.font: font, marker: true],
     )
     let layout = makeLaidOutLayout(text, width: 400)
 
@@ -58,10 +58,10 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 }
 
 @MainActor
-@Test func layoutKeepsASnapshotOfAMutableString() {
+@Test func `layout keeps A snapshot of A mutable string`() {
     let text = NSMutableAttributedString(
         string: "Visit https://example.com today",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     text.addAttribute(.link, value: "https://example.com", range: NSRange(location: 6, length: 19))
     let layout = TextLabel.Layout(attributedString: text)
@@ -75,7 +75,7 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 }
 
 @MainActor
-@Test func lineDrawingActionRunsOncePerLineAcrossRunSplits() throws {
+@Test func `line drawing action runs once per line across run splits`() throws {
     var invocationCount = 0
     let action = TextLabel.LineDrawingAction { _, _, _ in
         invocationCount += 1
@@ -86,11 +86,11 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
         // A bold span and a link split every line into several glyph runs.
         text.append(NSAttributedString(
             string: "Line \(index) ",
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16), .litextLineDrawingAction: action]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16), .litextLineDrawingAction: action],
         ))
         text.append(NSAttributedString(
             string: "bold",
-            attributes: [.font: PlatformFont.boldSystemFont(ofSize: 16), .litextLineDrawingAction: action]
+            attributes: [.font: PlatformFont.boldSystemFont(ofSize: 16), .litextLineDrawingAction: action],
         ))
         text.append(NSAttributedString(
             string: " link\n",
@@ -98,7 +98,7 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
                 .font: PlatformFont.systemFont(ofSize: 16),
                 .link: "https://example.com/\(index)",
                 .litextLineDrawingAction: action,
-            ]
+            ],
         ))
     }
     let layout = makeLaidOutLayout(text, width: 400)
@@ -113,7 +113,7 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
         bitsPerComponent: 8,
         bytesPerRow: 0,
         space: CGColorSpaceCreateDeviceRGB(),
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
     ))
     layout.draw(in: context)
 
@@ -121,19 +121,19 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 }
 
 @MainActor
-@Test func negativeTailIndentIsHonouredByMeasurement() {
+@Test func `negative tail indent is honoured by measurement`() {
     let paragraph = NSMutableParagraphStyle()
     paragraph.tailIndent = -40
     let text = NSAttributedString(
         string: "A single line with a tail indent",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 14), .paragraphStyle: paragraph]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 14), .paragraphStyle: paragraph],
     )
     let framesetter = CTFramesetterCreateWithAttributedString(text)
     let layout = TextLabel.Layout(attributedString: text)
 
     let natural = layout.sizeThatFits(CGSize(
         width: CGFloat.greatestFiniteMagnitude,
-        height: CGFloat.greatestFiniteMagnitude
+        height: CGFloat.greatestFiniteMagnitude,
     ))
     // Narrower than the line plus its tail indent, so CoreText wraps.
     let constraint = CGSize(width: natural.width - 20, height: .greatestFiniteMagnitude)
@@ -142,7 +142,7 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
         CFRange(location: 0, length: 0),
         nil,
         constraint,
-        nil
+        nil,
     )
     let measured = layout.sizeThatFits(constraint)
 
@@ -151,11 +151,11 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 }
 
 @MainActor
-@Test func characterIndexStaysOnTheHitLine() throws {
+@Test func `character index stays on the hit line`() throws {
     let marker = NSAttributedString.Key("CharacterIndexProbe")
     let text = NSAttributedString(
         string: "Hello world\nSecond",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16), marker: true]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16), marker: true],
     )
     let layout = makeLaidOutLayout(text, width: 400)
     let runs = layout.layoutRuns(matching: marker)
@@ -176,10 +176,10 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 }
 
 @MainActor
-@Test func bidiSelectionRectsFollowTheSelectedGlyphs() throws {
+@Test func `bidi selection rects follow the selected glyphs`() throws {
     let text = NSAttributedString(
         string: "abc שלום עולם def",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     let layout = makeLaidOutLayout(text, width: 400)
 
@@ -199,10 +199,10 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 }
 
 @MainActor
-@Test func linkRegionsUseTypographicBounds() throws {
+@Test func `link regions use typographic bounds`() throws {
     let text = NSMutableAttributedString(
         string: "ace gy",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     text.addAttribute(.link, value: "https://example.com/a", range: NSRange(location: 0, length: 3))
     text.addAttribute(.link, value: "https://example.com/b", range: NSRange(location: 4, length: 2))
@@ -217,7 +217,7 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
     #expect(abs(ace.height - gy.height) < 0.001)
 }
 
-@Test func rangeOfLineHonoursEveryParagraphSeparator() {
+@Test func `range of line honours every paragraph separator`() {
     let crlf = "abc\r\ndef" as NSString
     #expect(crlf.rangeOfLine(at: 0) == NSRange(location: 0, length: 3))
     #expect(crlf.rangeOfLine(at: 6) == NSRange(location: 5, length: 3))
@@ -232,7 +232,7 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
     #expect(newline.rangeOfLine(at: 5) == NSRange(location: 0, length: 5))
 }
 
-@Test func rangeOfWordFindsTheWordOrNothingBetweenWords() {
+@Test func `range of word finds the word or nothing between words`() {
     let text = "Hello, world!\nsecond line" as NSString
     #expect(text.rangeOfWord(at: 0) == NSRange(location: 0, length: 5))
     #expect(text.rangeOfWord(at: 4) == NSRange(location: 0, length: 5))
@@ -247,12 +247,12 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 // MARK: - Clusters on bidirectional lines
 
 @MainActor
-@Test func bidiLinesGiveEveryClusterCharacterARect() {
+@Test func `bidi lines give every cluster character A rect`() {
     let font = PlatformFont.systemFont(ofSize: 16)
     // The emoji's low surrogate (index 6) has no glyph of its own.
     let emoji = makeLaidOutLayout(
         NSAttributedString(string: "שלום 😀 abc", attributes: [.font: font]),
-        width: 400
+        width: 400,
     )
     #expect(!emoji.rects(for: NSRange(location: 6, length: 1)).isEmpty)
     #expect(emoji.rects(for: NSRange(location: 6, length: 1)) == emoji.rects(for: NSRange(location: 5, length: 1)))
@@ -260,16 +260,16 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
     // Lam-alef shapes into one ligature glyph that belongs to the lam.
     let ligature = makeLaidOutLayout(
         NSAttributedString(string: "x لا y", attributes: [.font: font]),
-        width: 400
+        width: 400,
     )
     #expect(!ligature.rects(for: NSRange(location: 3, length: 1)).isEmpty)
 }
 
 @MainActor
-@Test func caretRectFallsBackToTheLineWhenNoGlyphCoversTheIndex() throws {
+@Test func `caret rect falls back to the line when no glyph covers the index`() throws {
     let text = NSAttributedString(
         string: "Hello world",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     let layout = makeLaidOutLayout(text, width: 400)
     let glyph = try #require(layout.rects(for: NSRange(location: 4, length: 1)).first)
@@ -286,10 +286,10 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 // MARK: - Hit testing a character
 
 @MainActor
-@Test func characterIndexReturnsTheGlyphUnderThePoint() throws {
+@Test func `character index returns the glyph under the point`() throws {
     let text = NSAttributedString(
         string: "abc שלום def",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     )
     let layout = makeLaidOutLayout(text, width: 400)
     for index in 0 ..< text.length {
@@ -304,11 +304,11 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
 // MARK: - Last line box
 
 @MainActor
-@Test func lastLineBoxStaysInsideTheMeasuredSize() throws {
+@Test func `last line box stays inside the measured size`() throws {
     let font = try #require(fontWithLeading(size: 16))
     let layout = makeLaidOutLayout(
         NSAttributedString(string: "First line\nSecond line", attributes: [.font: font]),
-        width: 400
+        width: 400,
     )
     let lastLine = try #require(layout.rects(for: NSRange(location: 11, length: 6)).first)
     #expect(lastLine.minY >= -0.001)

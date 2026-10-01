@@ -13,7 +13,7 @@
         public func pointerInteraction(
             _: UIPointerInteraction,
             regionFor request: UIPointerRegionRequest,
-            defaultRegion: UIPointerRegion
+            defaultRegion: UIPointerRegion,
         ) -> UIPointerRegion? {
             guard isSelectable else { return nil }
             // Attachment views own the pointer over their surface — a nested

@@ -17,7 +17,7 @@ private final class OpenLayoutOverride: TextLabel.Layout {
 @MainActor
 private final class OpenAttachmentOverride: TextLabel.Attachment {
     override func attributedString(
-        attributes: [NSAttributedString.Key: Any]
+        attributes: [NSAttributedString.Key: Any],
     ) -> NSAttributedString {
         super.attributedString(attributes: attributes)
     }
@@ -77,7 +77,7 @@ private final class OpenAttachmentOverride: TextLabel.Attachment {
 #endif
 
 @MainActor
-@Test func renamedPublicAPIIsUsableWithoutTestableImport() throws {
+@Test func `renamed public API is usable without testable import`() throws {
     let attachment = TextLabel.Attachment()
     attachment.size = CGSize(width: 24, height: 16)
 
@@ -91,7 +91,7 @@ private final class OpenAttachmentOverride: TextLabel.Attachment {
     #expect(attachmentText.attribute(
         kCTRunDelegateAttributeName as NSAttributedString.Key,
         at: 0,
-        effectiveRange: nil
+        effectiveRange: nil,
     ) != nil)
 
     let layout = TextLabel.Layout(attributedString: attachmentText)
@@ -107,7 +107,7 @@ private final class OpenAttachmentOverride: TextLabel.Attachment {
         bitsPerComponent: 8,
         bytesPerRow: 0,
         space: CGColorSpaceCreateDeviceRGB(),
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
     ) {
         layout.draw(in: context, visibleRect: CGRect(x: 0, y: 0, width: 100, height: 10))
     }
@@ -123,7 +123,7 @@ private final class OpenAttachmentOverride: TextLabel.Attachment {
 }
 
 @MainActor
-@Test func openClassAPISupportsExternalSubclassing() {
+@Test func `open class API supports external subclassing`() {
     let attachment = OpenAttachmentOverride()
     attachment.size = CGSize(width: 12, height: 8)
     #expect(attachment.attributedString(attributes: [:]).length == 1)
@@ -140,7 +140,7 @@ private final class OpenAttachmentOverride: TextLabel.Attachment {
 
 #if !os(watchOS)
     @MainActor
-    @Test func drawingSizingAndLayoutHooksAreOpen() {
+    @Test func `drawing sizing and layout hooks are open`() {
         let text = NSAttributedString(string: "Open hooks")
         let plain = TextLabelView(attributedText: text)
         let label = CustomizedTextLabelView(attributedText: text)
@@ -152,7 +152,7 @@ private final class OpenAttachmentOverride: TextLabel.Attachment {
     }
 
     @MainActor
-    @Test func viewSpaceConvertersFlipAgainstTheLaidOutHeight() throws {
+    @Test func `view space converters flip against the laid out height`() throws {
         let url = try #require(URL(string: "https://example.com"))
         let text = NSMutableAttributedString(string: "Tap here")
         text.addAttribute(.link, value: url, range: NSRange(location: 4, length: 4))

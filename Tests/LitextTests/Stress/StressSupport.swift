@@ -79,7 +79,7 @@ func withinBudget<T>(
     _ label: String,
     seconds budget: Double,
     sourceLocation: SourceLocation = #_sourceLocation,
-    _ body: () throws -> T
+    _ body: () throws -> T,
 ) rethrows -> T {
     let clock = ContinuousClock()
     let start = clock.now
@@ -90,7 +90,7 @@ func withinBudget<T>(
     #expect(
         seconds <= budget,
         "\(label) took \(seconds) s, over its \(budget) s budget",
-        sourceLocation: sourceLocation
+        sourceLocation: sourceLocation,
     )
     return result
 }
@@ -148,7 +148,7 @@ func makeStressContext(width: Int = 64, height: Int = 64) -> CGContext {
         bitsPerComponent: 8,
         bytesPerRow: 0,
         space: CGColorSpaceCreateDeviceRGB(),
-        bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+        bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue,
     )!
 }
 
@@ -174,7 +174,7 @@ struct LayoutAudit {
         ranges: [NSRange] = [],
         context: CGContext? = nil,
         visibleRect: CGRect? = nil,
-        drawsEverything: Bool = true
+        drawsEverything: Bool = true,
     ) {
         let length = layout.attributedString.length
         for constraint in [
@@ -218,7 +218,7 @@ struct LayoutAudit {
         for region in layout.highlightRegions {
             check(
                 region.stringRange.location >= 0 && NSMaxRange(region.stringRange) <= length,
-                "highlight region \(region.stringRange) beyond length \(length)"
+                "highlight region \(region.stringRange) beyond length \(length)",
             )
             for rect in region.rects {
                 check(rect.isFiniteRect, "highlight region rect \(rect)")
@@ -251,7 +251,7 @@ struct LayoutAudit {
             check(entry.start == expectedStart, "line \(lineIndex) starts at \(entry.start), expected \(expectedStart)")
             check(
                 entry.covered == entry.end - entry.start,
-                "line \(lineIndex) runs cover \(entry.covered) of \(entry.start)..<\(entry.end)"
+                "line \(lineIndex) runs cover \(entry.covered) of \(entry.start)..<\(entry.end)",
             )
             expectedStart = entry.end
         }
@@ -275,7 +275,7 @@ func samplePoints(in size: CGSize, count: Int) -> [CGPoint] {
         for column in 0 ..< side {
             points.append(CGPoint(
                 x: width * CGFloat(column) / CGFloat(side),
-                y: height * CGFloat(row) / CGFloat(side)
+                y: height * CGFloat(row) / CGFloat(side),
             ))
         }
     }

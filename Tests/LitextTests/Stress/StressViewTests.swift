@@ -96,7 +96,7 @@ import Testing
             #expect(
                 range.location >= 0 && range.length > 0 && range.location + range.length <= length,
                 "\(step): selection \(range) beyond length \(length)",
-                sourceLocation: sourceLocation
+                sourceLocation: sourceLocation,
             )
         } else {
             #expect(label.selectionLayer == nil, "\(step): selection layer without a selection", sourceLocation: sourceLocation)
@@ -104,20 +104,20 @@ import Testing
         #expect(
             label.textLayout.attributedString.isEqual(to: label.attributedText),
             "\(step): layout text differs from attributedText",
-            sourceLocation: sourceLocation
+            sourceLocation: sourceLocation,
         )
         for region in label.highlightRegions {
             #expect(
                 region.stringRange.location + region.stringRange.length <= length,
                 "\(step): stale highlight region \(region.stringRange), length \(length)",
-                sourceLocation: sourceLocation
+                sourceLocation: sourceLocation,
             )
         }
         if let active = label.activeHighlightRegion {
             #expect(
                 active.stringRange.location + active.stringRange.length <= length,
                 "\(step): stale active highlight \(active.stringRange), length \(length)",
-                sourceLocation: sourceLocation
+                sourceLocation: sourceLocation,
             )
         }
         for view in label.attachmentViews {
@@ -135,7 +135,7 @@ import Testing
                     contentRect: CGRect(origin: .zero, size: size),
                     styleMask: [.titled, .resizable],
                     backing: .buffered,
-                    defer: false
+                    defer: false,
                 )
                 window.isReleasedWhenClosed = false
                 return window
@@ -160,7 +160,7 @@ import Testing
         /// and invalidating it. 1,000 steps in the quick mode (about 0.2 s on an M4 Max),
         /// 10,000 with LITEXT_STRESS=full (about 2 s). The stream restarts every few
         /// hundred steps, so total work stays linear in the step count.
-        @Test func rapidUpdatesKeepStateConsistent() {
+        @Test func `rapid updates keep state consistent`() {
             let steps = StressMode.pick(1000, full: 10000)
             var random = SeededGenerator(seed: 0xFEED)
             var stream = TextStream(seed: 7)
@@ -190,7 +190,7 @@ import Testing
                                 x: CGFloat.random(in: 0 ... 50, using: &random),
                                 y: 0,
                                 width: CGFloat.random(in: 1 ... 700, using: &random),
-                                height: CGFloat.random(in: 0 ... 600, using: &random)
+                                height: CGFloat.random(in: 0 ... 600, using: &random),
                             )
                         case 8:
                             name = "layout"
@@ -204,7 +204,7 @@ import Testing
                             let length = label.attributedText.length
                             label.selectionRange = NSRange(
                                 location: Int.random(in: -1 ... length + 1, using: &random),
-                                length: Int.random(in: -1 ... length + 2, using: &random)
+                                length: Int.random(in: -1 ... length + 2, using: &random),
                             )
                         case 11:
                             name = "select all"
@@ -235,7 +235,7 @@ import Testing
 
         /// A selection made on streamed text survives while the text only grows past
         /// it, and is dropped, never left out of bounds, as the text is cut back.
-        @Test func selectionWhileTextShrinks() {
+        @Test func `selection while text shrinks`() {
             let font = PlatformFont.systemFont(ofSize: 15)
             let full = String(repeating: "The quick brown fox jumps over the lazy dog. ", count: 40)
             let label = TextLabelView(attributedText: NSAttributedString(string: full, attributes: [.font: font]))
@@ -294,7 +294,7 @@ import Testing
             /// synthesized events, with the text replaced in the middle of some of
             /// them. 400 gestures in the quick mode (about 0.05 s), 4,000 with LITEXT_STRESS=full
             /// (about 0.5 s).
-            @Test func randomMouseSequences() throws {
+            @Test func `random mouse sequences`() throws {
                 let gestures = StressMode.pick(400, full: 4000)
                 var random = SeededGenerator(seed: 0xC11C)
                 var stream = TextStream(seed: 11)
@@ -321,13 +321,13 @@ import Testing
                         context: nil,
                         eventNumber: 0,
                         clickCount: clicks,
-                        pressure: 1
+                        pressure: 1,
                     ))
                 }
                 func randomPoint() -> CGPoint {
                     CGPoint(
                         x: CGFloat.random(in: -40 ... 440, using: &random),
-                        y: CGFloat.random(in: -40 ... 340, using: &random)
+                        y: CGFloat.random(in: -40 ... 340, using: &random),
                     )
                 }
 
@@ -391,7 +391,7 @@ import Testing
 
         #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS)
             /// Drags the selection handles while the text changes underneath.
-            @Test func randomHandleDrags() {
+            @Test func `random handle drags`() {
                 let drags = StressMode.pick(400, full: 4000)
                 var random = SeededGenerator(seed: 0x4A4D)
                 var stream = TextStream(seed: 13)
@@ -410,7 +410,7 @@ import Testing
                         for _ in 0 ..< Int.random(in: 1 ... 5, using: &random) {
                             label.selectionHandleDidMove(kind, toLocationInSuperView: CGPoint(
                                 x: CGFloat.random(in: -40 ... 440, using: &random),
-                                y: CGFloat.random(in: -40 ... 340, using: &random)
+                                y: CGFloat.random(in: -40 ... 340, using: &random),
                             ))
                             if Int.random(in: 0 ..< 6, using: &random) == 0 {
                                 label.attributedText = Bool.random(using: &random) ? stream.grow() : stream.shrink()
@@ -430,7 +430,7 @@ import Testing
 
         /// 2,000 labels created, laid out and drawn one after another: about
         /// 0.15 s on an M4 Max, in both modes.
-        @Test func manyLabelsLayOutAndDraw() {
+        @Test func `many labels lay out and draw`() {
             let count = 2000
             let font = PlatformFont.systemFont(ofSize: 14)
             withinBudget("\(count) labels laid out and drawn", seconds: 2) {
@@ -438,11 +438,11 @@ import Testing
                     autoreleasepool {
                         let text = NSMutableAttributedString(
                             string: "Label \(index): some text that wraps across a couple of lines ",
-                            attributes: [.font: font]
+                            attributes: [.font: font],
                         )
                         text.append(NSAttributedString(
                             string: "with a link",
-                            attributes: [.font: font, .link: URL(string: "https://example.com/\(index)")!]
+                            attributes: [.font: font, .link: URL(string: "https://example.com/\(index)")!],
                         ))
                         let label = TextLabelView(attributedText: text)
                         let size = label.textLayout.sizeThatFits(CGSize(width: 200, height: CGFloat.greatestFiniteMagnitude))
@@ -457,7 +457,7 @@ import Testing
 
         /// 200 labels in one window. Selecting in any one clears the others through
         /// the deduplication notification, whatever order the selections come in.
-        @Test func selectionDeduplicatesAcrossManyLabels() {
+        @Test func `selection deduplicates across many labels`() {
             let count = 200
             var random = SeededGenerator(seed: 0xD0D0)
             let window = makeWindow(size: CGSize(width: 800, height: 4000))
@@ -466,7 +466,7 @@ import Testing
             for index in 0 ..< count {
                 let label = TextLabelView(attributedText: NSAttributedString(
                     string: "Label number \(index) with selectable text",
-                    attributes: [.font: font]
+                    attributes: [.font: font],
                 ))
                 label.isSelectable = true
                 label.frame = CGRect(x: 0, y: CGFloat(index) * 20, width: 400, height: 20)
@@ -525,7 +525,7 @@ import Testing
         #if canImport(AppKit) && !targetEnvironment(macCatalyst)
             /// A hosted `TextLabel` whose text changes 1,000 times, with layout forced
             /// after each change: about 0.45 s on an M4 Max, in both modes.
-            @Test func swiftUILabelUpdatedRepeatedly() throws {
+            @Test func `swift UI label updated repeatedly`() throws {
                 let updates = 1000
                 var stream = TextStream(seed: 21)
                 var lastText = stream.grow()
@@ -573,7 +573,7 @@ import Testing
                 #expect(label.attributedText.string == lastText.string)
                 #expect(label.frame.width == 320)
                 #expect(label.frame.height >= label.textLayout.sizeThatFits(
-                    CGSize(width: 320, height: CGFloat.greatestFiniteMagnitude)
+                    CGSize(width: 320, height: CGFloat.greatestFiniteMagnitude),
                 ).height - 1)
                 for selection in selections {
                     if let selection {
