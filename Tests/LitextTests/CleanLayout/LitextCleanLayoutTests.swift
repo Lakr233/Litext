@@ -50,13 +50,6 @@ struct LitextCleanLayoutTests {
     so the container lays the text out on fewer lines than were measured.
     """
 
-    static let pixelCeilRewrapIssue: Comment = """
-    A view sizes itself to the measured width rounded up to the pixel grid. When that \
-    rounding passes the proposal (57.06 -> 58 at 1x for a 57.3 proposal), the wider \
-    frame lets a line take one more glyph, so the text needs fewer lines than were \
-    measured and the view ends with empty space below them.
-    """
-
     /// Whether `text` measures zero wide at `width` yet needs more lines there than
     /// unconstrained: only whitespace CoreText wraps without letting it hang.
     static func wrapsUnmeasuredWhitespace(_ text: NSAttributedString, width: CGFloat) -> Bool {
@@ -172,15 +165,22 @@ struct LitextCleanLayoutTests {
             }
             let scale = label.displayScale
             let measured = TextLabel.Layout(attributedString: text).sizeThatFits(CleanLayout.proposal(width))
+            // The width rounds up to the pixel grid but stops at the proposal, so the
+            // frame never lets the text wrap into fewer lines than were measured.
+            let ceiledWidth = CleanLayout.pixelCeil(measured.width, scale: scale)
+            let stopsAtProposal = !CleanLayout.isUnconstrained(width)
+                && measured.width <= width && ceiledWidth > width
             let expected = CGSize(
-                width: CleanLayout.pixelCeil(measured.width, scale: scale),
+                width: stopsAtProposal ? width : ceiledWidth,
                 height: CleanLayout.pixelCeil(measured.height, scale: scale),
             )
 
             let intrinsic = label.intrinsicContentSize
             #expect(intrinsic == expected, "intrinsic \(intrinsic), measured \(measured) at @\(scale)x")
             #expect(label.intrinsicContentSize == intrinsic, "intrinsic size jitters between calls")
-            #expect(intrinsic.width * scale == (intrinsic.width * scale).rounded(), "width is not on the pixel grid")
+            if !stopsAtProposal {
+                #expect(intrinsic.width * scale == (intrinsic.width * scale).rounded(), "width is not on the pixel grid")
+            }
             #expect(intrinsic.height * scale == (intrinsic.height * scale).rounded(), "height is not on the pixel grid")
 
             label.frame = CGRect(origin: .zero, size: intrinsic)
@@ -190,17 +190,10 @@ struct LitextCleanLayoutTests {
 
             let overflows = !CleanLayout.isUnconstrained(width) && measured.width > width + CleanLayout.epsilon
             if !overflows {
-                let wrapsUnmeasuredWhitespace = Self.wrapsUnmeasuredWhitespace(text, width: width)
-                // Only a proposal off the pixel grid can round past itself, which on a
-                // 1x display (CI) lets the frame grow by most of a point.
-                let roundsPastProposal = !CleanLayout.isUnconstrained(width) && intrinsic.width > width
-                withKnownIssue(
-                    wrapsUnmeasuredWhitespace ? Self.unmeasuredWrapIssue : Self.pixelCeilRewrapIssue,
-                    isIntermittent: true,
-                ) {
+                withKnownIssue(Self.unmeasuredWrapIssue, isIntermittent: true) {
                     assertCleanLayout(label.textLayout, width: width, corpus: corpus, context: " (view)")
                 } when: {
-                    wrapsUnmeasuredWhitespace || roundsPastProposal
+                    Self.wrapsUnmeasuredWhitespace(text, width: width)
                 }
             }
 
