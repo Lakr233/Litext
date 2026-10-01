@@ -49,6 +49,15 @@ struct ContentView: View {
                 ToolbarItem(placement: .primaryAction) {
                     settingsButton
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    NavigationLink {
+                        TableDemoView()
+                    } label: {
+                        Image(systemName: "tablecells")
+                    }
+                    .accessibilityLabel("Table Selection")
+                    .accessibilityIdentifier("demo.table.open")
+                }
             }
             #endif
             .safeAreaInset(edge: .bottom, spacing: 0) {
