@@ -242,6 +242,11 @@
             func showSelectionMenuController(selectionRects: [CGRect]? = nil) {
                 guard let range = selectionRange, range.length > 0 else { return }
 
+                // A menu cannot appear for a view outside a window, and asking
+                // UIEditMenuInteraction to present one there makes UIKit keep the view
+                // alive for good. A selection set before the label is shown gets no menu.
+                guard window != nil else { return }
+
                 // Don't show the menu if another view controller is presented above ours
                 // (e.g. UIActivityViewController from shareMenuItemTapped)
                 if parentViewController?.presentedViewController != nil {
