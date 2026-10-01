@@ -98,7 +98,7 @@ struct LitextLayoutLifetimeTests {
     }
 
     @Test("A layout with attachments deallocates, and so do its attachments")
-    func layoutWithAttachmentsDeallocates() async {
+    func layoutWithAttachmentsDeallocates() {
         weak var weakLayout: TextLabel.Layout?
         weak var weakAttachment: TextLabel.Attachment?
         autoreleasepool {
@@ -112,8 +112,9 @@ struct LitextLayoutLifetimeTests {
             weakAttachment = attachment
         }
         #expect(weakLayout == nil)
-        // CoreText may keep the typeset run attributes in a cache for a moment.
-        #expect(await waitUntil { weakAttachment == nil })
+        // CoreText keeps the last typeset string's attributes, which name the attachment.
+        evictCoreTextLastTypesetAttributes()
+        #expect(weakAttachment == nil)
     }
 
     @Test("Highlight regions outlive their layout without keeping it alive")
@@ -173,7 +174,7 @@ struct LitextLayoutLifetimeTests {
     }
 
     @Test("An attachment subclass with a computed size is measured with its current size and deallocates")
-    func computedSizeAttachment() async throws {
+    func computedSizeAttachment() throws {
         weak var weakAttachment: ComputedAttachment?
         try autoreleasepool {
             let attachment = ComputedAttachment()
@@ -189,7 +190,8 @@ struct LitextLayoutLifetimeTests {
             #expect(secondWidth == 44)
             weakAttachment = attachment
         }
-        #expect(await waitUntil { weakAttachment == nil })
+        evictCoreTextLastTypesetAttributes()
+        #expect(weakAttachment == nil)
     }
 
     @Test("One attachment shared by many strings and layouts survives them all and still measures")

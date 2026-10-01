@@ -44,6 +44,20 @@ func waitUntil(
     return true
 }
 
+/// Typesets one unrelated line, which makes CoreText let go of the attributes of the
+/// string it typeset before.
+///
+/// CoreText on iOS keeps the attributes of the last string it typeset on a thread until that
+/// thread typesets another one, however long it waits, so an attribute value such as a
+/// `TextLabel.Attachment` outlives every string, framesetter and line that named it. The
+/// cache holds that one entry per thread: it is bounded, independent of Litext, and released
+/// by typesetting anything else on the same thread. A test that checks an attribute value
+/// deallocates calls this first, on the thread that typeset it.
+@MainActor
+func evictCoreTextLastTypesetAttributes() {
+    _ = CTLineCreateWithAttributedString(NSAttributedString(string: "evict"))
+}
+
 /// Gives already-queued main-actor work a few turns without sleeping.
 @MainActor
 func yieldToMainActor(times: Int = 10) async {

@@ -137,7 +137,7 @@ import Testing
         }
 
         @Test("Attachments and their views deallocate once the label and the string are gone")
-        func attachmentsDeallocateWithTheLabel() async {
+        func attachmentsDeallocateWithTheLabel() {
             weak var weakLabel: TextLabelView?
             weak var weakAttachment: TextLabel.Attachment?
             weak var weakView: PlatformView?
@@ -153,9 +153,10 @@ import Testing
                 weakView = view
             }
             #expect(weakLabel == nil)
-            // The string was typeset, and CoreText may hold the run attributes, which name
-            // the attachment, in a cache for a moment. Allow it to let go.
-            #expect(await waitUntil { weakAttachment == nil && weakView == nil })
+            // CoreText keeps the last typeset string's attributes, which name the attachment.
+            evictCoreTextLastTypesetAttributes()
+            #expect(weakAttachment == nil)
+            #expect(weakView == nil)
         }
 
         // MARK: - Window
