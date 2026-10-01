@@ -12,6 +12,7 @@ A lightweight, high-performance rich-text library for all Apple platforms — UI
 - 📎 Native view embedding via attachments
 - 🔗 Clickable links support
 - ✏️ Text selection with copy/paste
+- 🔗 One selection across several labels, such as the cells of a table
 - 🎨 Custom per-line drawing callbacks
 - 📐 Auto layout integration (experimental)
 - 🖥️ SwiftUI support on all platforms, including watchOS
@@ -136,6 +137,34 @@ label.clearSelection()
 TextLabel("Some selectable text")
     .selectable()
 ```
+
+### Selection Across Labels
+
+Labels that share a `TextSelectionGroup` share one selection, so a selection can run from one label into the next, for example across the cells of a table. Copy, Look Up, Translate and Share act on all of it.
+
+```swift
+let group = TextSelectionGroup()
+// The order is the reading order: list a table row by row.
+group.labels = cells
+// Put a tab between cells of a row and a line break between rows.
+group.separator = { previous, next in row(of: previous) == row(of: next) ? "\t" : "\n" }
+group.delegate = self
+
+// TextSelectionGroupDelegate
+func textSelectionGroupDidChangeSelection(_ group: TextSelectionGroup) {
+    print(group.selectedPlainText() ?? "")
+}
+
+// Add commands to the menu (iOS 16, Mac Catalyst 16 or later).
+func textSelectionGroup(
+    _ group: TextSelectionGroup,
+    editMenuForSuggestedActions suggestedActions: [UIMenuElement],
+) -> UIMenu? {
+    UIMenu(children: suggestedActions + [copyAsMarkdownAction])
+}
+```
+
+The group holds its labels weakly; keep the labels alive as usual. `group.selectedSegments` lists the selected range in each label.
 
 ### Embedding Native Views (Attachments)
 
