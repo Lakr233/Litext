@@ -426,7 +426,7 @@ struct FuzzCase: CustomStringConvertible {
 @MainActor
 @Suite("Stress: fuzz", .tags(.stress), StressMode.enabled)
 struct StressFuzzTests {
-    /// About 7.5 ms per iteration on an M4 Max: 15 s for the quick mode's 2,000. The
+    /// About 7.5 ms per iteration on an Apple silicon Mac: 15 s for the quick mode's 2,000. The
     /// budget allows 40 ms per iteration, and no single iteration may take 2 s.
     @Test func `random attributed strings`() {
         let iterations = StressMode.fuzzIterations

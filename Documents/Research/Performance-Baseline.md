@@ -4,7 +4,7 @@ Measured on 2026-10-01, before the release that follows 2.2.2. Performance work 
 
 ## Setup
 
-- **Machine:** Apple M4 Max with 16 cores and 64 GB, running macOS 27.0.1 and Swift 6.4. Builds were release builds and ran on macOS through AppKit.
+- **Machine:** An Apple silicon Mac running macOS 27 and Swift 6.4. Builds were release builds and ran on macOS through AppKit. Compare ratios between revisions rather than absolute times.
 - **Revisions compared:**
   - `097475a` is the 2.2.2 tag.
   - `c9b93b8` is the head of the adversarial-review fixes.

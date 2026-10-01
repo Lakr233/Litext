@@ -2,7 +2,7 @@
 //  OhMyLitextWatchApp.swift
 //  OhMyLitextWatch Watch App
 //
-//  Created by qaq on 9/3/2026.
+//  Created by Litext Team.
 //
 
 import SwiftUI

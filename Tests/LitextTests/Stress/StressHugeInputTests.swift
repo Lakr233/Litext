@@ -38,7 +38,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
 
     static let all: [HugeInput] = [
         // 100k lines: about 1.8e6 points tall, past the old 1e6 layout cap.
-        // M4 Max, full: measure 0.4 s, lay out 0.6 s, 210 index lookups 2.7 s
+        // Apple silicon, full: measure 0.4 s, lay out 0.6 s, 210 index lookups 2.7 s
         // (each scans the lines linearly).
         HugeInput(
             name: "100k lines",
@@ -53,7 +53,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
         // One paragraph with no newline: 1 MB full, 50 KB default. CoreText's
         // line breaking is quadratic in paragraph length (see
         // `longParagraphCostMatchesCoreText`): the full size takes about 90 s to
-        // measure on an M4 Max, all of it inside CTFramesetter. Default: 0.25 s.
+        // measure on an Apple silicon Mac, all of it inside CTFramesetter. Default: 0.25 s.
         HugeInput(
             name: "1 MB paragraph",
             make: { full in
@@ -266,7 +266,7 @@ struct StressHugeInputTests {
     }
 
     /// CoreText's line breaking is quadratic in the length of a paragraph:
-    /// on an M4 Max, raw `CTTypesetterSuggestLineBreak` over 62.5k, 125k and
+    /// on an Apple silicon Mac, raw `CTTypesetterSuggestLineBreak` over 62.5k, 125k and
     /// 250k characters takes 0.37, 1.45 and 5.8 s. Litext cannot change that,
     /// but it must not add to it: its measurement stays within 1.5x of
     /// CoreText's own `CTFramesetterSuggestFrameSizeWithConstraints`.

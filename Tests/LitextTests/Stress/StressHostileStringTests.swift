@@ -163,7 +163,7 @@ struct StressHostileStringTests {
         }
     #endif
 
-    /// At most 0.25 s per string on an M4 Max in the quick mode; the full mode's longer
+    /// At most 0.25 s per string on an Apple silicon Mac in the quick mode; the full mode's longer
     /// clusters take up to 3 s (the flag run).
     @Test(arguments: HostileString.all)
     func `hostile strings lay out safely`(_ hostile: HostileString) {
@@ -177,7 +177,7 @@ struct StressHostileStringTests {
     /// The same strings with attributes changing at every UTF-16 unit, so runs
     /// split inside surrogate pairs and grapheme clusters.
     @Test func `attributes splitting clusters`() {
-        // About 0.5 s on an M4 Max.
+        // About 0.5 s on an Apple silicon Mac.
         withinBudget("attributes splitting clusters", seconds: 4) {
             for hostile in HostileString.all where hostile.units.count < 2000 {
                 let text = NSMutableAttributedString(string: hostile.nsString as String)
@@ -193,7 +193,7 @@ struct StressHostileStringTests {
     }
 
     /// CoreText's line breaking is about cubic in the length of a run of
-    /// regional indicators (flag emoji halves). On an M4 Max, raw
+    /// regional indicators (flag emoji halves). On an Apple silicon Mac, raw
     /// `CTFramesetterSuggestFrameSizeWithConstraints` at width 37 takes 0.66,
     /// 4.9 and 38 s for 600, 1,200 and 2,400 indicators: a few kilobytes of
     /// flags can stall any CoreText label. Litext cannot avoid that cost, but

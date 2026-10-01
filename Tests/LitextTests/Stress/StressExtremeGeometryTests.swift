@@ -5,7 +5,7 @@
 //  Stress: extreme geometry. See StressSupport.swift for the quick and
 //  LITEXT_STRESS=full modes. These tests are small and identical in both modes.
 //
-//  What Litext returns for degenerate geometry (M4 Max, macOS 27):
+//  What Litext returns for degenerate geometry (Apple silicon, macOS 27):
 //
 //  - A size is valid when both dimensions are finite and not negative
 //    (`CGSize.isValidLayoutSize`). Zero and `.greatestFiniteMagnitude` are valid
@@ -68,7 +68,7 @@ struct StressExtremeGeometryTests {
     @Test func `container sizes keep geometry finite`() {
         let text = sample()
         let context = makeStressContext()
-        // 100 combinations: about 0.02 s on an M4 Max; invalid sizes skip CoreText.
+        // 100 combinations: about 0.02 s on an Apple silicon Mac; invalid sizes skip CoreText.
         withinBudget("extreme container sizes", seconds: 1) {
             for width in Self.dimensions {
                 for height in Self.dimensions {
@@ -293,7 +293,7 @@ struct StressExtremeGeometryTests {
             }),
         ]
         let context = makeStressContext()
-        // About 15 ms on an M4 Max.
+        // About 15 ms on an Apple silicon Mac.
         withinBudget("extreme paragraph styles", seconds: 1) {
             for (name, configure) in styles {
                 let style = NSMutableParagraphStyle()

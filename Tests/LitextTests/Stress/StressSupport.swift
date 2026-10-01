@@ -9,7 +9,7 @@
 //  locally once, as the last check before a release or milestone:
 //
 //  - Quick (`LITEXT_STRESS=1 swift test --filter Stress`): reduced inputs and
-//    2,000 fuzz iterations, about 25 s on an M4 Max.
+//    2,000 fuzz iterations, about 25 s on an Apple silicon Mac.
 //  - Full (`LITEXT_STRESS=full swift test --filter Stress`): the full-size
 //    inputs (100k lines, a 1 MB paragraph, 10k links, 10,000 view updates, ...)
 //    and 20,000 fuzz iterations. Expect several minutes, most of it CoreText
@@ -24,7 +24,7 @@
 //    seed and a shrunk input, and re-running with that seed reproduces it.
 //
 //  Each measured step has a time budget, roughly 5-10x the time it takes on an
-//  M4 Max, so a slip into quadratic behaviour fails loudly while ordinary
+//  Apple silicon Mac, so a slip into quadratic behaviour fails loudly while ordinary
 //  machine noise does not. Steps that take milliseconds get a floor of 1-2 s
 //  instead, where scheduler noise would dominate a multiple. Budgets for the
 //  full sizes apply when LITEXT_STRESS=full.

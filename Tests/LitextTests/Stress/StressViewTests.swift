@@ -157,7 +157,7 @@ import Testing
         // MARK: - Rapid updates
 
         /// Streams text onto a label while resizing, laying out, drawing, selecting
-        /// and invalidating it. 1,000 steps in the quick mode (about 0.2 s on an M4 Max),
+        /// and invalidating it. 1,000 steps in the quick mode (about 0.2 s on an Apple silicon Mac),
         /// 10,000 with LITEXT_STRESS=full (about 2 s). The stream restarts every few
         /// hundred steps, so total work stays linear in the step count.
         @Test func `rapid updates keep state consistent`() {
@@ -429,7 +429,7 @@ import Testing
         // MARK: - Many labels
 
         /// 2,000 labels created, laid out and drawn one after another: about
-        /// 0.15 s on an M4 Max, in both modes.
+        /// 0.15 s on an Apple silicon Mac, in both modes.
         @Test func `many labels lay out and draw`() {
             let count = 2000
             let font = PlatformFont.systemFont(ofSize: 14)
@@ -479,7 +479,7 @@ import Testing
                 labels.indices.filter { labels[$0].selectionRange != nil }
             }
 
-            // 1,000 selections reach 200 observers each: about 0.08 s on an M4 Max.
+            // 1,000 selections reach 200 observers each: about 0.08 s on an Apple silicon Mac.
             //
             // On iOS each selection in a window also presents the edit menu, and
             // UIEditMenuInteraction.presentEditMenu(with:) takes 3 to 5 ms in UIKit when
@@ -524,7 +524,7 @@ import Testing
 
         #if canImport(AppKit) && !targetEnvironment(macCatalyst)
             /// A hosted `TextLabel` whose text changes 1,000 times, with layout forced
-            /// after each change: about 0.45 s on an M4 Max, in both modes.
+            /// after each change: about 0.45 s on an Apple silicon Mac, in both modes.
             @Test func `swift UI label updated repeatedly`() throws {
                 let updates = 1000
                 var stream = TextStream(seed: 21)

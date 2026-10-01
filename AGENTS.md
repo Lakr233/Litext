@@ -13,6 +13,7 @@ Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, includi
 - **Commits and pull requests:**
   - Commits use an imperative subject that says what the change does for the user of the label, followed by a body explaining why.
   - Keep `Sources` changes and test changes in separate commits, so a fix can land without its tests when needed.
+- **No personal or machine-specific details in the repository:** no names, emails, user paths, device identifiers, host names or descriptions of a particular machine, in code, comments, docs or this file. Describe hardware generically, for example "an Apple silicon Mac".
 - **Platform split:** Code shared between UIKit and AppKit lives in files without a suffix. Platform-only files use an `@AppKit` suffix or `#if canImport(UIKit)` guards. watchOS has no `TextLabelView`, only the SwiftUI `TextLabel`.
 
 ## Layout rules the code relies on
