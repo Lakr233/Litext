@@ -8,12 +8,21 @@
 import Foundation
 
 extension NSString {
+    /// The word containing `index`, or `NSNotFound` when `index` sits on
+    /// whitespace or punctuation.
+    ///
+    /// Words arrive in order, so the walk stops at the first word that starts
+    /// after `index` instead of tokenizing the rest of the string. The walk still
+    /// covers the whole string so word breaking keeps the language it would infer
+    /// from the full text.
     func rangeOfWord(at index: Int) -> NSRange {
         let options: NSString.EnumerationOptions = [.byWords, .substringNotRequired]
         var resultRange = NSRange(location: NSNotFound, length: 0)
 
         enumerateSubstrings(in: NSRange(location: 0, length: length), options: options) { _, substringRange, _, stop in
-            if substringRange.contains(index) {
+            if substringRange.location > index {
+                stop.pointee = true
+            } else if substringRange.contains(index) {
                 resultRange = substringRange
                 stop.pointee = true
             }
