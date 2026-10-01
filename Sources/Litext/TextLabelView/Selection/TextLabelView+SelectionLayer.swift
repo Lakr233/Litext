@@ -75,24 +75,14 @@ import QuartzCore
                     ?? textLayout.caretRect(at: range.location, onLineOf: range.location)
                     ?? .zero
                 beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
-                selectionHandleStart.frame = .init(
-                    x: beginRect.minX - SelectionHandle.handleWidth / 2 - SelectionHandle.stickOutset,
-                    y: beginRect.minY - SelectionHandle.knobDiameter,
-                    width: SelectionHandle.handleWidth,
-                    height: beginRect.height + SelectionHandle.knobDiameter,
-                )
+                selectionHandleStart.frame = selectionHandleStart.frame(forLineRect: beginRect)
                 var endRect = textLayout.rects(
                     for: NSRange(location: lastCharacter, length: 1),
                 ).first
                     ?? textLayout.caretRect(at: lastCharacter + 1, onLineOf: lastCharacter)
                     ?? .zero
                 endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
-                selectionHandleEnd.frame = .init(
-                    x: endRect.maxX - SelectionHandle.handleWidth / 2 + SelectionHandle.stickOutset,
-                    y: endRect.minY,
-                    width: SelectionHandle.handleWidth,
-                    height: endRect.height + SelectionHandle.knobDiameter,
-                )
+                selectionHandleEnd.frame = selectionHandleEnd.frame(forLineRect: endRect)
             #endif
 
             if presentsMenu {
