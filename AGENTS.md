@@ -26,8 +26,9 @@ Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, includi
 
 ```sh
 swift build
-swift test                                        # macOS, about 35 s
-LITEXT_STRESS=1 swift test --filter Stress        # full stress suite, about 6 min
+swift test                                        # macOS, about 12 s; skips the stress suites
+LITEXT_STRESS=1 swift test --filter Stress        # stress suites at quick sizes, about 25 s
+LITEXT_STRESS=full swift test --filter Stress     # stress suites at full sizes, about 6 min
 Script/test.sh                                    # every platform build plus sample-app tests
 ```
 
@@ -40,6 +41,7 @@ xcodebuild test -scheme Litext -destination 'platform=iOS Simulator,id=<UDID>' \
 ```
 
 - **Test framework:** The tests use Swift Testing.
+- **Stress suites:** They are tagged `.stress` and skipped unless `LITEXT_STRESS` is set. CI runs them at quick sizes in a separate step. On a simulator, pass the variable as `TEST_RUNNER_LITEXT_STRESS=1`. Run them at full size before changing layout, selection or streaming paths.
 - **`CleanLayout`:** These tests record 24 known issues for glyph ink outside the typographic bounds. Those issues are expected, but new ones are not.
 - **Fuzzing:** `LITEXT_FUZZ_SEED` and `LITEXT_FUZZ_ITERATIONS` reproduce or widen the fuzz tests.
 - **Simulator tests:** Disable parallel testing. The view tests share one window and time-based budgets.

@@ -2,8 +2,8 @@
 //  Created by Litext Team.
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
-//  Stress: huge inputs. See StressSupport.swift for the default and
-//  LITEXT_STRESS=1 sizes and for how the time budgets were chosen.
+//  Stress: huge inputs. See StressSupport.swift for the quick and
+//  LITEXT_STRESS=full sizes and for how the time budgets were chosen.
 //
 
 import CoreGraphics
@@ -20,9 +20,9 @@ import Testing
 
 struct HugeInput: CustomTestStringConvertible, Sendable {
     let name: String
-    /// Builds the string at the default or the full size.
+    /// Builds the string at the quick or the full size.
     let make: @MainActor @Sendable (_ full: Bool) -> NSAttributedString
-    /// Budget for each typesetting step (measure, lay out), default and full.
+    /// Budget for each typesetting step (measure, lay out), quick and full.
     let typesetBudget: (standard: Double, full: Double)
     /// Budget for each query step (draw, rects, index lookups, selection).
     let queryBudget: (standard: Double, full: Double)
@@ -167,7 +167,7 @@ struct HugeInput: CustomTestStringConvertible, Sendable {
 }
 
 @MainActor
-@Suite("Stress: huge inputs", .tags(.stress), .serialized)
+@Suite("Stress: huge inputs", .tags(.stress), StressMode.enabled, .serialized)
 struct StressHugeInputTests {
     @Test(arguments: HugeInput.all)
     func hugeInputStaysBounded(_ input: HugeInput) {

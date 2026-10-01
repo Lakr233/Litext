@@ -3,7 +3,7 @@
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 //  Stress: rapid updates, synthesized input, many labels and SwiftUI. See
-//  StressSupport.swift for the default and LITEXT_STRESS=1 modes.
+//  StressSupport.swift for the quick and full modes.
 //
 //  Mouse sequences use synthesized NSEvents and run on AppKit only; UIKit runs
 //  the same update loop and drives selection handles instead, since UITouch
@@ -127,7 +127,7 @@ import Testing
     }
 
     @MainActor
-    @Suite("Stress: views", .tags(.stress), .serialized)
+    @Suite("Stress: views", .tags(.stress), StressMode.enabled, .serialized)
     struct StressViewTests {
         #if canImport(AppKit) && !targetEnvironment(macCatalyst)
             private func makeWindow(size: CGSize = CGSize(width: 800, height: 600)) -> NSWindow {
@@ -157,8 +157,8 @@ import Testing
         // MARK: - Rapid updates
 
         /// Streams text onto a label while resizing, laying out, drawing, selecting
-        /// and invalidating it. 1,000 steps by default (about 0.2 s on an M4 Max),
-        /// 10,000 with LITEXT_STRESS=1 (about 2 s). The stream restarts every few
+        /// and invalidating it. 1,000 steps in the quick mode (about 0.2 s on an M4 Max),
+        /// 10,000 with LITEXT_STRESS=full (about 2 s). The stream restarts every few
         /// hundred steps, so total work stays linear in the step count.
         @Test func rapidUpdatesKeepStateConsistent() {
             let steps = StressMode.pick(1000, full: 10000)
@@ -292,7 +292,7 @@ import Testing
 
             /// Random click, double-click, triple-click and drag sequences from
             /// synthesized events, with the text replaced in the middle of some of
-            /// them. 400 gestures by default (about 0.05 s), 4,000 with LITEXT_STRESS=1
+            /// them. 400 gestures in the quick mode (about 0.05 s), 4,000 with LITEXT_STRESS=full
             /// (about 0.5 s).
             @Test func randomMouseSequences() throws {
                 let gestures = StressMode.pick(400, full: 4000)

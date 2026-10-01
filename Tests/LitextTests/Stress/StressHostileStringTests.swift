@@ -2,8 +2,8 @@
 //  Created by Litext Team.
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
-//  Stress: hostile strings. See StressSupport.swift for the default and
-//  LITEXT_STRESS=1 modes; the full mode repeats the long clusters more.
+//  Stress: hostile strings. See StressSupport.swift for the quick and
+//  LITEXT_STRESS=full modes; the full mode repeats the long clusters more.
 //
 
 import CoreGraphics
@@ -90,7 +90,7 @@ struct HostileString: CustomTestStringConvertible, Sendable {
 }
 
 @MainActor
-@Suite("Stress: hostile strings", .tags(.stress))
+@Suite("Stress: hostile strings", .tags(.stress), StressMode.enabled)
 struct StressHostileStringTests {
     private static let font = PlatformFont.systemFont(ofSize: 15)
 
@@ -163,7 +163,7 @@ struct StressHostileStringTests {
         }
     #endif
 
-    /// At most 0.25 s per string on an M4 Max by default; the full mode's longer
+    /// At most 0.25 s per string on an M4 Max in the quick mode; the full mode's longer
     /// clusters take up to 3 s (the flag run).
     @Test(arguments: HostileString.all)
     func hostileStringsLayOutSafely(_ hostile: HostileString) {

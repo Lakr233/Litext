@@ -4,17 +4,19 @@
 //
 //  Stress tests: robustness under load and adversarial input.
 //
-//  Every stress test is tagged `.stress` and runs in two sizes:
+//  Every stress test is tagged `.stress` and is skipped unless `LITEXT_STRESS`
+//  asks for it, so a plain `swift test` stays fast:
 //
-//  - Default (`swift test`): reduced inputs and 2,000 fuzz iterations, so the
-//    whole stress suite adds about 15 s to a run.
-//  - Full (`LITEXT_STRESS=1 swift test`): the full-size inputs (100k lines,
-//    a 1 MB paragraph, 10k links, 10,000 view updates, ...) and 20,000 fuzz
-//    iterations. Expect several minutes, most of it CoreText typesetting the
-//    1 MB paragraph, which is quadratic in paragraph length inside CoreText.
+//  - Quick (`LITEXT_STRESS=1 swift test --filter Stress`): reduced inputs and
+//    2,000 fuzz iterations, about 25 s on an M4 Max.
+//  - Full (`LITEXT_STRESS=full swift test --filter Stress`): the full-size
+//    inputs (100k lines, a 1 MB paragraph, 10k links, 10,000 view updates, ...)
+//    and 20,000 fuzz iterations. Expect several minutes, most of it CoreText
+//    typesetting the 1 MB paragraph, which is quadratic in paragraph length
+//    inside CoreText.
 //
-//  Run only the stress tests with `swift test --filter Stress`, or skip them
-//  with `swift test --skip Stress`. Other knobs:
+//  On a simulator, pass the variable to the test runner with
+//  `TEST_RUNNER_LITEXT_STRESS=1 xcodebuild test ...`. Other knobs:
 //
 //  - `LITEXT_FUZZ_ITERATIONS=<n>` overrides the fuzz iteration count.
 //  - `LITEXT_FUZZ_SEED=<n>` sets the base seed. A failing fuzz case prints its
@@ -24,7 +26,7 @@
 //  M4 Max, so a slip into quadratic behaviour fails loudly while ordinary
 //  machine noise does not. Steps that take milliseconds get a floor of 1-2 s
 //  instead, where scheduler noise would dominate a multiple. Budgets for the
-//  full sizes apply when LITEXT_STRESS=1.
+//  full sizes apply when LITEXT_STRESS=full.
 //
 
 import CoreGraphics
@@ -40,10 +42,19 @@ extension Tag {
 enum StressMode {
     static let environment = ProcessInfo.processInfo.environment
 
-    /// `true` when `LITEXT_STRESS=1` asks for the full-size runs.
-    static let isFull: Bool = environment["LITEXT_STRESS"] == "1"
+    /// `true` when `LITEXT_STRESS` is set to anything but `0`, which runs the
+    /// stress suites at all.
+    static let isEnabled: Bool = environment["LITEXT_STRESS"].map { !$0.isEmpty && $0 != "0" } ?? false
 
-    /// Picks the default or the full-size value.
+    /// `true` when `LITEXT_STRESS=full` asks for the full-size runs.
+    static let isFull: Bool = environment["LITEXT_STRESS"] == "full"
+
+    /// The trait that skips a stress suite unless `LITEXT_STRESS` is set.
+    static var enabled: ConditionTrait {
+        .enabled(if: isEnabled, "Set LITEXT_STRESS=1 (quick) or LITEXT_STRESS=full to run the stress tests")
+    }
+
+    /// Picks the quick or the full-size value.
     static func pick<T>(_ standard: T, full: T) -> T {
         isFull ? full : standard
     }

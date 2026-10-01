@@ -2,8 +2,8 @@
 //  Created by Litext Team.
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
-//  Stress: extreme geometry. See StressSupport.swift for the default and
-//  LITEXT_STRESS=1 modes. These tests are small and identical in both modes.
+//  Stress: extreme geometry. See StressSupport.swift for the quick and
+//  LITEXT_STRESS=full modes. These tests are small and identical in both modes.
 //
 //  What Litext returns for degenerate geometry (M4 Max, macOS 27):
 //
@@ -41,7 +41,7 @@ import Testing
 #endif
 
 @MainActor
-@Suite("Stress: extreme geometry", .tags(.stress))
+@Suite("Stress: extreme geometry", .tags(.stress), StressMode.enabled)
 struct StressExtremeGeometryTests {
     static let dimensions: [CGFloat] = [
         0, 0.1, 1, 100, 1e7, .greatestFiniteMagnitude, .infinity, -.infinity, .nan, -50,

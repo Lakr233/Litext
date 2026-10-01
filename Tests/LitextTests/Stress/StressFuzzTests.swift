@@ -3,9 +3,9 @@
 //  Copyright (c) 2025 Litext Team. All rights reserved.
 //
 //  Stress: seeded, reproducible fuzzing. See StressSupport.swift for the
-//  default and LITEXT_STRESS=1 modes.
+//  quick and full modes.
 //
-//  2,000 iterations by default, 20,000 with LITEXT_STRESS=1, or any count with
+//  2,000 iterations in the quick mode, 20,000 with LITEXT_STRESS=full, or any count with
 //  LITEXT_FUZZ_ITERATIONS. Iteration i uses seed LITEXT_FUZZ_SEED + i (base
 //  0x5EED1A7E). A failure is shrunk to a minimal input and reported with its
 //  seed; re-run just that case with
@@ -424,9 +424,9 @@ struct FuzzCase: CustomStringConvertible {
 #endif
 
 @MainActor
-@Suite("Stress: fuzz", .tags(.stress))
+@Suite("Stress: fuzz", .tags(.stress), StressMode.enabled)
 struct StressFuzzTests {
-    /// About 7.5 ms per iteration on an M4 Max: 15 s for the default 2,000. The
+    /// About 7.5 ms per iteration on an M4 Max: 15 s for the quick mode's 2,000. The
     /// budget allows 40 ms per iteration, and no single iteration may take 2 s.
     @Test func randomAttributedStrings() {
         let iterations = StressMode.fuzzIterations
