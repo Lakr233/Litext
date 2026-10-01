@@ -170,6 +170,12 @@ extension TextLabel {
         /// real container while keeping line origins in a precise double range.
         private static let maxLayoutDimension: CGFloat = 1_000_000
 
+        /// The tallest path the final layout grows to. Text taller than
+        /// `maxLayoutDimension` (about 50,000 lines of body text) is common in long
+        /// documents and would lose every line past that height, so the final
+        /// layout allows far more while staying in a precise double range.
+        private static let maxLayoutHeight: CGFloat = 100_000_000
+
         /// Attributes that produce highlight regions, in the order a run's regions
         /// are added: a run carrying both a link and an attachment yields the link
         /// region first.
@@ -737,8 +743,13 @@ extension TextLabel {
             }
 
             // Measuring at this width may lay out a frame; adopting it avoids
-            // typesetting the same text a second time.
-            _ = sizeThatFits(CGSize(width: containerSize.width, height: Self.maxLayoutDimension))
+            // typesetting the same text a second time. Measurement frames stop at
+            // `maxLayoutDimension`; taller text falls back to the framesetter,
+            // which still reports its full height here.
+            let naturalHeight = sizeThatFits(CGSize(
+                width: containerSize.width,
+                height: Self.maxLayoutHeight
+            )).height
             if adoptMeasurementFillIfMatching() {
                 return
             }
@@ -751,9 +762,13 @@ extension TextLabel {
             // `containerSize`, so lines past the container simply fall outside the
             // view and are clipped rather than lost. Using the measurement's path
             // height also makes the line origins bit-identical to an adopted
-            // measurement, whichever of the two produced the lines.
+            // measurement, whichever of the two produced the lines. Only text
+            // taller than a measurement frame holds gets the taller path.
+            let pathHeight = naturalHeight <= Self.maxLayoutDimension
+                ? Self.maxLayoutDimension
+                : Self.maxLayoutHeight
             adopt(makeFrameFill(
-                constraint: CGSize(width: layoutPathWidth, height: Self.maxLayoutDimension),
+                constraint: CGSize(width: layoutPathWidth, height: pathHeight),
                 clampsToMaxLayoutDimension: false
             ))
         }
