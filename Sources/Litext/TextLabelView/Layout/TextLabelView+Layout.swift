@@ -43,11 +43,16 @@ import QuartzCore
                 constraintSize,
             )
             // Round up to the pixel grid so the host layout system never sizes the
-            // view fractionally smaller than the measured text.
-            return CGSize(
-                width: pixelCeil(suggested.width),
-                height: pixelCeil(suggested.height),
-            )
+            // view fractionally smaller than the measured text. The width stops at the
+            // constraint, though: a frame wider than the width the text was measured
+            // at lets lines take more glyphs, so the text would wrap into fewer lines
+            // than the height was measured for (57.06 rounds to 58 at 1x for a 57.3
+            // constraint). Text too wide for the constraint keeps its full width.
+            var width = pixelCeil(suggested.width)
+            if suggested.width <= constraintSize.width, width > constraintSize.width {
+                width = constraintSize.width
+            }
+            return CGSize(width: width, height: pixelCeil(suggested.height))
         }
 
         /// Returns laid-out glyph runs that carry `key`.
