@@ -112,7 +112,9 @@ import Testing
             }
             #expect(weakLabel == nil)
             // The implicit Core Animation transaction keeps the layers it touched until it
-            // commits at the end of this run-loop turn.
+            // commits. Commit it now instead of waiting for the run loop to turn, which a
+            // busy machine can delay past the wait's timeout.
+            CATransaction.flush()
             #expect(await waitUntil { weakSelectionLayer == nil })
         }
 
