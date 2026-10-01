@@ -40,7 +40,6 @@ import QuartzCore
                 return
             }
 
-            let selectionPath = PlatformBezierPath()
             let selectionRects = textLayout.rects(for: range)
             guard !selectionRects.isEmpty else {
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
@@ -52,8 +51,7 @@ import QuartzCore
                 return
             }
 
-            createSelectionPath(selectionPath, fromRects: selectionRects)
-            updateSelectionLayer(withPath: selectionPath)
+            updateSelectionLayer(withPath: selectionPath(fromRects: selectionRects))
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 if presentsMenu {
@@ -116,15 +114,18 @@ import QuartzCore
             clearSelection()
         }
 
-        private func createSelectionPath(_ selectionPath: PlatformBezierPath, fromRects rects: [CGRect]) {
+        /// One rect per selected line segment. A Core Graphics path takes them in
+        /// linear time; appending to a bezier path copies it each time, which made
+        /// selecting all of a 20,000-line label take seconds.
+        private func selectionPath(fromRects rects: [CGRect]) -> CGPath {
+            let path = CGMutablePath()
             for rect in rects {
-                let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
-                let subpath = PlatformBezierPath(rect: convertedRect)
-                selectionPath.append(subpath)
+                path.addRect(convertRectFromTextLayout(rect, insetForInteraction: false))
             }
+            return path
         }
 
-        private func updateSelectionLayer(withPath path: PlatformBezierPath) {
+        private func updateSelectionLayer(withPath path: CGPath) {
             let fillColor = (selectionBackgroundColor ?? defaultSelectionTint).cgColor
 
             CATransaction.begin()
@@ -132,13 +133,13 @@ import QuartzCore
             defer { CATransaction.commit() }
 
             if let selectionLayer {
-                selectionLayer.path = cgPath(from: path)
+                selectionLayer.path = path
                 selectionLayer.fillColor = fillColor
                 return
             }
 
             let selLayer = CAShapeLayer()
-            selLayer.path = cgPath(from: path)
+            selLayer.path = path
             selLayer.fillColor = fillColor
             backingLayer?.insertSublayer(selLayer, at: 0)
             selectionLayer = selLayer

@@ -51,17 +51,19 @@ import QuartzCore
 
             activeHighlightRegion = highlightRegion
 
-            let highlightPath = PlatformBezierPath()
+            // A link styled character by character has a rect per character.
+            // Appending to a bezier path copies it each time, which is quadratic,
+            // so the rounded rects are collected in a Core Graphics path instead.
+            let highlightPath = CGMutablePath()
             let cornerRadius: CGFloat = 4
             for rect in highlightRegion.rects {
                 let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
                 #if canImport(UIKit)
                     let subpath = PlatformBezierPath(roundedRect: convertedRect, cornerRadius: cornerRadius)
-                    highlightPath.append(subpath)
                 #elseif canImport(AppKit)
                     let subpath = PlatformBezierPath(roundedRect: convertedRect, xRadius: cornerRadius, yRadius: cornerRadius)
-                    highlightPath.append(subpath)
                 #endif
+                highlightPath.addPath(cgPath(from: subpath))
             }
 
             let highlightColor: PlatformColor = if let color = highlightRegion.attributes[.foregroundColor] as? PlatformColor {
@@ -71,7 +73,7 @@ import QuartzCore
             }
 
             let highlightLayer = CAShapeLayer()
-            highlightLayer.path = cgPath(from: highlightPath)
+            highlightLayer.path = highlightPath
             highlightLayer.fillColor = highlightColor.withAlphaComponent(0.1).cgColor
             backingLayer?.addSublayer(highlightLayer)
 
