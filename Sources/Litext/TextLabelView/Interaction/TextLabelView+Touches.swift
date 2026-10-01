@@ -59,13 +59,30 @@
                 return
             }
 
-            if isSelectable, !isFirstResponder {
+            if isSelectable {
                 // Become first responder so the label receives keyboard shortcuts such as Copy.
-                _ = becomeFirstResponder()
+                #if os(tvOS)
+                    _ = isFirstResponder || becomeFirstResponder()
+                #else
+                    becomeSelectionFirstResponder()
+                #endif
             }
 
             let location = firstTouch.location(in: self)
             setInteractionStateToBegin(initialLocation: location)
+
+            #if !os(tvOS)
+                if isSelectable, event?.buttonMask == .secondary {
+                    // A right click leaves the selection alone when it lands on it and
+                    // otherwise selects the word under it, as the system text views do,
+                    // so the context menu that follows has text to act on.
+                    interactionState.isSecondaryClick = true
+                    if !selectionContains(location), let index = characterIndexAtPoint(location) {
+                        selectWordAtIndex(index)
+                    }
+                    return
+                }
+            #endif
 
             if isLocationAboveAttachmentView(location: location) {
                 interactionState.isForwardingToSuper = true
@@ -122,7 +139,7 @@
             }
 
             let location = firstTouch.location(in: self)
-            guard isTouchReallyMoved(location) else { return }
+            guard !interactionState.isSecondaryClick, isTouchReallyMoved(location) else { return }
 
             deactivateHighlightRegion()
             performContinuousStateReset()
@@ -153,6 +170,9 @@
             }
             let location = firstTouch.location(in: self)
             defer { deactivateHighlightRegion() }
+            if interactionState.isSecondaryClick {
+                return
+            }
 
             if !isTouchReallyMoved(location),
                interactionState.clickCountAtBegin <= 1
@@ -246,15 +266,16 @@
                     unionRect = unionRect.union(rect)
                 }
 
+                if #available(iOS 16.0, macCatalyst 16.0, visionOS 1.0, *) {
+                    #if !targetEnvironment(macCatalyst)
+                        showEditMenuController(from: unionRect)
+                    #endif
+                    // Mac Catalyst opens the system text menu on a right click by itself.
+                    return
+                }
+
                 let availableItems = availableTextSelectionMenuItems()
                 guard !availableItems.isEmpty else { return }
-
-                #if !targetEnvironment(macCatalyst)
-                    if #available(iOS 16.0, visionOS 1.0, *) {
-                        showEditMenuController(from: unionRect)
-                        return
-                    }
-                #endif
 
                 let menuController = UIMenuController.shared
 
@@ -272,10 +293,8 @@
             func hideSelectionMenuController() {
                 guard Self.menuOwnerIdentifier == id else { return }
                 #if !targetEnvironment(macCatalyst)
-                    if #available(iOS 16.0, visionOS 1.0, *),
-                       let editMenuInteraction = editMenuInteractionStorage as? UIEditMenuInteraction
-                    {
-                        editMenuInteraction.dismissMenu()
+                    if #available(iOS 16.0, visionOS 1.0, *) {
+                        inputProxy?.editMenuInteraction.dismissMenu()
                         return
                     }
                 #endif
@@ -341,21 +360,11 @@
 
             #if !targetEnvironment(macCatalyst)
                 @available(iOS 16.0, visionOS 1.0, *)
-                private func ensureEditMenuInteraction() -> UIEditMenuInteraction {
-                    if let editMenuInteraction = editMenuInteractionStorage as? UIEditMenuInteraction {
-                        return editMenuInteraction
-                    }
-
-                    let editMenuInteraction = UIEditMenuInteraction(delegate: self)
-                    editMenuInteractionStorage = editMenuInteraction
-                    addInteraction(editMenuInteraction)
-                    return editMenuInteraction
-                }
-
-                @available(iOS 16.0, visionOS 1.0, *)
                 private func showEditMenuController(from unionRect: CGRect) {
-                    // UIEditMenuInteraction presentation is unsupported on Mac Catalyst.
-                    let editMenuInteraction = ensureEditMenuInteraction()
+                    // The system offers its text commands only to the proxy, so the
+                    // proxy presents the menu as the first responder.
+                    guard let proxy = inputProxy, becomeSelectionFirstResponder() else { return }
+                    let editMenuInteraction = proxy.editMenuInteraction
                     editMenuTargetRect = unionRect
                     Self.menuOwnerIdentifier = id
 
@@ -365,7 +374,7 @@
                     }
 
                     isEditMenuVisible = true
-                    let sourcePoint = CGPoint(x: unionRect.midX, y: unionRect.midY)
+                    let sourcePoint = convert(CGPoint(x: unionRect.midX, y: unionRect.midY), to: proxy)
                     let configuration = UIEditMenuConfiguration(identifier: nil, sourcePoint: sourcePoint)
                     editMenuInteraction.presentEditMenu(with: configuration)
                 }
@@ -379,18 +388,16 @@
             public func editMenuInteraction(
                 _: UIEditMenuInteraction,
                 menuFor _: UIEditMenuConfiguration,
-                suggestedActions _: [UIMenuElement],
+                suggestedActions: [UIMenuElement],
             ) -> UIMenu? {
-                let actions = makeSelectionMenuActions()
-                guard !actions.isEmpty else { return nil }
-                return UIMenu(children: actions)
+                selectionMenu(suggestedActions: suggestedActions)
             }
 
             public func editMenuInteraction(
-                _: UIEditMenuInteraction,
+                _ interaction: UIEditMenuInteraction,
                 targetRectFor _: UIEditMenuConfiguration,
             ) -> CGRect {
-                editMenuTargetRect
+                convert(editMenuTargetRect, to: interaction.view)
             }
 
             public func editMenuInteraction(

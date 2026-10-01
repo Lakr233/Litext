@@ -7,6 +7,12 @@
 
 import Foundation
 
+#if canImport(UIKit)
+    import UIKit
+#elseif canImport(AppKit)
+    import AppKit
+#endif
+
 #if !os(watchOS)
 
     @MainActor
@@ -31,6 +37,30 @@ import Foundation
             _ textLabelView: TextLabelView,
             didDragSelectionAt location: CGPoint,
         )
+
+        #if canImport(UIKit) && !os(tvOS)
+            /// Returns the menu to show for the selection, or nil for the system's menu.
+            ///
+            /// `suggestedActions` are the system's commands for the selection, such as
+            /// Copy, Look Up, Translate and Share, without the editing ones. Called on
+            /// iOS 16 and Mac Catalyst 16 or later; earlier systems show a fixed menu.
+            @available(iOS 16.0, macCatalyst 16.0, visionOS 1.0, *)
+            func textLabelView(
+                _ textLabelView: TextLabelView,
+                editMenuForSelection selection: NSRange,
+                suggestedActions: [UIMenuElement],
+            ) -> UIMenu?
+        #elseif canImport(AppKit)
+            /// Returns the menu to show for a right click on the selection, or nil for
+            /// `menu`, the menu the label built. AppKit appends the Services menu to
+            /// either one.
+            func textLabelView(
+                _ textLabelView: TextLabelView,
+                menu: NSMenu,
+                forSelection selection: NSRange,
+                event: NSEvent,
+            ) -> NSMenu?
+        #endif
     }
 
     public extension TextLabelViewDelegate {
@@ -49,6 +79,26 @@ import Foundation
             _: TextLabelView,
             didDragSelectionAt _: CGPoint,
         ) {}
+
+        #if canImport(UIKit) && !os(tvOS)
+            @available(iOS 16.0, macCatalyst 16.0, visionOS 1.0, *)
+            func textLabelView(
+                _: TextLabelView,
+                editMenuForSelection _: NSRange,
+                suggestedActions _: [UIMenuElement],
+            ) -> UIMenu? {
+                nil
+            }
+        #elseif canImport(AppKit)
+            func textLabelView(
+                _: TextLabelView,
+                menu _: NSMenu,
+                forSelection _: NSRange,
+                event _: NSEvent,
+            ) -> NSMenu? {
+                nil
+            }
+        #endif
     }
 
 #endif // !os(watchOS)

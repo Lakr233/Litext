@@ -15,6 +15,11 @@
             configurationForMenuAtLocation location: CGPoint,
         ) -> UIContextMenuConfiguration? {
             #if targetEnvironment(macCatalyst)
+                // From Mac Catalyst 16 the input proxy over the label opens the system
+                // text menu instead.
+                if #available(macCatalyst 16.0, *) {
+                    return nil
+                }
                 guard selectionRange != nil else { return nil }
                 let menuItems: [UIMenuElement] = makeSelectionMenuActions()
                 return .init(

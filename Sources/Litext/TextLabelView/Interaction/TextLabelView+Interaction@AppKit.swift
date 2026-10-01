@@ -34,8 +34,10 @@ import Foundation
             }
             let key = event.charactersIgnoringModifiers
 
+            // The Edit menu reaches `copy(_:)` and `selectAll(_:)` too; these keep the
+            // shortcuts working in a host without one.
             if key == "c", let range = selectionRange, range.length > 0 {
-                copySelectionOrNestedSelection()
+                copy(nil)
                 return true
             }
 
@@ -46,17 +48,20 @@ import Foundation
             return false
         }
 
+        /// AppKit's own handling asks `menu(for:)` for the context menu.
         override open func rightMouseDown(with event: NSEvent) {
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
             defer { isInteractionInProgress = false }
-            if handleRightClick(with: event) {
-                return
-            }
             super.rightMouseDown(with: event)
         }
 
         override open func mouseDown(with event: NSEvent) {
+            if event.modifierFlags.contains(.control) {
+                // A control-click is a right click: AppKit shows `menu(for:)`.
+                super.mouseDown(with: event)
+                return
+            }
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
 
@@ -208,58 +213,6 @@ import Foundation
             applyCursor(desiredCursor(at: point))
         }
 
-        private func handleRightClick(with event: NSEvent) -> Bool {
-            let point = convert(event.locationInWindow, from: nil)
-
-            if isSelectable, let selectionRange, selectionRange.length > 0 {
-                showContextMenu()
-                return true
-            }
-
-            if let hitRegion = linkRegion(at: point),
-               let linkURL = hitRegion.linkURL
-            {
-                selectedLinkForMenuAction = linkURL
-                showLinkContextMenu()
-                return true
-            }
-
-            return false
-        }
-
-        private func showContextMenu() {
-            let menu = NSMenu()
-            menu.addItem(
-                withTitle: LocalizedText.copy,
-                action: #selector(copyAction(_:)),
-                keyEquivalent: "c",
-            )
-
-            if let event = NSApp.currentEvent {
-                NSMenu.popUpContextMenu(menu, with: event, for: self)
-            }
-        }
-
-        private func showLinkContextMenu() {
-            let menu = NSMenu()
-
-            menu.addItem(
-                withTitle: LocalizedText.openLink,
-                action: #selector(openLink(_:)),
-                keyEquivalent: "",
-            )
-
-            menu.addItem(
-                withTitle: LocalizedText.copyLink,
-                action: #selector(copyLink(_:)),
-                keyEquivalent: "",
-            )
-
-            if let event = NSApp.currentEvent {
-                NSMenu.popUpContextMenu(menu, with: event, for: self)
-            }
-        }
-
         /// Resolves which cursor the point deserves, or `nil` when another view
         /// owns the cursor at that location. The whole label surface is
         /// treated as text (like NSTextView) instead of hit-testing individual
@@ -308,18 +261,9 @@ import Foundation
             cursor.set()
         }
 
-        @objc private func copyLink(_: Any) {
-            guard let linkURL = selectedLinkForMenuAction else { return }
-            writeToPasteboard(linkURL.absoluteString)
-        }
-
-        @objc private func openLink(_: Any) {
-            guard let url = selectedLinkForMenuAction else { return }
-            NSWorkspace.shared.open(url)
-        }
-
-        @objc public func copyAction(_: Any?) {
-            copySelectionOrNestedSelection()
+        @available(*, deprecated, renamed: "copy(_:)")
+        @objc public func copyAction(_ sender: Any?) {
+            copy(sender)
         }
     }
 #endif

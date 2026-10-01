@@ -1263,6 +1263,16 @@ extension TextLabel {
                 .clippedHorizontally(to: lineBox)
         }
 
+        /// The point on the baseline where the character at `index` starts, in layout
+        /// space. AppKit's Look Up draws its highlight over the text from there.
+        func baselineOrigin(at index: Int) -> CGPoint? {
+            guard let lines, let lineOrigins, !lines.isEmpty else { return nil }
+            let lineIndex = min(Self.firstLineIndex(endingAfter: index, in: lines), lines.count - 1)
+            let offset = CTLineGetOffsetForStringIndex(lines[lineIndex], index, nil)
+            let lineOrigin = lineOrigins[lineIndex]
+            return CGPoint(x: lineOrigin.x + offset, y: lineOrigin.y)
+        }
+
         // MARK: - Private Text Index Helpers
 
         private func nearestLine(to point: CGPoint) -> LineHit? {

@@ -138,6 +138,9 @@ import QuartzCore
                 if !isSelectable {
                     clearSelection()
                 }
+                #if canImport(UIKit) && !os(tvOS)
+                    updateInputProxy()
+                #endif
             }
         }
 
@@ -184,7 +187,11 @@ import QuartzCore
         func setSelectionRange(_ newValue: NSRange?, presentsMenu: Bool) {
             let sanitizedRange = NSRange.sanitized(newValue, within: attributedText.length)
             guard sanitizedRange != _selectionRange else { return }
-            _selectionRange = sanitizedRange
+            #if canImport(UIKit) && !os(tvOS)
+                performSelectionChange { _selectionRange = sanitizedRange }
+            #else
+                _selectionRange = sanitizedRange
+            #endif
             updateSelectionLayer(presentsMenu: presentsMenu)
             delegate?.textLabelView(self, didChangeSelection: sanitizedRange)
         }
@@ -197,9 +204,14 @@ import QuartzCore
             var selectionHandleEnd: SelectionHandle = .init(kind: .end)
             /// Created the first time the handles show in a window.
             nonisolated(unsafe) var selectionHandleGrabGesture: SelectionHandleGrabGesture?
-            var editMenuInteractionStorage: UIInteraction?
             var isEditMenuVisible = false
             var editMenuTargetRect: CGRect = .zero
+        #endif
+
+        #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
+            /// The `TextLabelInputProxy` while the label is selectable, from iOS 16 and
+            /// Mac Catalyst 16. Typed loosely because the class needs those systems.
+            var inputProxyStorage: UIView?
         #endif
 
         var interactionState = InteractionState()
@@ -339,6 +351,9 @@ import QuartzCore
             /// Set while a selection handle is being dragged. Touches forwarded to the label
             /// during the drag must not end the interaction the handle started.
             var isDraggingSelectionHandle: Bool = false
+            /// Set when the interaction began with a secondary (right) click, which leaves
+            /// the rest of the sequence to the context menu.
+            var isSecondaryClick: Bool = false
         }
 
         struct Flags {
