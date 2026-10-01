@@ -736,6 +736,23 @@ extension TextLabel {
             lineOrigins = nil
             lineMetrics = nil
 
+            // A NaN width fits no line. It fails every comparison, so the path width
+            // would read it as unconstrained, and measuring it can hand it to the
+            // framesetter, which walks the whole path looking for a line that fits:
+            // about a second for a 1e8-point one.
+            guard !containerSize.width.isNaN else {
+                adopt(FrameFill(
+                    lines: [],
+                    lineOrigins: [],
+                    lineMetrics: [],
+                    pathSize: .zero,
+                    measuredSize: .zero,
+                    unbrokenWidth: 0,
+                    isComplete: false
+                ))
+                return
+            }
+
             // A measurement pass over the same width already laid out every line;
             // reuse it and translate the origins into the container's height.
             if adoptMeasurementFillIfMatching() {
