@@ -12,18 +12,20 @@ import Foundation
 #elseif canImport(AppKit)
     import AppKit
 
-    public extension TextLabelView {
+    /// Subclasses that override a mouse, key or hit-testing hook below must call
+    /// `super` for the events they do not consume, or selection and link clicks stop working.
+    extension TextLabelView {
         /// The cursor most recently applied by any label. Re-setting the same
         /// cursor on every mouse event makes AppKit flicker, and nested labels
         /// share the cursor, so deduplication must be global — a per-view cache
         /// goes stale as soon as another label sets a different cursor.
         fileprivate static var appliedCursor: NSCursor?
 
-        override var acceptsFirstResponder: Bool {
+        override open var acceptsFirstResponder: Bool {
             isSelectable
         }
 
-        override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        override open func performKeyEquivalent(with event: NSEvent) -> Bool {
             guard window?.firstResponder === self else {
                 return super.performKeyEquivalent(with: event)
             }
@@ -33,10 +35,7 @@ import Foundation
             let key = event.charactersIgnoringModifiers
 
             if key == "c", let range = selectionRange, range.length > 0 {
-                let copiedText = copySelection()
-                if copiedText.length <= 0 {
-                    _ = copyFromSubviewsRecursively()
-                }
+                copySelectionOrNestedSelection()
                 return true
             }
 
@@ -47,50 +46,64 @@ import Foundation
             return false
         }
 
-        override func rightMouseDown(with event: NSEvent) {
+        override open func rightMouseDown(with event: NSEvent) {
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
             defer { isInteractionInProgress = false }
-            if handleRightClick(with: event) { return }
+            if handleRightClick(with: event) {
+                return
+            }
             super.rightMouseDown(with: event)
         }
 
-        override func mouseDown(with event: NSEvent) {
+        override open func mouseDown(with event: NSEvent) {
             let location = convert(event.locationInWindow, from: nil)
             setInteractionStateToBegin(initialLocation: location)
 
-            if isSelectable || highlightRegionAtPoint(location) != nil {
+            if isSelectable || linkRegion(at: location) != nil {
                 window?.makeFirstResponder(self)
             }
 
             if isLocationAboveAttachmentView(location: location) {
+                interactionState.isForwardingToSuper = true
                 super.mouseDown(with: event)
                 return
             }
 
-            if activateHighlightRegionAtPoint(location) {
+            if activateLinkRegion(at: location) {
                 return
             }
 
             interactionState.clickCount = event.clickCount
-            if !isSelectable { return }
+            if !isSelectable {
+                // Hit-testing normally routes these clicks past the label. When one arrives
+                // anyway, hand the whole sequence to the next responder so it gets a
+                // matching mouseDragged and mouseUp.
+                interactionState.isForwardingToSuper = true
+                super.mouseDown(with: event)
+                return
+            }
 
             if interactionState.clickCount <= 1 {
                 if !selectionContains(location) {
                     clearSelection()
                 }
             } else if interactionState.clickCount == 2 {
-                if let index = nearestTextIndexAtPoint(location) {
+                if let index = characterIndexAtPoint(location) {
                     selectWordAtIndex(index)
                 }
             } else {
-                if let index = nearestTextIndexAtPoint(location) {
+                if let index = characterIndexAtPoint(location) {
                     selectLineAtIndex(index)
                 }
             }
         }
 
-        override func mouseDragged(with event: NSEvent) {
+        override open func mouseDragged(with event: NSEvent) {
+            if interactionState.isForwardingToSuper {
+                super.mouseDragged(with: event)
+                return
+            }
             let location = convert(event.locationInWindow, from: nil)
 
             guard isTouchReallyMoved(location) else { return }
@@ -110,40 +123,48 @@ import Foundation
             }
         }
 
-        override func mouseUp(with event: NSEvent) {
+        override open func mouseUp(with event: NSEvent) {
             isInteractionInProgress = false
             defer { deactivateHighlightRegion() }
+            if interactionState.isForwardingToSuper {
+                interactionState.isForwardingToSuper = false
+                super.mouseUp(with: event)
+                return
+            }
             let location = convert(event.locationInWindow, from: nil)
 
-            guard !isTouchReallyMoved(location) else { return }
+            guard !isTouchReallyMoved(location), !interactionState.isTapCancelled else { return }
 
             if let region = highlightRegionForTap(at: location) {
                 delegate?.textLabelView(self, didTapHighlightRegion: region, at: location)
             }
         }
 
-        override func hitTest(_ point: NSPoint) -> NSView? {
+        override open func hitTest(_ point: NSPoint) -> NSView? {
             // AppKit hands hitTest the point in the superview's coordinate
             // space; local geometry (bounds, attachment frames, highlight
             // regions) can only be tested after converting. Skipping the
             // conversion makes a label nested at a non-zero origin — e.g.
             // inside another label's attachment view — mouse-transparent.
             let localPoint = superview.map { convert(point, from: $0) } ?? point
-            if !bounds.contains(localPoint) { return nil }
-
-            for view in attachmentViews {
-                if view.frame.contains(localPoint) {
-                    return super.hitTest(point)
-                }
-            }
-
-            if isSelectable || highlightRegionAtPoint(localPoint) != nil {
+            switch hitTarget(at: localPoint) {
+            case .outside:
+                return nil
+            case .attachment:
+                // `super` expects the original, superview-space point.
+                return super.hitTest(point)
+            case .interactiveText:
                 return self
+            case .passThrough:
+                // Like `point(inside:with:)` on UIKit, a non-selectable label lets clicks
+                // away from its links reach the view behind it. A subview that claims the
+                // point still receives it.
+                let hit = super.hitTest(point)
+                return hit === self ? nil : hit
             }
-            return super.hitTest(point)
         }
 
-        override func updateTrackingAreas() {
+        override open func updateTrackingAreas() {
             super.updateTrackingAreas()
 
             for trackingArea in trackingAreas {
@@ -163,25 +184,25 @@ import Foundation
             addTrackingArea(trackingArea)
         }
 
-        override func cursorUpdate(with event: NSEvent) {
+        override open func cursorUpdate(with event: NSEvent) {
             // Intentionally not calling super: it would reset to the arrow cursor.
             let point = convert(event.locationInWindow, from: nil)
             applyCursor(desiredCursor(at: point))
         }
 
-        override func mouseEntered(with event: NSEvent) {
+        override open func mouseEntered(with event: NSEvent) {
             super.mouseEntered(with: event)
             let point = convert(event.locationInWindow, from: nil)
             applyCursor(desiredCursor(at: point))
         }
 
-        override func mouseExited(with event: NSEvent) {
+        override open func mouseExited(with event: NSEvent) {
             super.mouseExited(with: event)
             applyCursor(.arrow)
             Self.appliedCursor = nil
         }
 
-        override func mouseMoved(with event: NSEvent) {
+        override open func mouseMoved(with event: NSEvent) {
             super.mouseMoved(with: event)
             let point = convert(event.locationInWindow, from: nil)
             applyCursor(desiredCursor(at: point))
@@ -195,8 +216,8 @@ import Foundation
                 return true
             }
 
-            if let hitRegion = highlightRegionAtPoint(point),
-               let linkURL = hitRegion.attributes[.link] as? URL
+            if let hitRegion = linkRegion(at: point),
+               let linkURL = hitRegion.linkURL
             {
                 selectedLinkForMenuAction = linkURL
                 showLinkContextMenu()
@@ -211,7 +232,7 @@ import Foundation
             menu.addItem(
                 withTitle: LocalizedText.copy,
                 action: #selector(copyAction(_:)),
-                keyEquivalent: "c"
+                keyEquivalent: "c",
             )
 
             if let event = NSApp.currentEvent {
@@ -225,13 +246,13 @@ import Foundation
             menu.addItem(
                 withTitle: LocalizedText.openLink,
                 action: #selector(openLink(_:)),
-                keyEquivalent: ""
+                keyEquivalent: "",
             )
 
             menu.addItem(
                 withTitle: LocalizedText.copyLink,
                 action: #selector(copyLink(_:)),
-                keyEquivalent: ""
+                keyEquivalent: "",
             )
 
             if let event = NSApp.currentEvent {
@@ -248,10 +269,12 @@ import Foundation
             if isLocationAboveAttachmentView(location: point) {
                 // A nested TextLabelView runs this same tracking-area logic for
                 // its own surface; applying .arrow from here would fight it.
-                if nestedTextLabelView(at: point) != nil { return nil }
+                if nestedTextLabelView(at: point) != nil {
+                    return nil
+                }
                 return .arrow
             }
-            if highlightRegionAtPoint(point) != nil {
+            if linkRegion(at: point) != nil {
                 return .pointingHand
             }
             if isSelectable {
@@ -269,7 +292,9 @@ import Foundation
                 // local point is already in the right space.
                 var hit = view.hitTest(point)
                 while let current = hit {
-                    if let label = current as? TextLabelView { return label }
+                    if let label = current as? TextLabelView {
+                        return label
+                    }
                     hit = current.superview
                 }
             }
@@ -285,10 +310,7 @@ import Foundation
 
         @objc private func copyLink(_: Any) {
             guard let linkURL = selectedLinkForMenuAction else { return }
-
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString(linkURL.absoluteString, forType: .string)
+            writeToPasteboard(linkURL.absoluteString)
         }
 
         @objc private func openLink(_: Any) {
@@ -296,11 +318,8 @@ import Foundation
             NSWorkspace.shared.open(url)
         }
 
-        @objc func copyAction(_: Any?) {
-            let copiedText = copySelection()
-            if copiedText.length <= 0 {
-                _ = copyFromSubviewsRecursively()
-            }
+        @objc public func copyAction(_: Any?) {
+            copySelectionOrNestedSelection()
         }
     }
 #endif

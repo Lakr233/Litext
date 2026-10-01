@@ -10,6 +10,32 @@ import QuartzCore
 
 #if !os(watchOS)
 
+    // Layout geometry (`layoutRuns(matching:)`, `HighlightRegion.rects`,
+    // `TextLabel.Layout.rects(for:)`) uses CoreText's lower-left origin. The view,
+    // its subviews and every delegate location use a top-left origin: natively on
+    // UIKit, and on AppKit because `isFlipped` is `true`.
+    public extension TextLabelView {
+        /// Converts a rect from CoreText layout space to this view's coordinates.
+        ///
+        /// The flip uses the height the text was last laid out at, which lags `bounds`
+        /// between a resize and the next layout pass, so the result always lines up
+        /// with the drawn text.
+        func viewRect(fromLayoutRect rect: CGRect) -> CGRect {
+            textLayout.viewRect(fromLayoutRect: rect)
+        }
+
+        /// Converts a rect from this view's coordinates to CoreText layout space.
+        func layoutRect(fromViewRect rect: CGRect) -> CGRect {
+            textLayout.layoutRect(fromViewRect: rect)
+        }
+
+        /// Converts a point from this view's coordinates, such as a delegate's tap
+        /// location, to CoreText layout space.
+        func layoutPoint(fromViewPoint point: CGPoint) -> CGPoint {
+            textLayout.layoutPoint(fromViewPoint: point)
+        }
+    }
+
     extension TextLabelView {
         /// Text is drawn anchored to the top of the layout container, so view-space
         /// conversions must flip against the layout's container height. Using
@@ -17,10 +43,12 @@ import QuartzCore
         /// hit testing from the drawn text whenever the view is resized before the
         /// next layout pass runs.
         func convertRectFromTextLayout(_ rect: CGRect, insetForInteraction useInset: Bool) -> CGRect {
-            var result = rect
-            result.origin.y = textLayout.containerSize.height - result.origin.y - result.size.height
-            if useInset { result = result.insetBy(dx: -4, dy: -4) }
-            return result
+            let result = textLayout.viewRect(fromLayoutRect: rect)
+            return useInset ? result.insetBy(dx: -4, dy: -4) : result
+        }
+
+        func convertPointForTextLayout(_ point: CGPoint) -> CGPoint {
+            textLayout.layoutPoint(fromViewPoint: point)
         }
 
         var displayScale: CGFloat {
@@ -66,9 +94,6 @@ import QuartzCore
             #if canImport(UIKit)
                 return path.cgPath
             #elseif canImport(AppKit)
-                if #available(macOS 14.0, *) {
-                    return path.cgPath
-                }
                 return path.quartzPath
             #endif
         }

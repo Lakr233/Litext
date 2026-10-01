@@ -9,16 +9,10 @@ import Foundation
 
     extension TextLabelView {
         func isLocationAboveAttachmentView(location: CGPoint) -> Bool {
-            for view in attachmentViews {
-                if view.frame.contains(location) {
-                    return true
-                }
-            }
-            return false
+            attachmentViews.contains { $0.frame.contains(location) }
         }
 
         func updateAttachmentViews() {
-            let viewsToRemove = attachmentViews
             var newAttachmentViews: Set<PlatformView> = []
 
             for highlightRegion in highlightRegions {
@@ -28,23 +22,20 @@ import Foundation
                       let firstRect = highlightRegion.rects.first
                 else { continue }
 
-                if view.superview == self {
-                    newAttachmentViews.insert(view)
-                } else {
+                if view.superview != self {
                     addSubview(view)
-                    newAttachmentViews.insert(view)
                 }
+                newAttachmentViews.insert(view)
 
                 let convertedRect = convertRectFromTextLayout(firstRect, insetForInteraction: false)
                 view.frame = pixelAlign(convertedRect)
             }
 
-            for view in viewsToRemove {
-                if !newAttachmentViews.contains(view) {
-                    view.removeFromSuperview()
-                }
+            // A view has one superview. When another label showing the same attachment laid
+            // out later, the view now belongs to that label and must stay there.
+            for view in attachmentViews.subtracting(newAttachmentViews) where view.superview === self {
+                view.removeFromSuperview()
             }
-
             attachmentViews = newAttachmentViews
         }
     }

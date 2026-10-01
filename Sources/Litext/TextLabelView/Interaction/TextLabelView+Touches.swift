@@ -9,10 +9,12 @@
     import Foundation
     import UIKit
 
-    public extension TextLabelView {
+    /// Subclasses that override a touch, press or hit-testing hook below must call
+    /// `super` for the events they do not consume, or selection and link taps stop working.
+    extension TextLabelView {
         fileprivate static var menuOwnerIdentifier: UUID = .init()
 
-        override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        override open func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
             guard isSelectable else {
                 super.pressesBegan(presses, with: event)
                 return
@@ -22,50 +24,34 @@
                 guard let key = press.key else { continue }
                 // Use keyCode instead of charactersIgnoringModifiers for keyboard layout independence
                 if key.keyCode == .keyboardC, key.modifierFlags.contains(.command) {
-                    let copiedText = copySelection()
-                    didHandleEvent = copiedText.length > 0 || copyFromSubviewsRecursively()
+                    didHandleEvent = copySelectionOrNestedSelection()
                 }
                 if key.keyCode == .keyboardA, key.modifierFlags.contains(.command) {
                     selectAll()
                     didHandleEvent = true
                 }
             }
-            if !didHandleEvent { super.pressesBegan(presses, with: event) }
+            if !didHandleEvent {
+                super.pressesBegan(presses, with: event)
+            }
         }
 
-        override var canBecomeFocused: Bool {
+        override open var canBecomeFocused: Bool {
             isSelectable
         }
 
-        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-            #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                for handler in [selectionHandleStart, selectionHandleEnd] {
-                    guard !handler.isHidden else { continue }
-                    let rect = handler.frame
-                        .insetBy(
-                            dx: -SelectionHandle.knobExtraResponsiveArea,
-                            dy: -SelectionHandle.knobExtraResponsiveArea
-                        )
-                    if rect.contains(point) { return true }
-                }
-            #endif
-
-            if !bounds.contains(point) { return false }
-
-            for view in attachmentViews {
-                if view.frame.contains(point) {
-                    return super.point(inside: point, with: event)
-                }
+        override open func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            switch hitTarget(at: point) {
+            case .outside, .passThrough:
+                false
+            case .attachment:
+                super.point(inside: point, with: event)
+            case .interactiveText:
+                true
             }
-
-            if isSelectable || highlightRegionAtPoint(point) != nil {
-                return true
-            }
-
-            return false
         }
 
-        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {
@@ -74,7 +60,7 @@
             }
 
             if isSelectable, !isFirstResponder {
-                // to received keyboard event from there
+                // Become first responder so the label receives keyboard shortcuts such as Copy.
                 _ = becomeFirstResponder()
             }
 
@@ -82,44 +68,53 @@
             setInteractionStateToBegin(initialLocation: location)
 
             if isLocationAboveAttachmentView(location: location) {
+                interactionState.isForwardingToSuper = true
                 super.touchesBegan(touches, with: event)
                 return
             }
 
-            if activateHighlightRegionAtPoint(location) {
+            if activateLinkRegion(at: location) {
                 return
             }
 
             bumpClickCountIfWithinTimeGap()
-            if !isSelectable { return }
+            interactionState.clickCountAtBegin = interactionState.clickCount
+            if !isSelectable {
+                return
+            }
 
             if interactionState.clickCount <= 1 {
-                if isPointerDevice(touch: firstTouch) {
+                // A pointer click inside the selection keeps it so touchesEnded can show the
+                // menu; a drag rebuilds the range from the initial location either way.
+                if isPointerDevice(touch: firstTouch), !selectionContains(location) {
                     if let index = textIndexAtPoint(location) {
                         selectionRange = NSRange(location: index, length: 0)
                     }
                 }
-            } else if interactionState.clickCount == 2 {
-                if let index = nearestTextIndexAtPoint(location) {
-                    selectWordAtIndex(index)
-                    // prevent touches did end discard the changes
-                    DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
-                        self?.selectWordAtIndex(index)
-                    }
-                }
-            } else {
-                if let index = nearestTextIndexAtPoint(location) {
-                    selectLineAtIndex(index)
-                    // prevent touches did end discard the changes
-                    DispatchQueue.main.asyncAfter(deadline: .now()) { [weak self] in
-                        self?.selectLineAtIndex(index)
-                    }
+            } else if let index = characterIndexAtPoint(location) {
+                let selectsLine = interactionState.clickCount > 2
+                selectWordOrLine(at: index, selectsLine: selectsLine)
+                // Apply the selection again on the next run-loop turn, in case UIKit
+                // reverts it while it finishes delivering this touch. Skip it if the text
+                // has been replaced since, as the index would then point into other text.
+                let text = attributedText
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, attributedText.isEqual(to: text) else { return }
+                    selectWordOrLine(at: index, selectsLine: selectsLine)
                 }
             }
         }
 
-        override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-            guard touches.count == 1,
+        private func selectWordOrLine(at index: Int, selectsLine: Bool) {
+            if selectsLine {
+                selectLineAtIndex(index)
+            } else {
+                selectWordAtIndex(index)
+            }
+        }
+
+        override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+            guard !interactionState.isForwardingToSuper, touches.count == 1,
                   let firstTouch = touches.first
             else {
                 super.touchesMoved(touches, with: event)
@@ -142,8 +137,14 @@
             }
         }
 
-        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-            isInteractionInProgress = false
+        override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+            endInteractionUnlessDraggingSelectionHandle()
+            if interactionState.isForwardingToSuper {
+                interactionState.isForwardingToSuper = false
+                deactivateHighlightRegion()
+                super.touchesEnded(touches, with: event)
+                return
+            }
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {
@@ -154,7 +155,7 @@
             defer { deactivateHighlightRegion() }
 
             if !isTouchReallyMoved(location),
-               interactionState.clickCount <= 1
+               interactionState.clickCountAtBegin <= 1
             {
                 if selectionContains(location) {
                     #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
@@ -165,14 +166,23 @@
                 }
             }
 
-            guard selectionRange == nil, !isTouchReallyMoved(location) else { return }
+            guard selectionRange == nil,
+                  !isTouchReallyMoved(location),
+                  !interactionState.isTapCancelled
+            else { return }
             if let region = highlightRegionForTap(at: location) {
                 delegate?.textLabelView(self, didTapHighlightRegion: region, at: location)
             }
         }
 
-        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-            isInteractionInProgress = false
+        override open func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+            endInteractionUnlessDraggingSelectionHandle()
+            if interactionState.isForwardingToSuper {
+                interactionState.isForwardingToSuper = false
+                deactivateHighlightRegion()
+                super.touchesCancelled(touches, with: event)
+                return
+            }
             guard touches.count == 1 else {
                 super.touchesCancelled(touches, with: event)
                 return
@@ -180,38 +190,54 @@
             NSObject.cancelPreviousPerformRequests(
                 withTarget: self,
                 selector: #selector(performContinuousStateReset),
-                object: nil
+                object: nil,
             )
             performContinuousStateReset()
             deactivateHighlightRegion()
         }
 
+        /// A selection handle drag owns the interaction until the handle reports its end,
+        /// even if touches the label receives meanwhile end or are cancelled.
+        private func endInteractionUnlessDraggingSelectionHandle() {
+            if !interactionState.isDraggingSelectionHandle {
+                isInteractionInProgress = false
+            }
+        }
+
         #if !os(tvOS) && !os(watchOS)
             /// for handling right click on iOS
-            func installContextMenuInteraction() {
+            public func installContextMenuInteraction() {
                 let interaction = UIContextMenuInteraction(delegate: self)
                 addInteraction(interaction)
             }
 
-            func installTextPointerInteraction() {
-                if #available(iOS 13.4, macCatalyst 13.4, *) {
-                    let pointerInteraction = UIPointerInteraction(delegate: self)
-                    addInteraction(pointerInteraction)
-                }
+            public func installTextPointerInteraction() {
+                let pointerInteraction = UIPointerInteraction(delegate: self)
+                addInteraction(pointerInteraction)
             }
         #endif
     }
 
     #if !os(tvOS) && !os(watchOS)
         extension TextLabelView {
-            func showSelectionMenuController() {
+            /// Shows the selection menu over the selection. Pass `selectionRects`, the
+            /// selection's rects in layout space, when they are already at hand so they
+            /// need not be computed again.
+            func showSelectionMenuController(selectionRects: [CGRect]? = nil) {
                 guard let range = selectionRange, range.length > 0 else { return }
+
+                // A menu cannot appear for a view outside a window, and asking
+                // UIEditMenuInteraction to present one there makes UIKit keep the view
+                // alive for good. A selection set before the label is shown gets no menu.
+                guard window != nil else { return }
 
                 // Don't show the menu if another view controller is presented above ours
                 // (e.g. UIActivityViewController from shareMenuItemTapped)
-                if parentViewController?.presentedViewController != nil { return }
+                if parentViewController?.presentedViewController != nil {
+                    return
+                }
 
-                let rects: [CGRect] = textLayout.rects(for: range).map {
+                let rects: [CGRect] = (selectionRects ?? textLayout.rects(for: range)).map {
                     convertRectFromTextLayout($0, insetForInteraction: true)
                 }
                 guard !rects.isEmpty, var unionRect = rects.first else { return }
@@ -232,17 +258,14 @@
 
                 let menuController = UIMenuController.shared
 
-                let items = availableItems
-                    .compactMap { item -> UIMenuItem? in
-                        guard let selector = item.action else { return nil }
-                        return UIMenuItem(title: item.title, action: selector)
-                    }
-                menuController.menuItems = items
+                menuController.menuItems = availableItems.map { item in
+                    UIMenuItem(title: item.title, action: item.action)
+                }
 
                 Self.menuOwnerIdentifier = id
                 menuController.showMenu(
                     from: self,
-                    rect: unionRect.insetBy(dx: -8, dy: -8)
+                    rect: unionRect.insetBy(dx: -8, dy: -8),
                 )
             }
 
@@ -260,10 +283,7 @@
             }
 
             @objc func copyMenuItemTapped() {
-                let copiedText = copySelection()
-                if copiedText.length <= 0 {
-                    _ = copyFromSubviewsRecursively()
-                }
+                copySelectionOrNestedSelection()
                 clearSelection()
             }
 
@@ -287,7 +307,7 @@
 
             override open func canPerformAction(
                 _ action: Selector,
-                withSender _: Any?
+                withSender _: Any?,
             ) -> Bool {
                 if action == #selector(copyMenuItemTapped) {
                     return selectionRange != nil
@@ -302,10 +322,20 @@
                 return false
             }
 
-            fileprivate func availableTextSelectionMenuItems() -> [TextLabelMenuItem] {
-                TextLabelMenuItem.textSelectionMenu().filter { item in
-                    guard let selector = item.action else { return false }
-                    return canPerformAction(selector, withSender: nil)
+            func availableTextSelectionMenuItems() -> [TextLabelMenuItem] {
+                TextLabelMenuItem.allCases.filter { item in
+                    canPerformAction(item.action, withSender: nil)
+                }
+            }
+
+            /// The available selection menu items as actions, for the edit menu and
+            /// the Mac Catalyst context menu.
+            func makeSelectionMenuActions() -> [UIAction] {
+                availableTextSelectionMenuItems().map { item in
+                    let selector = item.action
+                    return UIAction(title: item.title, image: item.image) { [weak self] _ in
+                        self?.perform(selector)
+                    }
                 }
             }
 
@@ -349,21 +379,16 @@
             public func editMenuInteraction(
                 _: UIEditMenuInteraction,
                 menuFor _: UIEditMenuConfiguration,
-                suggestedActions _: [UIMenuElement]
+                suggestedActions _: [UIMenuElement],
             ) -> UIMenu? {
-                let actions = availableTextSelectionMenuItems().compactMap { item -> UIAction? in
-                    guard let selector = item.action else { return nil }
-                    return UIAction(title: item.title, image: item.image) { [weak self] _ in
-                        self?.perform(selector)
-                    }
-                }
+                let actions = makeSelectionMenuActions()
                 guard !actions.isEmpty else { return nil }
                 return UIMenu(children: actions)
             }
 
             public func editMenuInteraction(
                 _: UIEditMenuInteraction,
-                targetRectFor _: UIEditMenuConfiguration
+                targetRectFor _: UIEditMenuConfiguration,
             ) -> CGRect {
                 editMenuTargetRect
             }
@@ -371,7 +396,7 @@
             public func editMenuInteraction(
                 _: UIEditMenuInteraction,
                 willDismissMenuFor _: UIEditMenuConfiguration,
-                animator _: UIEditMenuInteractionAnimating
+                animator _: UIEditMenuInteractionAnimating,
             ) {
                 isEditMenuVisible = false
             }

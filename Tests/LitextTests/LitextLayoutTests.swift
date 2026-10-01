@@ -13,7 +13,7 @@ import Testing
 #endif
 
 @MainActor
-@Test func invalidRangesDoNotProduceRects() {
+@Test func `invalid ranges do not produce rects`() {
     let layout = TextLabel.Layout(attributedString: NSAttributedString(string: "Hello Litext"))
     layout.containerSize = CGSize(width: 200, height: 60)
 
@@ -26,12 +26,12 @@ import Testing
 #if !os(watchOS)
     #if canImport(AppKit) && !targetEnvironment(macCatalyst)
         @MainActor
-        @Test func selectionKeyEquivalentRequiresTextLabelFirstResponder() throws {
+        @Test func `selection key equivalent requires text label first responder`() throws {
             let window = NSWindow(
                 contentRect: CGRect(x: 0, y: 0, width: 320, height: 160),
                 styleMask: [.titled],
                 backing: .buffered,
-                defer: false
+                defer: false,
             )
             let label = TextLabelView(attributedText: NSAttributedString(string: "Selectable text"))
             label.isSelectable = true
@@ -50,7 +50,7 @@ import Testing
                 characters: "a",
                 charactersIgnoringModifiers: "a",
                 isARepeat: false,
-                keyCode: 0
+                keyCode: 0,
             ))
 
             #expect(window.makeFirstResponder(input))
@@ -62,10 +62,66 @@ import Testing
             #expect(label.performKeyEquivalent(with: commandA))
             #expect(label.selectionRange == NSRange(location: 0, length: label.attributedText.length))
         }
+
+        @MainActor
+        @Test func `mouse drag that began over attachment view does not select text`() throws {
+            let window = NSWindow(
+                contentRect: CGRect(x: 0, y: 0, width: 320, height: 160),
+                styleMask: [.titled],
+                backing: .buffered,
+                defer: false,
+            )
+            let attachment = TextLabel.Attachment(
+                size: CGSize(width: 30, height: 20),
+                view: NSView(),
+            )
+            let text = NSMutableAttributedString(attributedString: attachment.attributedString())
+            text.append(NSAttributedString(
+                string: " selectable text after the attachment",
+                attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
+            ))
+            let label = TextLabelView(attributedText: text)
+            label.isSelectable = true
+            label.frame = CGRect(x: 0, y: 40, width: 300, height: 40)
+            window.contentView?.addSubview(label)
+            label.needsLayout = true
+            label.layout()
+
+            let attachmentView = try #require(attachment.view)
+            #expect(attachmentView.superview === label)
+            let start = label.convert(
+                CGPoint(x: attachmentView.frame.midX, y: attachmentView.frame.midY),
+                to: nil,
+            )
+            let end = label.convert(CGPoint(x: label.bounds.maxX - 4, y: attachmentView.frame.midY), to: nil)
+
+            func mouseEvent(_ type: NSEvent.EventType, at point: CGPoint) throws -> NSEvent {
+                try #require(NSEvent.mouseEvent(
+                    with: type,
+                    location: point,
+                    modifierFlags: [],
+                    timestamp: 0,
+                    windowNumber: window.windowNumber,
+                    context: nil,
+                    eventNumber: 0,
+                    clickCount: 1,
+                    pressure: 1,
+                ))
+            }
+
+            try label.mouseDown(with: mouseEvent(.leftMouseDown, at: start))
+            #expect(label.interactionState.isForwardingToSuper)
+            try label.mouseDragged(with: mouseEvent(.leftMouseDragged, at: end))
+            try label.mouseUp(with: mouseEvent(.leftMouseUp, at: end))
+
+            #expect(label.selectionRange == nil)
+            #expect(!label.interactionState.isForwardingToSuper)
+            #expect(!label.isInteractionInProgress)
+        }
     #endif
 
     @MainActor
-    @Test func publicSelectionRangeIsSanitized() {
+    @Test func `public selection range is sanitized`() {
         let label = TextLabelView(attributedText: NSAttributedString(string: "Hello"))
 
         label.selectionRange = NSRange(location: 1, length: 100)
@@ -79,7 +135,7 @@ import Testing
     }
 
     @MainActor
-    @Test func clearSelectionRemovesStaleSelectionLayerEvenWhenRangeIsNil() {
+    @Test func `clear selection removes stale selection layer even when range is nil`() {
         let label = TextLabelView(attributedText: NSAttributedString(string: "Hello"))
         label.selectionLayer = CAShapeLayer()
 
@@ -89,7 +145,7 @@ import Testing
     }
 
     @MainActor
-    @Test func highlightRegionForTapPrioritizesLinkedAttachments() throws {
+    @Test func `highlight region for tap prioritizes linked attachments`() throws {
         let url = try #require(URL(string: "https://example.com/attachment"))
         let text = NSMutableAttributedString(string: "Start ")
         text.append(NSAttributedString(
@@ -97,7 +153,7 @@ import Testing
             attributes: [
                 .font: PlatformFont.systemFont(ofSize: 16),
                 .link: url,
-            ]
+            ],
         ))
         text.append(NSAttributedString(string: " "))
 
@@ -120,13 +176,13 @@ import Testing
         let tapRect = label.convertRectFromTextLayout(rect, insetForInteraction: true)
         let tapPoint = CGPoint(x: tapRect.midX, y: tapRect.midY)
 
-        #expect(label.highlightRegionAtPoint(tapPoint)?.kind == .link)
+        #expect(label.linkRegion(at: tapPoint)?.kind == .link)
         let tappedRegion = try #require(label.highlightRegionForTap(at: tapPoint))
         #expect(ObjectIdentifier(tappedRegion) == ObjectIdentifier(attachmentRegion))
     }
 
     @MainActor
-    @Test func textLabelViewExposesLayoutRunsAfterLayout() throws {
+    @Test func `text label view exposes layout runs after layout`() throws {
         let marker = NSAttributedString.Key("TextLabelViewLayoutRunProbe")
         let attachment = TextLabel.Attachment()
         attachment.size = CGSize(width: 40, height: 24)
@@ -153,7 +209,7 @@ import Testing
 #endif
 
 @MainActor
-@Test func highlightRegionsSeparateMultiStyleLinksAndLinkedAttachments() throws {
+@Test func `highlight regions separate multi style links and linked attachments`() throws {
     let url = try #require(URL(string: "https://example.com/linked"))
     let text = NSMutableAttributedString(string: "Start ")
     text.append(NSAttributedString(
@@ -161,14 +217,14 @@ import Testing
         attributes: [
             .link: url,
             .foregroundColor: PlatformColor.systemBlue,
-        ]
+        ],
     ))
     text.append(NSAttributedString(
         string: "style",
         attributes: [
             .link: url,
             .foregroundColor: PlatformColor.systemPurple,
-        ]
+        ],
     ))
     text.append(NSAttributedString(string: " "))
 
@@ -192,7 +248,7 @@ import Testing
 }
 
 @MainActor
-@Test func attachmentRunDelegateUsesRetainedMetricsAfterOriginalAttachmentDrops() throws {
+@Test func `attachment run delegate uses retained metrics after original attachment drops`() throws {
     var attachment: TextLabel.Attachment? = TextLabel.Attachment()
     attachment?.size = CGSize(width: 24, height: 16)
     let cachedDelegate = try #require(attachment?.runDelegate) as AnyObject
@@ -205,10 +261,12 @@ import Testing
     try string?.addAttribute(
         kCTRunDelegateAttributeName as NSAttributedString.Key,
         value: #require(delegate),
-        range: range
+        range: range,
     )
 
+    weak let weakAttachment = attachment
     attachment = nil
+    #expect(weakAttachment == nil)
     var line: CTLine? = try CTLineCreateWithAttributedString(#require(string))
     let width = try CTLineGetTypographicBounds(#require(line), nil, nil, nil)
     #expect(width == 24)
@@ -216,10 +274,36 @@ import Testing
     line = nil
     string = nil
     delegate = nil
+    #expect(weakAttachment == nil)
 }
 
 @MainActor
-@Test func drawingInvokesLineDrawingActionForEveryLine() throws {
+@Test func `attachment deallocates after its attributed string drops`() {
+    weak var weakAttachment: TextLabel.Attachment?
+    weak var weakView: PlatformView?
+    autoreleasepool {
+        let view = PlatformView()
+        let attachment = TextLabel.Attachment(size: CGSize(width: 24, height: 16), view: view)
+        weakAttachment = attachment
+        weakView = view
+        // Reading the run delegate used to retain the attachment forever.
+        _ = attachment.attributedString()
+    }
+    #expect(weakAttachment == nil)
+    #expect(weakView == nil)
+}
+
+@MainActor
+@Test func `attachment run delegate reads size at layout time`() {
+    let attachment = TextLabel.Attachment()
+    let string = attachment.attributedString()
+    attachment.size = CGSize(width: 40, height: 10)
+    let line = CTLineCreateWithAttributedString(string)
+    #expect(CTLineGetTypographicBounds(line, nil, nil, nil) == 40)
+}
+
+@MainActor
+@Test func `drawing invokes line drawing action for every line`() throws {
     let width: CGFloat = 260
     let lineCount = 12
     let attributedText = lineDrawingProbeText(lineCount: lineCount)
@@ -231,11 +315,13 @@ import Testing
     let context = try #require(makeBitmapContext(size: layout.containerSize))
     layout.draw(in: context)
 
-    #expect(lineDrawingProbeInvocationCount >= lineCount)
+    // Probe lines wrap at this width; each laid-out line runs the action once.
+    #expect(layout.visibleLineCount(in: nil) >= lineCount)
+    #expect(lineDrawingProbeInvocationCount == layout.visibleLineCount(in: nil))
 }
 
 @MainActor
-@Test func layoutRunsExposeMarkedAttachmentGeometry() throws {
+@Test func `layout runs expose marked attachment geometry`() throws {
     let marker = NSAttributedString.Key("LayoutRunProbe")
     let font = PlatformFont.systemFont(ofSize: 16)
     let attachment = TextLabel.Attachment()
@@ -243,7 +329,7 @@ import Testing
 
     let text = NSMutableAttributedString(
         string: "Before\n",
-        attributes: [.font: font]
+        attributes: [.font: font],
     )
     let attachmentStart = text.length
     text.append(attachment.attributedString(attributes: [
@@ -252,7 +338,7 @@ import Testing
     ]))
     text.append(NSAttributedString(
         string: "\nAfter",
-        attributes: [.font: font]
+        attributes: [.font: font],
     ))
 
     let layout = TextLabel.Layout(attributedString: text)
@@ -273,14 +359,14 @@ import Testing
 }
 
 @MainActor
-@Test func naturalSizeFastPathMatchesFramesetterForNonWrappingWidths() {
+@Test func `natural size fast path matches framesetter for non wrapping widths`() {
     let layout = TextLabel.Layout(attributedString: NSAttributedString(
         string: "Short line",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     ))
     let unconstrained = CGSize(
         width: CGFloat.greatestFiniteMagnitude,
-        height: CGFloat.greatestFiniteMagnitude
+        height: CGFloat.greatestFiniteMagnitude,
     )
 
     let naturalSize = layout.sizeThatFits(unconstrained)
@@ -288,7 +374,7 @@ import Testing
     // A fresh layout answers a wide-enough constraint identically to the fast path.
     let reference = TextLabel.Layout(attributedString: NSAttributedString(
         string: "Short line",
-        attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+        attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
     ))
     let wideConstraint = CGSize(width: naturalSize.width + 100, height: .greatestFiniteMagnitude)
     #expect(layout.sizeThatFits(wideConstraint) == reference.sizeThatFits(wideConstraint))
@@ -300,7 +386,7 @@ import Testing
 }
 
 @MainActor
-@Test func drawingWithVisibleRectSkipsOffscreenLineDrawingActions() throws {
+@Test func `drawing with visible rect skips offscreen line drawing actions`() throws {
     let width: CGFloat = 260
     let lineCount = 12
     let attributedText = lineDrawingProbeText(lineCount: lineCount)
@@ -322,7 +408,7 @@ import Testing
 }
 
 @MainActor
-@Test func sizeThatFitsMatchesFramesetterSuggestionForLeftAlignedText() {
+@Test func `size that fits matches framesetter suggestion for left aligned text`() {
     let paragraph = NSMutableParagraphStyle()
     paragraph.lineSpacing = 5
     let text = NSMutableAttributedString(
@@ -330,7 +416,7 @@ import Testing
         attributes: [
             .font: PlatformFont.systemFont(ofSize: 16),
             .paragraphStyle: paragraph,
-        ]
+        ],
     )
 
     let framesetter = CTFramesetterCreateWithAttributedString(text)
@@ -349,7 +435,7 @@ import Testing
             CFRange(location: 0, length: 0),
             nil,
             constraint,
-            nil
+            nil,
         )
         let measured = layout.sizeThatFits(constraint)
         #expect(abs(measured.width - suggested.width) < 0.001)
@@ -358,7 +444,7 @@ import Testing
 }
 
 @MainActor
-@Test func sizeThatFitsKeepsFramesetterSuggestionForCenteredText() {
+@Test func `size that fits keeps framesetter suggestion for centered text`() {
     let paragraph = NSMutableParagraphStyle()
     paragraph.alignment = .center
     let text = NSAttributedString(
@@ -366,13 +452,13 @@ import Testing
         attributes: [
             .font: PlatformFont.systemFont(ofSize: 14),
             .paragraphStyle: paragraph,
-        ]
+        ],
     )
 
     let layout = TextLabel.Layout(attributedString: text)
     let measured = layout.sizeThatFits(CGSize(
         width: CGFloat.greatestFiniteMagnitude,
-        height: CGFloat.greatestFiniteMagnitude
+        height: CGFloat.greatestFiniteMagnitude,
     ))
 
     let framesetter = CTFramesetterCreateWithAttributedString(text)
@@ -381,13 +467,13 @@ import Testing
         CFRange(location: 0, length: 0),
         nil,
         CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
-        nil
+        nil,
     )
     #expect(measured == suggested)
 }
 
 @MainActor
-@Test func adoptedMeasurementFrameMatchesFreshlyGeneratedLayout() {
+@Test func `adopted measurement frame matches freshly generated layout`() {
     let paragraph = NSMutableParagraphStyle()
     paragraph.lineSpacing = 3
     let text = NSMutableAttributedString()
@@ -397,7 +483,7 @@ import Testing
             attributes: [
                 .font: PlatformFont.systemFont(ofSize: 16),
                 .paragraphStyle: paragraph,
-            ]
+            ],
         ))
     }
 
@@ -446,7 +532,7 @@ private func lineDrawingProbeText(lineCount: Int) -> NSAttributedString {
             attributes: [
                 .font: PlatformFont.systemFont(ofSize: 16),
                 .litextLineDrawingAction: action,
-            ]
+            ],
         ))
     }
     return text
@@ -463,6 +549,6 @@ private func makeBitmapContext(size: CGSize) -> CGContext? {
         bitsPerComponent: 8,
         bytesPerRow: 0,
         space: colorSpace,
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
     )
 }

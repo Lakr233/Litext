@@ -11,6 +11,11 @@ import QuartzCore
 #if !os(watchOS)
 
     public extension TextLabelView {
+        /// Removes the selection.
+        ///
+        /// A reusing host such as a table or collection view cell should call this in
+        /// `prepareForReuse()`: new text that shares a prefix with the old one would
+        /// otherwise keep the previous content's selection.
         @objc func clearSelection() {
             selectionRange = nil
             updateSelectionLayer()
@@ -22,14 +27,7 @@ import QuartzCore
                 return .init()
             }
 
-            #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
-                UIPasteboard.general.string = selectedText.string
-            #elseif canImport(AppKit)
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(selectedText.string, forType: .string)
-            #endif
-
+            writeToPasteboard(selectedText.string)
             return selectedText.copy() as! NSAttributedString
         }
     }
@@ -41,7 +39,7 @@ import QuartzCore
             else { return }
             selectionRange = NSRange(
                 location: min(startIndex, endIndex),
-                length: abs(endIndex - startIndex)
+                length: abs(endIndex - startIndex),
             )
         }
 
@@ -49,14 +47,14 @@ import QuartzCore
             textLayout.nearestTextIndex(at: convertPointForTextLayout(point))
         }
 
-        func textIndexAtPoint(_ point: CGPoint) -> Int? {
-            textLayout.textIndex(at: convertPointForTextLayout(point))
+        /// The character under `point`, for word and line selection. Unlike
+        /// `nearestTextIndexAtPoint(_:)`, it never resolves to the next line.
+        func characterIndexAtPoint(_ point: CGPoint) -> Int? {
+            textLayout.characterIndex(at: convertPointForTextLayout(point))
         }
 
-        func convertPointForTextLayout(_ point: CGPoint) -> CGPoint {
-            // Must mirror convertRectFromTextLayout: flip against the layout
-            // container height, not the live view bounds.
-            CGPoint(x: point.x, y: textLayout.containerSize.height - point.y)
+        func textIndexAtPoint(_ point: CGPoint) -> Int? {
+            textLayout.textIndex(at: convertPointForTextLayout(point))
         }
 
         public func selectionContains(_ location: CGPoint) -> Bool {
@@ -70,7 +68,7 @@ import QuartzCore
         public func selectedAttributedText() -> NSAttributedString? {
             guard let safeRange = NSRange.sanitized(
                 selectionRange,
-                within: textLayout.attributedString.length
+                within: textLayout.attributedString.length,
             ) else {
                 return nil
             }
@@ -83,12 +81,12 @@ import QuartzCore
             mutableResult.enumerateAttribute(
                 .litextAttachment,
                 in: NSRange(location: 0, length: mutableResult.length),
-                options: []
+                options: [],
             ) { value, range, _ in
                 if let attachment = value as? TextLabel.Attachment {
                     mutableResult.replaceCharacters(
                         in: range,
-                        with: attachment.attributedStringRepresentation()
+                        with: attachment.attributedStringRepresentation(),
                     )
                 }
             }
@@ -98,6 +96,23 @@ import QuartzCore
 
         public func selectedPlainText() -> String? {
             selectedAttributedText()?.string
+        }
+
+        /// Copies this label's selection, or else the first nested label
+        /// selection found in its subviews. Returns whether anything was copied.
+        @discardableResult
+        func copySelectionOrNestedSelection() -> Bool {
+            copySelection().length > 0 || copyFromSubviewsRecursively()
+        }
+
+        func writeToPasteboard(_ string: String) {
+            #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
+                UIPasteboard.general.string = string
+            #elseif canImport(AppKit)
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(string, forType: .string)
+            #endif
         }
 
         func copyFromSubviewsRecursively() -> Bool {

@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -7,10 +7,10 @@ let package = Package(
     name: "Litext",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v13),
-        .macCatalyst(.v13),
+        .iOS(.v15),
+        .macCatalyst(.v15),
         .macOS(.v12),
-        .tvOS(.v13),
+        .tvOS(.v15),
         .visionOS(.v1),
         .watchOS(.v8),
     ],
@@ -23,15 +23,15 @@ let package = Package(
             resources: [.process("Resources")],
             swiftSettings: [
                 .swiftLanguageMode(.v6),
-            ]
+            ],
         ),
         .testTarget(
             name: "LitextTests",
             dependencies: ["Litext"],
             swiftSettings: [
                 .swiftLanguageMode(.v6),
-            ]
+            ],
         ),
     ],
-    swiftLanguageModes: [.v6]
+    swiftLanguageModes: [.v6],
 )

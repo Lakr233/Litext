@@ -56,7 +56,7 @@ final class LitextSampleUnitTests: XCTestCase {
             attributes: [
                 .font: PlatformFont.systemFont(ofSize: 16),
                 .link: url,
-            ]
+            ],
         ))
         text.append(NSAttributedString(string: " "))
 
@@ -79,7 +79,7 @@ final class LitextSampleUnitTests: XCTestCase {
         let tapRect = label.convertRectFromTextLayout(rect, insetForInteraction: true)
         let tapPoint = CGPoint(x: tapRect.midX, y: tapRect.midY)
 
-        XCTAssertEqual(label.highlightRegionAtPoint(tapPoint)?.kind, .link)
+        XCTAssertEqual(label.linkRegion(at: tapPoint)?.kind, .link)
         let tappedRegion = try XCTUnwrap(label.highlightRegionForTap(at: tapPoint))
         XCTAssertEqual(ObjectIdentifier(tappedRegion), ObjectIdentifier(attachmentRegion))
     }
@@ -88,7 +88,7 @@ final class LitextSampleUnitTests: XCTestCase {
     func testNativeHitTestingReturnsIndicesForBidiOverflowPoints() throws {
         let text = NSAttributedString(
             string: "LTR שלום عربى 123",
-            attributes: [.font: PlatformFont.systemFont(ofSize: 18)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 18)],
         )
         let layout = TextLabel.Layout(attributedString: text)
         layout.containerSize = CGSize(width: 320, height: 80)
@@ -106,17 +106,17 @@ final class LitextSampleUnitTests: XCTestCase {
     func testNearestHitTestingUsesNearestLineWithoutHorizontalClamp() throws {
         let text = NSAttributedString(
             string: "First line\nSecond line",
-            attributes: [.font: PlatformFont.systemFont(ofSize: 18)]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 18)],
         )
         let secondLineStart = (text.string as NSString).range(of: "Second").location
         let layout = TextLabel.Layout(attributedString: text)
         layout.containerSize = CGSize(width: 220, height: 120)
 
         let secondLineRect = try XCTUnwrap(layout.rects(
-            for: NSRange(location: secondLineStart, length: 6)
+            for: NSRange(location: secondLineStart, length: 6),
         ).first)
         let nearestIndex = try XCTUnwrap(layout.nearestTextIndex(
-            at: CGPoint(x: secondLineRect.minX - 400, y: secondLineRect.midY)
+            at: CGPoint(x: secondLineRect.minX - 400, y: secondLineRect.midY),
         ))
 
         XCTAssertGreaterThanOrEqual(nearestIndex, secondLineStart)
@@ -132,7 +132,7 @@ final class LitextSampleUnitTests: XCTestCase {
                 .font: PlatformFont.boldSystemFont(ofSize: 16),
                 .foregroundColor: PlatformColor.systemBlue,
                 .link: url,
-            ]
+            ],
         ))
         text.append(NSAttributedString(
             string: "style",
@@ -140,7 +140,7 @@ final class LitextSampleUnitTests: XCTestCase {
                 .font: PlatformFont.systemFont(ofSize: 16),
                 .foregroundColor: PlatformColor.systemPurple,
                 .link: url,
-            ]
+            ],
         ))
         text.append(NSAttributedString(string: " "))
 
@@ -178,10 +178,12 @@ final class LitextSampleUnitTests: XCTestCase {
         try string?.addAttribute(
             kCTRunDelegateAttributeName as NSAttributedString.Key,
             value: XCTUnwrap(delegate),
-            range: range
+            range: range,
         )
 
+        weak let weakAttachment = attachment
         attachment = nil
+        XCTAssertNil(weakAttachment)
         var line: CTLine? = try CTLineCreateWithAttributedString(XCTUnwrap(string))
         let width = try CTLineGetTypographicBounds(XCTUnwrap(line), nil, nil, nil)
         XCTAssertEqual(width, 24)
@@ -198,7 +200,7 @@ final class LitextSampleUnitTests: XCTestCase {
         let attributedText = Self.lineDrawingProbeText(lineCount: lineCount)
         let layout = TextLabel.Layout(attributedString: attributedText)
         let suggestedSize = layout.sizeThatFits(
-            CGSize(width: width, height: .greatestFiniteMagnitude)
+            CGSize(width: width, height: .greatestFiniteMagnitude),
         )
         layout.containerSize = CGSize(width: width, height: suggestedSize.height)
 
@@ -215,7 +217,7 @@ final class LitextSampleUnitTests: XCTestCase {
         let attributedText = Self.lineDrawingProbeText(lineCount: 500)
         let layout = TextLabel.Layout(attributedString: attributedText)
         let suggestedSize = layout.sizeThatFits(
-            CGSize(width: width, height: .greatestFiniteMagnitude)
+            CGSize(width: width, height: .greatestFiniteMagnitude),
         )
         layout.containerSize = CGSize(width: width, height: suggestedSize.height)
         let fullContext = try XCTUnwrap(Self.makeBitmapContext(size: layout.containerSize))
@@ -240,7 +242,7 @@ final class LitextSampleUnitTests: XCTestCase {
                 attributes: [
                     .font: PlatformFont.systemFont(ofSize: 16),
                     .litextLineDrawingAction: action,
-                ]
+                ],
             ))
         }
         return text
@@ -257,7 +259,7 @@ final class LitextSampleUnitTests: XCTestCase {
             bitsPerComponent: 8,
             bytesPerRow: 0,
             space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
         )
     }
 }

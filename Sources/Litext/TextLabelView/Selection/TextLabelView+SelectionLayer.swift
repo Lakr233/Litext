@@ -11,7 +11,7 @@ import QuartzCore
 #if !os(watchOS)
 
     private let kDeduplicateSelectionNotification = Notification.Name(
-        rawValue: "TextLabelViewDeduplicateSelectionNotification"
+        rawValue: "TextLabelViewDeduplicateSelectionNotification",
     )
 
     extension TextLabelView {
@@ -25,6 +25,7 @@ import QuartzCore
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 selectionHandleStart.isHidden = true
                 selectionHandleEnd.isHidden = true
+                defer { updateSelectionHandleGrabGesture() }
             #endif
 
             guard let range = selectionRange,
@@ -32,27 +33,31 @@ import QuartzCore
                   range.length > 0
             else {
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                    if presentsMenu { hideSelectionMenuController() }
+                    if presentsMenu {
+                        hideSelectionMenuController()
+                    }
                 #endif
                 clearSelectionLayer()
                 return
             }
 
-            let selectionPath = PlatformBezierPath()
             let selectionRects = textLayout.rects(for: range)
             guard !selectionRects.isEmpty else {
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                    if presentsMenu { hideSelectionMenuController() }
+                    if presentsMenu {
+                        hideSelectionMenuController()
+                    }
                 #endif
                 clearSelectionLayer()
                 return
             }
 
-            createSelectionPath(selectionPath, fromRects: selectionRects)
-            updateSelectionLayer(withPath: selectionPath)
+            updateSelectionLayer(withPath: selectionPath(fromRects: selectionRects))
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                if presentsMenu { showSelectionMenuController() }
+                if presentsMenu {
+                    showSelectionMenuController(selectionRects: selectionRects)
+                }
 
                 selectionHandleStart.isHidden = false
                 selectionHandleEnd.isHidden = false
@@ -62,26 +67,23 @@ import QuartzCore
                 selectionHandleStart.updateHandleColor(handleColor)
                 selectionHandleEnd.updateHandleColor(handleColor)
 
+                // A character drawn by another glyph can have no rect of its own; the
+                // caret at its edge keeps the handle on the text instead of at `.zero`.
+                let lastCharacter = range.location + range.length - 1
                 var beginRect = textLayout.rects(
-                    for: NSRange(location: range.location, length: 1)
-                ).first ?? .zero
+                    for: NSRange(location: range.location, length: 1),
+                ).first
+                    ?? textLayout.caretRect(at: range.location, onLineOf: range.location)
+                    ?? .zero
                 beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
-                selectionHandleStart.frame = .init(
-                    x: beginRect.minX - SelectionHandle.knobRadius - 1,
-                    y: beginRect.minY - SelectionHandle.knobRadius,
-                    width: SelectionHandle.knobRadius * 2,
-                    height: beginRect.height + SelectionHandle.knobRadius
-                )
+                selectionHandleStart.frame = selectionHandleStart.frame(forLineRect: beginRect)
                 var endRect = textLayout.rects(
-                    for: NSRange(location: range.location + range.length - 1, length: 1)
-                ).first ?? .zero
+                    for: NSRange(location: lastCharacter, length: 1),
+                ).first
+                    ?? textLayout.caretRect(at: lastCharacter + 1, onLineOf: lastCharacter)
+                    ?? .zero
                 endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
-                selectionHandleEnd.frame = .init(
-                    x: endRect.maxX - SelectionHandle.knobRadius + 1,
-                    y: endRect.minY,
-                    width: SelectionHandle.knobRadius * 2,
-                    height: endRect.height + SelectionHandle.knobRadius
-                )
+                selectionHandleEnd.frame = selectionHandleEnd.frame(forLineRect: endRect)
             #endif
 
             if presentsMenu {
@@ -94,7 +96,7 @@ import QuartzCore
                 self,
                 selector: #selector(deduplicateSelection),
                 name: kDeduplicateSelectionNotification,
-                object: nil
+                object: nil,
             )
         }
 
@@ -103,15 +105,18 @@ import QuartzCore
             clearSelection()
         }
 
-        private func createSelectionPath(_ selectionPath: PlatformBezierPath, fromRects rects: [CGRect]) {
+        /// One rect per selected line segment. A Core Graphics path takes them in
+        /// linear time; appending to a bezier path copies it each time, which made
+        /// selecting all of a 20,000-line label take seconds.
+        private func selectionPath(fromRects rects: [CGRect]) -> CGPath {
+            let path = CGMutablePath()
             for rect in rects {
-                let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: false)
-                let subpath = PlatformBezierPath(rect: convertedRect)
-                selectionPath.append(subpath)
+                path.addRect(convertRectFromTextLayout(rect, insetForInteraction: false))
             }
+            return path
         }
 
-        private func updateSelectionLayer(withPath path: PlatformBezierPath) {
+        private func updateSelectionLayer(withPath path: CGPath) {
             let fillColor = (selectionBackgroundColor ?? defaultSelectionTint).cgColor
 
             CATransaction.begin()
@@ -119,13 +124,13 @@ import QuartzCore
             defer { CATransaction.commit() }
 
             if let selectionLayer {
-                selectionLayer.path = cgPath(from: path)
+                selectionLayer.path = path
                 selectionLayer.fillColor = fillColor
                 return
             }
 
             let selLayer = CAShapeLayer()
-            selLayer.path = cgPath(from: path)
+            selLayer.path = path
             selLayer.fillColor = fillColor
             backingLayer?.insertSublayer(selLayer, at: 0)
             selectionLayer = selLayer

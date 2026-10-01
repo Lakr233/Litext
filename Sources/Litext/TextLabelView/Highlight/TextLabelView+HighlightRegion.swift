@@ -9,28 +9,22 @@ import QuartzCore
 #if !os(watchOS)
 
     extension TextLabelView {
-        func activateHighlightRegionAtPoint(_ location: CGPoint) -> Bool {
-            if let hitHighlightRegion = highlightRegionAtPoint(location) {
-                addActiveHighlightRegion(hitHighlightRegion)
+        /// Shows the press highlight on the link under `location`, if any.
+        func activateLinkRegion(at location: CGPoint) -> Bool {
+            if let hitRegion = linkRegion(at: location) {
+                addActiveHighlightRegion(hitRegion)
                 return true
             }
             return false
         }
 
-        func deactivateHighlightRegion() {
-            removeActiveHighlightRegion()
+        /// The link region under `point`. Attachment regions are ignored.
+        func linkRegion(at point: CGPoint) -> TextLabel.HighlightRegion? {
+            highlightRegions.first { $0.kind == .link && isHighlightRegion($0, containsPoint: point) }
         }
 
-        func highlightRegionAtPoint(_ point: CGPoint) -> TextLabel.HighlightRegion? {
-            for region in highlightRegions {
-                guard region.kind == .link else { continue }
-                if isHighlightRegion(region, containsPoint: point) {
-                    return region
-                }
-            }
-            return nil
-        }
-
+        /// The region a tap at `point` activates: an attachment wins over a link
+        /// that overlaps it, and otherwise any region under the point is returned.
         func highlightRegionForTap(at point: CGPoint) -> TextLabel.HighlightRegion? {
             if let attachmentRegion = highlightRegions.first(where: {
                 $0.kind == .attachment && isHighlightRegion($0, containsPoint: point)
@@ -52,22 +46,24 @@ import QuartzCore
         }
 
         func addActiveHighlightRegion(_ highlightRegion: TextLabel.HighlightRegion) {
-            removeActiveHighlightRegion()
+            deactivateHighlightRegion()
             removePendingHighlightLayers()
 
             activeHighlightRegion = highlightRegion
 
-            let highlightPath = PlatformBezierPath()
+            // A link styled character by character has a rect per character.
+            // Appending to a bezier path copies it each time, which is quadratic,
+            // so the rounded rects are collected in a Core Graphics path instead.
+            let highlightPath = CGMutablePath()
             let cornerRadius: CGFloat = 4
             for rect in highlightRegion.rects {
                 let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
                 #if canImport(UIKit)
                     let subpath = PlatformBezierPath(roundedRect: convertedRect, cornerRadius: cornerRadius)
-                    highlightPath.append(subpath)
                 #elseif canImport(AppKit)
                     let subpath = PlatformBezierPath(roundedRect: convertedRect, xRadius: cornerRadius, yRadius: cornerRadius)
-                    highlightPath.append(subpath)
                 #endif
+                highlightPath.addPath(cgPath(from: subpath))
             }
 
             let highlightColor: PlatformColor = if let color = highlightRegion.attributes[.foregroundColor] as? PlatformColor {
@@ -77,14 +73,15 @@ import QuartzCore
             }
 
             let highlightLayer = CAShapeLayer()
-            highlightLayer.path = cgPath(from: highlightPath)
+            highlightLayer.path = highlightPath
             highlightLayer.fillColor = highlightColor.withAlphaComponent(0.1).cgColor
             backingLayer?.addSublayer(highlightLayer)
 
             highlightRegion.associatedObject = highlightLayer
         }
 
-        private func removeActiveHighlightRegion() {
+        /// Fades out and removes the press highlight, if one is showing.
+        func deactivateHighlightRegion() {
             guard let activeHighlightRegion else { return }
 
             if let highlightLayer = activeHighlightRegion.associatedObject as? CALayer {

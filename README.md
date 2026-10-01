@@ -20,13 +20,15 @@ A lightweight, high-performance rich-text library for all Apple platforms — UI
 
 ## Supported Platforms
 
+Litext supports iOS 15, macOS 12, Mac Catalyst 15, tvOS 15, visionOS 1 and watchOS 8, the oldest systems current toolchains deploy to. It requires Swift 6.2 (Xcode 26) or later.
+
 | Platform | Minimum Version | TextLabelView (UIKit/AppKit) | TextLabel (SwiftUI) |
 |---|---|---|---|
-| iOS | 13.0+ | ✅ | ✅ |
+| iOS | 15.0+ | ✅ | ✅ |
 | macOS | 12.0+ | ✅ | ✅ |
-| tvOS | 13.0+ | ✅ | ✅ |
+| tvOS | 15.0+ | ✅ | ✅ |
 | visionOS | 1.0+ | ✅ | ✅ |
-| Mac Catalyst | 13.0+ | ✅ | ✅ |
+| Mac Catalyst | 15.0+ | ✅ | ✅ |
 | watchOS | 8.0+ | — | ✅ |
 
 ## Installation
@@ -84,7 +86,7 @@ You can also initialise with an `NSAttributedString` or `AttributedString`:
 
 ```swift
 TextLabel(attributedString: myNSAttributedString)
-TextLabel(attributedString: myAttributedString) // AttributedString (iOS 15+, macOS 12+)
+TextLabel(attributedString: myAttributedString)
 ```
 
 ### Link Handling
@@ -102,7 +104,7 @@ func textLabelView(
     didTapHighlightRegion region: TextLabel.HighlightRegion,
     at location: CGPoint
 ) {
-    if let url = region.attributes[.link] as? URL {
+    if let url = region.linkURL {
         UIApplication.shared.open(url)
     }
 }

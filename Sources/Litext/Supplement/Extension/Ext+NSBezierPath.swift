@@ -9,6 +9,8 @@
     import AppKit
 
     extension NSBezierPath {
+        /// The path as a `CGPath`: `cgPath` on macOS 14 and later, and an
+        /// element-by-element copy on earlier systems.
         var quartzPath: CGPath {
             if #available(macOS 14.0, *) {
                 return cgPath
