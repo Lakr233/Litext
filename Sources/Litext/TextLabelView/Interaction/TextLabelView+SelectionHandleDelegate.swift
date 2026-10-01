@@ -9,7 +9,8 @@
 
     import UIKit
 
-    extension TextLabelView: SelectionHandleDelegate {
+    /// A selection handle drag, driven by `SelectionHandleGrabGesture`.
+    extension TextLabelView {
         func selectionHandleDidBeginDrag(_: SelectionHandle.Kind) {
             interactionState.isDraggingSelectionHandle = true
             isInteractionInProgress = true

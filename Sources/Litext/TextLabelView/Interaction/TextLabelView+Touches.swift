@@ -41,27 +41,13 @@
         }
 
         override open func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-            #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                for handler in [selectionHandleStart, selectionHandleEnd] {
-                    guard !handler.isHidden else { continue }
-                    let rect = handler.frame
-                        .insetBy(
-                            dx: -SelectionHandle.knobExtraResponsiveArea,
-                            dy: -SelectionHandle.knobExtraResponsiveArea,
-                        )
-                    if rect.contains(point) {
-                        return true
-                    }
-                }
-            #endif
-
             switch hitTarget(at: point) {
             case .outside, .passThrough:
-                return false
+                false
             case .attachment:
-                return super.point(inside: point, with: event)
+                super.point(inside: point, with: event)
             case .interactiveText:
-                return true
+                true
             }
         }
 

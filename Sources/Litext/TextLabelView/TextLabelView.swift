@@ -195,6 +195,8 @@ import QuartzCore
         #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
             var selectionHandleStart: SelectionHandle = .init(kind: .start)
             var selectionHandleEnd: SelectionHandle = .init(kind: .end)
+            /// Created the first time the handles show in a window.
+            nonisolated(unsafe) var selectionHandleGrabGesture: SelectionHandleGrabGesture?
             var editMenuInteractionStorage: UIInteraction?
             var isEditMenuVisible = false
             var editMenuTargetRect: CGRect = .zero
@@ -224,10 +226,8 @@ import QuartzCore
                 #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                     clipsToBounds = false // for selection handle
                     selectionHandleStart.isHidden = true
-                    selectionHandleStart.delegate = self
                     addSubview(selectionHandleStart)
                     selectionHandleEnd.isHidden = true
-                    selectionHandleEnd.delegate = self
                     addSubview(selectionHandleEnd)
                 #endif
 
@@ -270,7 +270,25 @@ import QuartzCore
             }
             NotificationCenter.default.removeObserver(self)
             NSObject.cancelPreviousPerformRequests(withTarget: self)
+            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+                selectionHandleGrabGesture?.detachWhenLabelDeallocates()
+            #endif
         }
+
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+            override open var isHidden: Bool {
+                didSet { updateSelectionHandleGrabGesture() }
+            }
+
+            override open func willMove(toWindow newWindow: UIWindow?) {
+                super.willMove(toWindow: newWindow)
+                // Off the old window before the label leaves it; the selection clears once
+                // the label is in the new one.
+                if newWindow !== window {
+                    selectionHandleGrabGesture?.detach()
+                }
+            }
+        #endif
 
         #if canImport(UIKit)
             override open func didMoveToWindow() {

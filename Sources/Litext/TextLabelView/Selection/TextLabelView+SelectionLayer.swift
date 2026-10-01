@@ -25,6 +25,7 @@ import QuartzCore
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 selectionHandleStart.isHidden = true
                 selectionHandleEnd.isHidden = true
+                defer { updateSelectionHandleGrabGesture() }
             #endif
 
             guard let range = selectionRange,

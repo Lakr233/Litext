@@ -7,13 +7,6 @@ import Foundation
 
 #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
 
-    @MainActor
-    protocol SelectionHandleDelegate: AnyObject {
-        func selectionHandleDidBeginDrag(_ kind: SelectionHandle.Kind)
-        func selectionHandleDidMove(_ kind: SelectionHandle.Kind, toLocationInSuperView point: CGPoint)
-        func selectionHandleDidEndDrag(_ kind: SelectionHandle.Kind)
-    }
-
     open class SelectionHandle: UIView {
         /// Sized and placed like the grabbers of the system text views, measured on
         /// iOS 18 and later: a 16.5 pt knob that reaches 3 pt into the line it caps, over
@@ -45,8 +38,6 @@ import Foundation
         }
 
         public let kind: Kind
-
-        weak var delegate: SelectionHandleDelegate?
 
         private(set) var handleColor: UIColor = defaultSelectionHandleTint {
             didSet {
@@ -91,12 +82,10 @@ import Foundation
 
         private func setupView() {
             backgroundColor = .clear
-            isUserInteractionEnabled = true
+            // The label's window takes the touches on a handle. See SelectionHandleGrabGesture.
+            isUserInteractionEnabled = false
             addSubview(stickView)
             addSubview(knobView)
-            let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
-            panGesture.cancelsTouchesInView = true
-            addGestureRecognizer(panGesture)
         }
 
         /// The handle's frame for the selection edge on `lineRect`, the rect of the
@@ -168,39 +157,19 @@ import Foundation
             knobView.layer.shadowPath = UIBezierPath(ovalIn: knobView.bounds).cgPath
         }
 
-        private var frameAtGestureBegin: CGRect = .zero
-
-        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            switch gesture.state {
-            case .began:
-                frameAtGestureBegin = frame
-                delegate?.selectionHandleDidBeginDrag(kind)
-                fallthrough
-            case .changed:
-                let translation = gesture.translation(in: superview)
-                let newFrame = CGRect(
-                    x: frameAtGestureBegin.origin.x + translation.x,
-                    y: frameAtGestureBegin.origin.y + translation.y,
-                    width: frameAtGestureBegin.width,
-                    height: frameAtGestureBegin.height,
-                )
-                let anchor = lineAnchor
-                delegate?.selectionHandleDidMove(
-                    kind,
-                    toLocationInSuperView: .init(x: newFrame.minX + anchor.x, y: newFrame.minY + anchor.y),
-                )
-            case .ended, .cancelled, .failed:
-                delegate?.selectionHandleDidEndDrag(kind)
-            default: return
-            }
+        /// Where a touch grabs the handle, in the superview's coordinates: the handle
+        /// enlarged on every side so the thin stick and small knob are easy to hit.
+        var grabArea: CGRect {
+            frame.insetBy(dx: -Self.knobExtraResponsiveArea, dy: -Self.knobExtraResponsiveArea)
         }
 
-        override open func point(inside point: CGPoint, with _: UIEvent?) -> Bool {
-            let touchRect = bounds.insetBy(
-                dx: -Self.knobExtraResponsiveArea,
-                dy: -Self.knobExtraResponsiveArea,
-            )
-            return touchRect.contains(point)
+        /// The distance from `point`, in the superview's coordinates, to the knob's centre.
+        func knobDistance(to point: CGPoint) -> CGFloat {
+            let centerY: CGFloat = switch kind {
+            case .start: frame.minY + Self.knobRadius
+            case .end: frame.maxY - Self.knobRadius
+            }
+            return hypot(point.x - frame.midX, point.y - centerY)
         }
     }
 #endif
