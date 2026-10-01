@@ -148,12 +148,12 @@
         }
 
         @Test func `ends at a member edge move into the next member`() {
-            let selection = group.selection(
+            let selection = group.normalizedSelection(
                 from: .init(member: 0, offset: 7),
                 to: .init(member: 2, offset: 0),
             )
             #expect(selection == .init(start: .init(member: 1, offset: 0), end: .init(member: 1, offset: 6)))
-            #expect(group.selection(from: .init(member: 0, offset: 7), to: .init(member: 1, offset: 0)) == nil)
+            #expect(group.normalizedSelection(from: .init(member: 0, offset: 7), to: .init(member: 1, offset: 0)) == nil)
         }
 
         @Test func `moving an end keeps at least one character`() {
