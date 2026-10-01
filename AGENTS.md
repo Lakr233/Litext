@@ -44,7 +44,10 @@ xcodebuild test -scheme Litext -destination 'platform=iOS Simulator,id=<UDID>' \
 ```
 
 - **Test framework:** The tests use Swift Testing.
-- **Stress suites:** They are tagged `.stress` and skipped unless `LITEXT_STRESS` is set. CI runs them at quick sizes in a separate step. On a simulator, pass the variable as `TEST_RUNNER_LITEXT_STRESS=1`. Run them at full size before changing layout, selection or streaming paths.
+- **Stress suites:**
+  - They are tagged `.stress` and skipped unless `LITEXT_STRESS` is set. CI never runs them.
+  - Run them locally once, as the last check before a release or milestone, and not on every change.
+  - On a simulator, pass the variable as `TEST_RUNNER_LITEXT_STRESS=1`.
 - **`CleanLayout`:** These tests record 24 known issues for glyph ink outside the typographic bounds. Those issues are expected, but new ones are not.
 - **Fuzzing:** `LITEXT_FUZZ_SEED` and `LITEXT_FUZZ_ITERATIONS` reproduce or widen the fuzz tests.
 - **Simulator tests:** Disable parallel testing. The view tests share one window and time-based budgets.

@@ -5,7 +5,8 @@
 //  Stress tests: robustness under load and adversarial input.
 //
 //  Every stress test is tagged `.stress` and is skipped unless `LITEXT_STRESS`
-//  asks for it, so a plain `swift test` stays fast:
+//  asks for it, so a plain `swift test` stays fast. CI never runs them; run them
+//  locally once, as the last check before a release or milestone:
 //
 //  - Quick (`LITEXT_STRESS=1 swift test --filter Stress`): reduced inputs and
 //    2,000 fuzz iterations, about 25 s on an M4 Max.
