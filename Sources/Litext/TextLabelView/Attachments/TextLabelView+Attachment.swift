@@ -31,7 +31,11 @@ import Foundation
                 view.frame = pixelAlign(convertedRect)
             }
 
-            attachmentViews.subtracting(newAttachmentViews).forEach { $0.removeFromSuperview() }
+            // A view has one superview. When another label showing the same attachment laid
+            // out later, the view now belongs to that label and must stay there.
+            for view in attachmentViews.subtracting(newAttachmentViews) where view.superview === self {
+                view.removeFromSuperview()
+            }
             attachmentViews = newAttachmentViews
         }
     }
