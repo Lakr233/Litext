@@ -9,15 +9,15 @@
 //
 //  - A size is valid when both dimensions are finite and not negative
 //    (`CGSize.isValidLayoutSize`). Zero and `.greatestFiniteMagnitude` are valid
-//    and mean "unconstrained" to measurement. NaN, negative values and both
-//    infinities are invalid.
+//    and mean "unconstrained" to both measurement and layout. NaN, negative
+//    values and both infinities are invalid.
 //  - An invalid container lays out nothing, without calling CoreText: no lines,
 //    rects, highlight regions or attachment views, nil index lookups, and
 //    drawing paints nothing. A later valid size lays the text out again.
 //  - `sizeThatFits` with an invalid proposal returns `.zero`.
-//  - A zero size lays out no lines. Widths 0 (with a positive height), 0.1 and 1
-//    lay out one glyph per line; 1e7 and `.greatestFiniteMagnitude` one unwrapped
-//    line.
+//  - A zero size lays out no lines. Widths 0.1 and 1 lay out one glyph per line.
+//    Width 0 (with a positive height), 1e7 and `.greatestFiniteMagnitude` lay out
+//    the unconstrained lines: only the sample's explicit line breaks wrap it.
 //  - `.greatestFiniteMagnitude` or 1e12 heights lay the text out in full,
 //    anchored to the top of a 1e8-point container, so every rect stays finite.
 //  - A height too small for even the first line (a 2000-point font in a 100-point
@@ -116,9 +116,12 @@ struct StressExtremeGeometryTests {
         let glyphLines = lineCount(CGSize(width: 0.1, height: 100))
         #expect(glyphLines > 40)
         #expect(lineCount(CGSize(width: 1, height: 100)) == glyphLines)
-        #expect(lineCount(CGSize(width: 0, height: 100)) == glyphLines)
-        #expect(lineCount(CGSize(width: 1e7, height: 100)) == 2)
-        #expect(lineCount(CGSize(width: CGFloat.greatestFiniteMagnitude, height: 100)) == 2)
+        // Zero width is unconstrained, as in measurement: the same lines as an
+        // unbounded width, not one glyph per line.
+        let unconstrainedLines = lineCount(CGSize(width: CGFloat.greatestFiniteMagnitude, height: 100))
+        #expect(unconstrainedLines == 2)
+        #expect(lineCount(CGSize(width: 1e7, height: 100)) == unconstrainedLines)
+        #expect(lineCount(CGSize(width: 0, height: 100)) == unconstrainedLines)
 
         // Unbounded heights lay out everything, anchored at the top.
         let reference = TextLabel.Layout(attributedString: text)
