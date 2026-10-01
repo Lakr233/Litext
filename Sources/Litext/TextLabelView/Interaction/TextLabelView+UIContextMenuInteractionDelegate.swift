@@ -20,7 +20,7 @@
                 if #available(macCatalyst 16.0, *) {
                     return nil
                 }
-                guard selectionRange != nil else { return nil }
+                guard hasCommandSelection else { return nil }
                 let menuItems: [UIMenuElement] = makeSelectionMenuActions()
                 return .init(
                     identifier: nil,

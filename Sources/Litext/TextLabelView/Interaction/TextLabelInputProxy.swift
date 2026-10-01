@@ -93,14 +93,14 @@
 
         override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
             guard let label, label.isSelectable else { return false }
-            guard let range = label.selectionRange, range.length > 0 else {
+            guard label.hasCommandSelection else {
                 return action == #selector(selectAll(_:)) && label.selectAllRange() != nil
             }
             switch action {
             case #selector(copy(_:)):
                 return true
             case #selector(selectAll(_:)):
-                return range != label.selectAllRange()
+                return !label.isEntireTextSelected
             case #selector(cut(_:)), #selector(paste(_:)), #selector(delete(_:)):
                 return false
             default:
@@ -200,10 +200,11 @@
 
         func text(in range: UITextRange) -> String? {
             guard let label, let range = (range as? TextLabelTextRange)?.range else { return nil }
-            // Look Up and Share read the selection; give them the text Copy would give,
-            // with attachments in their text form.
+            // Look Up, Translate and Share read the selection; give them the text Copy
+            // would give, with attachments in their text form, and in a group the text of
+            // the whole selection.
             if range == label.selectionRange {
-                return label.selectedPlainText()
+                return label.commandSelectedText()?.string
             }
             guard let safeRange = NSRange.sanitized(range, within: string.length) else { return nil }
             return string.substring(with: safeRange)

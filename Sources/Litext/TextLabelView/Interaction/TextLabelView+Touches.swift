@@ -148,9 +148,7 @@
 
             if isPointerDevice(touch: firstTouch) {
                 updateSelectionRange(withLocation: location)
-                if selectionRange != nil {
-                    delegate?.textLabelView(self, didDragSelectionAt: location)
-                }
+                reportSelectionDrag(at: location)
             }
         }
 
@@ -244,16 +242,25 @@
             /// selection's rects in layout space, when they are already at hand so they
             /// need not be computed again.
             func showSelectionMenuController(selectionRects: [CGRect]? = nil) {
-                guard let range = selectionRange, range.length > 0 else { return }
+                // A group shows its menu from the member where the selection ends, so
+                // there is only ever one, whichever member asks.
+                if let menuLabel = selectionGroup?.menuLabel, menuLabel !== self {
+                    menuLabel.showSelectionMenuController()
+                    return
+                }
+                guard hasCommandSelection, let range = selectionRange ?? selectionGroup?.selectedSegments.last?.range
+                else { return }
 
                 // A menu cannot appear for a view outside a window, and asking
                 // UIEditMenuInteraction to present one there makes UIKit keep the view
                 // alive for good. A selection set before the label is shown gets no menu.
                 guard window != nil else { return }
 
-                let rects: [CGRect] = (selectionRects ?? textLayout.rects(for: range)).map {
-                    convertRectFromTextLayout($0, insetForInteraction: true)
-                }
+                // A group's menu covers the selection in every member.
+                let rects: [CGRect] = selectionGroup?.selectionRects(in: self)
+                    ?? (selectionRects ?? textLayout.rects(for: range)).map {
+                        convertRectFromTextLayout($0, insetForInteraction: true)
+                    }
                 guard !rects.isEmpty, var unionRect = rects.first else { return }
 
                 for rect in rects.dropFirst() {
@@ -322,7 +329,7 @@
             }
 
             @objc func shareMenuItemTapped() {
-                guard let text = selectedPlainText(), !text.isEmpty else { return }
+                guard let text = commandSelectedText()?.string, !text.isEmpty else { return }
                 // Present from the label's own controller, and only while nothing covers
                 // the label. Presenting from another controller would put the sheet over
                 // whatever already covers the label.
@@ -346,14 +353,13 @@
                 withSender _: Any?,
             ) -> Bool {
                 if action == #selector(copyMenuItemTapped) {
-                    return selectionRange != nil
-                        && selectionRange!.length > 0
+                    return hasCommandSelection
                 }
                 if action == #selector(selectAllTapped) {
-                    return selectionRange != selectAllRange()
+                    return selectAllRange() != nil && !isEntireTextSelected
                 }
                 if action == #selector(shareMenuItemTapped) {
-                    return (selectedPlainText() ?? "").isEmpty == false
+                    return (commandSelectedText()?.string ?? "").isEmpty == false
                 }
                 return false
             }

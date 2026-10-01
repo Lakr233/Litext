@@ -70,6 +70,11 @@ import QuartzCore
             }
 
             guard let range = selectionRange else { return }
+            // A group cannot keep a selection whose part in one member moved.
+            if selectionGroup != nil {
+                clearSelection()
+                return
+            }
             let selectionEnd = NSMaxRange(range)
             let isPrefixUnchanged = selectionEnd <= oldText.length
                 && selectionEnd <= attributedText.length
@@ -136,7 +141,7 @@ import QuartzCore
         open var isSelectable: Bool = false {
             didSet {
                 if !isSelectable {
-                    clearSelection()
+                    clearSelectionHeldHere()
                 }
                 #if canImport(UIKit) && !os(tvOS)
                     updateInputProxy()
@@ -152,6 +157,10 @@ import QuartzCore
         public internal(set) var isInteractionInProgress = false
 
         open weak var delegate: TextLabelViewDelegate?
+
+        /// The group whose selection the label shares, set through
+        /// `TextSelectionGroup.labels`.
+        public internal(set) var selectionGroup: TextSelectionGroup?
 
         // MARK: - Internal Properties
 
@@ -184,7 +193,13 @@ import QuartzCore
         /// Sets the selection like the public setter, optionally without presenting the
         /// menu or broadcasting the change to sibling labels, for use while a drag is
         /// still moving the selection.
+        ///
+        /// In a group, the range becomes the group's selection, in this label only.
         func setSelectionRange(_ newValue: NSRange?, presentsMenu: Bool) {
+            if let selectionGroup {
+                selectionGroup.select(newValue, in: self, presentsMenu: presentsMenu)
+                return
+            }
             let sanitizedRange = NSRange.sanitized(newValue, within: attributedText.length)
             guard sanitizedRange != _selectionRange else { return }
             #if canImport(UIKit) && !os(tvOS)
@@ -194,6 +209,25 @@ import QuartzCore
             #endif
             updateSelectionLayer(presentsMenu: presentsMenu)
             delegate?.textLabelView(self, didChangeSelection: sanitizedRange)
+        }
+
+        /// Sets this member's part of its group's selection. The group presents the
+        /// menu, so this only redraws the selection and its handles, which can move
+        /// between members even when the part is unchanged.
+        func applyGroupSegment(_ range: NSRange?) {
+            let sanitizedRange = NSRange.sanitized(range, within: attributedText.length)
+            let didChange = sanitizedRange != _selectionRange
+            if didChange {
+                #if canImport(UIKit) && !os(tvOS)
+                    performSelectionChange { _selectionRange = sanitizedRange }
+                #else
+                    _selectionRange = sanitizedRange
+                #endif
+            }
+            updateSelectionLayer(presentsMenu: false)
+            if didChange {
+                delegate?.textLabelView(self, didChangeSelection: sanitizedRange)
+            }
         }
 
         var selectedLinkForMenuAction: URL?
@@ -305,14 +339,14 @@ import QuartzCore
         #if canImport(UIKit)
             override open func didMoveToWindow() {
                 super.didMoveToWindow()
-                clearSelection()
+                clearSelectionHeldHere()
                 invalidateTextLayout()
             }
 
         #elseif canImport(AppKit)
             override open func viewDidMoveToWindow() {
                 super.viewDidMoveToWindow()
-                clearSelection()
+                clearSelectionHeldHere()
                 // No display request here: the pending layout pass issues one once the text
                 // layout matches the new geometry. See `TextLabelView.canDrawTextLayout`.
                 invalidateTextLayout()
@@ -332,6 +366,18 @@ import QuartzCore
     }
 
     extension TextLabelView {
+        /// Drops the selection when the label can no longer show it: it moved to
+        /// another window or out of one, or stopped being selectable. A group member
+        /// clears the group only when part of the selection is in it, so a host that
+        /// reuses, scrolls away or disables other members keeps the selection.
+        func clearSelectionHeldHere() {
+            if selectionGroup != nil, selectionRange == nil {
+                updateSelectionLayer(presentsMenu: false)
+                return
+            }
+            clearSelection()
+        }
+
         struct InteractionState {
             var initialTouchLocation: CGPoint = .zero
             var clickCount: Int = 1

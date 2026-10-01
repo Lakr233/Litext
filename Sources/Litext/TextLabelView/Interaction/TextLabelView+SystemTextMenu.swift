@@ -61,6 +61,12 @@
         @available(iOS 16.0, macCatalyst 16.0, visionOS 1.0, *)
         func selectionMenu(suggestedActions: [UIMenuElement]) -> UIMenu? {
             let actions = Self.removingEditingCommands(from: suggestedActions)
+            if let selectionGroup {
+                return selectionGroup.delegate?.textSelectionGroup(
+                    selectionGroup,
+                    editMenuForSuggestedActions: actions,
+                ) ?? UIMenu(children: actions)
+            }
             if let range = selectionRange,
                let menu = delegate?.textLabelView(self, editMenuForSelection: range, suggestedActions: actions)
             {

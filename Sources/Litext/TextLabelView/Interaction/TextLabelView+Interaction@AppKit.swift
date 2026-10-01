@@ -36,7 +36,7 @@ import Foundation
 
             // The Edit menu reaches `copy(_:)` and `selectAll(_:)` too; these keep the
             // shortcuts working in a host without one.
-            if key == "c", let range = selectionRange, range.length > 0 {
+            if key == "c", hasCommandSelection {
                 copy(nil)
                 return true
             }
@@ -122,9 +122,7 @@ import Foundation
 
             if isSelectable {
                 updateSelectionRange(withLocation: location)
-                if selectionRange != nil {
-                    delegate?.textLabelView(self, didDragSelectionAt: location)
-                }
+                reportSelectionDrag(at: location)
             }
         }
 

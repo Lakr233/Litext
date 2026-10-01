@@ -11,7 +11,13 @@ import QuartzCore
 #if !os(watchOS)
 
     public extension TextLabelView {
+        /// Selects the whole text, or in a group the text of every member.
         func selectAll() {
+            if let selectionGroup {
+                guard isSelectable else { return }
+                selectionGroup.selectAll()
+                return
+            }
             guard let range = selectAllRange() else { return }
             selectionRange = range
         }

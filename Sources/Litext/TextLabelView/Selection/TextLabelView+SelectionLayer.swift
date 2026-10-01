@@ -59,8 +59,10 @@ import QuartzCore
                     showSelectionMenuController(selectionRects: selectionRects)
                 }
 
-                selectionHandleStart.isHidden = false
-                selectionHandleEnd.isHidden = false
+                // In a group, the first member shows the start handle and the last one
+                // the end handle.
+                selectionHandleStart.isHidden = !(selectionGroup?.showsHandle(true, in: self) ?? true)
+                selectionHandleEnd.isHidden = !(selectionGroup?.showsHandle(false, in: self) ?? true)
 
                 // Update handle colors to match selection color
                 let handleColor = selectionBackgroundColor?.withAlphaComponent(1.0)
@@ -87,8 +89,14 @@ import QuartzCore
             #endif
 
             if presentsMenu {
-                NotificationCenter.default.post(name: kDeduplicateSelectionNotification, object: self)
+                broadcastSelection()
             }
+        }
+
+        /// Tells every other label to drop its selection, except the members of this
+        /// label's group, which share it.
+        func broadcastSelection() {
+            NotificationCenter.default.post(name: kDeduplicateSelectionNotification, object: self)
         }
 
         func registerNotificationCenterForSelectionDeduplicate() {
@@ -102,6 +110,15 @@ import QuartzCore
 
         @objc private func deduplicateSelection(_ notification: Notification) {
             guard let object = notification.object as? TextLabelView, object != self else { return }
+            if let selectionGroup {
+                // The group keeps its members' selection layers in step, so only a group
+                // with a selection has anything to clear. Every member hears the
+                // broadcast; the first one clears the group.
+                if object.selectionGroup !== selectionGroup, selectionGroup.hasSelection {
+                    selectionGroup.clearSelection()
+                }
+                return
+            }
             clearSelection()
         }
 

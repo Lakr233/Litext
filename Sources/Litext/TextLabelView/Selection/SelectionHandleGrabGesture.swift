@@ -185,7 +185,10 @@
         /// Keeps the grab recognizer on the label's window while its handles show, and
         /// off every window otherwise.
         func updateSelectionHandleGrabGesture() {
+            // A group's handle can move to another member during a drag; the recognizer
+            // that began the drag stays until it ends.
             let showsHandles = !selectionHandleStart.isHidden || !selectionHandleEnd.isHidden
+                || interactionState.isDraggingSelectionHandle
             guard showsHandles, !isHidden, let window else {
                 selectionHandleGrabGesture?.detach()
                 return

@@ -27,12 +27,15 @@
                 selectWordAtIndex(index)
             }
             guard let range = selectionRange, range.length > 0,
-                  let text = selectedPlainText(), !text.isEmpty
+                  let text = commandSelectedText()?.string, !text.isEmpty
             else { return super.menu(for: event) }
 
             window?.makeFirstResponder(self)
             Self.registerServicesSendTypes()
             let menu = selectionMenu(for: text)
+            if let selectionGroup {
+                return selectionGroup.delegate?.textSelectionGroup(selectionGroup, menu: menu, event: event) ?? menu
+            }
             return delegate?.textLabelView(self, menu: menu, forSelection: range, event: event) ?? menu
         }
 
@@ -79,7 +82,7 @@
         // MARK: - Look Up and Translate
 
         @objc private func lookUpSelection(_: Any?) {
-            guard let range = selectionRange, let text = selectedAttributedText(),
+            guard let range = selectionRange, let text = commandSelectedText(),
                   let origin = textLayout.baselineOrigin(at: range.location)
             else { return }
             let point = viewRect(fromLayoutRect: CGRect(origin: origin, size: .zero)).origin
@@ -110,7 +113,7 @@
         @objc private func translateSelection(_: Any?) {
             // The popover cannot open in a hidden window, and its anchor would stay.
             // It must not open over a sheet or a view laid over the label either.
-            guard let range = selectionRange, let text = selectedPlainText(), !text.isEmpty,
+            guard let range = selectionRange, let text = commandSelectedText()?.string, !text.isEmpty,
                   let anchor = textLayout.rects(for: range).first,
                   canPresentSelectionUI(from: viewRect(fromLayoutRect: anchor))
             else { return }
@@ -151,7 +154,7 @@
 
         @objc private func performShareService(_ sender: NSMenuItem) {
             guard let service = sender.representedObject as? NSSharingService,
-                  let text = selectedPlainText()
+                  let text = commandSelectedText()?.string
             else { return }
             service.perform(withItems: [text])
         }
@@ -175,7 +178,7 @@
 
         /// Speaks the selection, or the whole text when nothing is selected.
         @objc open func startSpeaking(_: Any?) {
-            let text = selectedPlainText() ?? attributedText.string
+            let text = commandSelectedText()?.string ?? attributedText.string
             guard !text.isEmpty else { return }
             TextLabelSpeech.shared.speak(text)
         }
@@ -212,7 +215,7 @@
         open func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
             switch menuItem.action {
             case #selector(copy(_:)):
-                (selectionRange?.length ?? 0) > 0
+                hasCommandSelection
             case #selector(selectAll(_:)):
                 selectAllRange() != nil
             case #selector(stopSpeaking(_:)):
@@ -228,7 +231,7 @@
         ) -> Any? {
             // Read-only: the label can send its selection to a service but takes nothing back.
             if returnType == nil, sendType == nil || sendType == .string || sendType == .rtf,
-               let range = selectionRange, range.length > 0
+               hasCommandSelection
             {
                 return self
             }
@@ -248,7 +251,7 @@
 
     extension TextLabelView: @preconcurrency NSServicesMenuRequestor {
         public func writeSelection(to pboard: NSPasteboard, types: [NSPasteboard.PasteboardType]) -> Bool {
-            guard let text = selectedAttributedText(), text.length > 0 else { return false }
+            guard let text = commandSelectedText(), text.length > 0 else { return false }
             pboard.clearContents()
             var didWrite = false
             if types.contains(.string) {
