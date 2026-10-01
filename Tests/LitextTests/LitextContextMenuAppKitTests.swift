@@ -159,6 +159,13 @@
             #expect(pasteboard.string(forType: .string) == "Hello")
             #expect(pasteboard.data(forType: .rtf) != nil)
         }
+
+        @Test func `translate leaves nothing behind in a hidden window`() {
+            label.selectionRange = NSRange(location: 6, length: 5)
+            let subviews = label.subviews
+            label.perform(NSSelectorFromString("translateSelection:"), with: nil)
+            #expect(label.subviews == subviews)
+        }
     }
 
 #endif
