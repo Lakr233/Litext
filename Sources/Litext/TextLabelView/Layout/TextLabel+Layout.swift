@@ -338,7 +338,7 @@ extension TextLabel {
             context.setAllowsAntialiasing(true)
             context.textMatrix = .identity
 
-            context.translateBy(x: 0, y: containerSize.height)
+            context.translateBy(x: 0, y: anchorHeight)
             context.scaleBy(x: 1, y: -1)
 
             for index in textLineIndices {
@@ -785,7 +785,7 @@ extension TextLabel {
             guard let fill = measurementFill,
                   fill.isComplete,
                   fill.pathSize.width == layoutPathWidth,
-                  containerSize.height <= Self.maxLayoutDimension
+                  anchorHeight <= Self.maxLayoutDimension
             else { return false }
             adopt(fill)
             return true
@@ -798,7 +798,7 @@ extension TextLabel {
             lines = fill.lines
             lineMetrics = fill.lineMetrics
 
-            let offsetY = containerSize.height - fill.pathSize.height
+            let offsetY = anchorHeight - fill.pathSize.height
             if offsetY == 0 {
                 lineOrigins = fill.lineOrigins
             } else {
@@ -1113,17 +1113,29 @@ extension TextLabel {
 
         // Layout geometry uses CoreText's lower-left origin; views, visible rects and
         // attachment frames use a top-left origin. Both flip against
-        // `containerSize.height`, the same height `draw(in:)` flips the context by,
-        // so this is the only place the flip is written down.
+        // `anchorHeight`, the same height `draw(in:)` flips the context by and
+        // lines are anchored to, so this is the only place the flip is written down.
+
+        /// The container height the first line is anchored below: `containerSize.height`
+        /// for every height a layout can fill. An infinite height would make every line
+        /// origin infinite, and `.greatestFiniteMagnitude` would round them all to the
+        /// same value, so heights beyond `maxLayoutHeight` in either direction are clamped
+        /// to it, and a NaN height anchors the text to a zero-height container. The text
+        /// still starts at the top, so view-space geometry is unaffected.
+        private var anchorHeight: CGFloat {
+            let height = containerSize.height
+            guard !height.isNaN else { return 0 }
+            return min(max(height, -Self.maxLayoutHeight), Self.maxLayoutHeight)
+        }
 
         /// Converts a rect from layout space to top-left view space.
         ///
         /// Layout space is the lower-left-origin space of `rects(for:)`,
         /// `layoutRuns(matching:)` and `HighlightRegion.rects`. The flip uses
-        /// `containerSize.height`, so it matches what `draw(in:)` paints.
+        /// the container's height, so it matches what `draw(in:)` paints.
         public func viewRect(fromLayoutRect rect: CGRect) -> CGRect {
             var result = rect
-            result.origin.y = containerSize.height - rect.origin.y - rect.size.height
+            result.origin.y = anchorHeight - rect.origin.y - rect.size.height
             return result
         }
 
@@ -1131,7 +1143,7 @@ extension TextLabel {
         public func layoutRect(fromViewRect rect: CGRect) -> CGRect {
             CGRect(
                 x: rect.minX,
-                y: containerSize.height - rect.maxY,
+                y: anchorHeight - rect.maxY,
                 width: rect.width,
                 height: rect.height
             )
@@ -1139,7 +1151,7 @@ extension TextLabel {
 
         /// Converts a point from top-left view space to layout space.
         public func layoutPoint(fromViewPoint point: CGPoint) -> CGPoint {
-            CGPoint(x: point.x, y: containerSize.height - point.y)
+            CGPoint(x: point.x, y: anchorHeight - point.y)
         }
 
         // MARK: - Text Index Helpers
