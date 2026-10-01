@@ -1,0 +1,164 @@
+//
+//  Created by Litext Team.
+//  Copyright (c) 2025 Litext Team. All rights reserved.
+//
+
+#if canImport(AppKit) && !targetEnvironment(macCatalyst)
+
+    import AppKit
+    @testable import Litext
+    import Testing
+
+    @MainActor
+    @Suite(.serialized)
+    struct `AppKit context menu` {
+        private let window: NSWindow
+        private let label: TextLabelView
+
+        init() {
+            window = NSWindow(
+                contentRect: CGRect(x: 0, y: 0, width: 400, height: 200),
+                styleMask: [.titled],
+                backing: .buffered,
+                defer: false,
+            )
+            window.isReleasedWhenClosed = false
+            label = TextLabelView(attributedText: NSAttributedString(
+                string: "Hello brave new world",
+                attributes: [.font: NSFont.systemFont(ofSize: 16)],
+            ))
+            label.isSelectable = true
+            label.frame = CGRect(x: 0, y: 0, width: 400, height: 200)
+            window.contentView?.addSubview(label)
+            label.layout()
+        }
+
+        /// A right click at the middle of the character at `index`, in window coordinates.
+        private func rightClick(atCharacter index: Int, modifierFlags: NSEvent.ModifierFlags = []) -> NSEvent {
+            let rect = label.viewRect(fromLayoutRect: label.textLayout.rects(
+                for: NSRange(location: index, length: 1),
+            )[0])
+            let point = label.convert(CGPoint(x: rect.midX, y: rect.midY), to: nil)
+            return NSEvent.mouseEvent(
+                with: .rightMouseDown,
+                location: point,
+                modifierFlags: modifierFlags,
+                timestamp: 0,
+                windowNumber: window.windowNumber,
+                context: nil,
+                eventNumber: 0,
+                clickCount: 1,
+                pressure: 1,
+            )!
+        }
+
+        private func actions(of menu: NSMenu) -> [String] {
+            menu.items.map { item in
+                if item.isSeparatorItem {
+                    return "---"
+                }
+                if item.hasSubmenu {
+                    return "submenu"
+                }
+                return item.action.map(NSStringFromSelector) ?? "none"
+            }
+        }
+
+        @Test func `the selection menu matches a read-only text view`() throws {
+            label.selectionRange = NSRange(location: 0, length: 5)
+            let menu = try #require(label.menu(for: rightClick(atCharacter: 1)))
+
+            var expected = ["lookUpSelection:"]
+            if #available(macOS 14.4, *) {
+                expected.append("translateSelection:")
+            }
+            expected += ["---", "copy:", "---"]
+            if #available(macOS 13.0, *) {
+                expected.append("_performStandardShareMenuItem:")
+            } else {
+                expected.append("submenu")
+            }
+            expected += ["---", "submenu"]
+            #expect(actions(of: menu) == expected)
+            #expect(menu.items[0].title.contains("Hello"))
+            let speech = try #require(menu.items.last?.submenu)
+            #expect(actions(of: speech) == ["startSpeaking:", "stopSpeaking:"])
+        }
+
+        @Test func `a right click away from the selection selects the word under it`() throws {
+            label.selectionRange = NSRange(location: 0, length: 5)
+            _ = try #require(label.menu(for: rightClick(atCharacter: 7)))
+            #expect(label.selectionRange == NSRange(location: 6, length: 5))
+        }
+
+        @Test func `a right click inside the selection keeps it`() throws {
+            label.selectionRange = NSRange(location: 0, length: 11)
+            _ = try #require(label.menu(for: rightClick(atCharacter: 7)))
+            #expect(label.selectionRange == NSRange(location: 0, length: 11))
+        }
+
+        @Test func `a label that is not selectable shows no selection menu`() {
+            label.isSelectable = false
+            #expect(label.menu(for: rightClick(atCharacter: 1)) == nil)
+            #expect(label.selectionRange == nil)
+        }
+
+        @Test func `the delegate can replace the menu`() throws {
+            final class Delegate: TextLabelViewDelegate {
+                var selection: NSRange?
+                func textLabelView(
+                    _: TextLabelView,
+                    menu _: NSMenu,
+                    forSelection selection: NSRange,
+                    event _: NSEvent,
+                ) -> NSMenu? {
+                    self.selection = selection
+                    return NSMenu(title: "Custom")
+                }
+            }
+            let delegate = Delegate()
+            label.delegate = delegate
+            label.selectionRange = NSRange(location: 0, length: 5)
+            let menu = try #require(label.menu(for: rightClick(atCharacter: 1)))
+            #expect(menu.title == "Custom")
+            #expect(delegate.selection == NSRange(location: 0, length: 5))
+        }
+
+        @Test func `a long selection is quoted the way the system quotes it`() {
+            #expect(TextLabelView.menuTitleQuote(for: "  two\nlines  ") == "two lines")
+            #expect(TextLabelView.menuTitleQuote(for: "The quick brown fox jumps over the lazy dog")
+                == "The quick brown fox jumps over…")
+        }
+
+        @Test func `copy keeps the selection and validates against it`() {
+            let copyItem = NSMenuItem(title: "Copy", action: #selector(TextLabelView.copy(_:)), keyEquivalent: "")
+            #expect(!label.validateMenuItem(copyItem))
+
+            label.selectionRange = NSRange(location: 6, length: 5)
+            #expect(label.validateMenuItem(copyItem))
+            label.copy(nil)
+            #expect(NSPasteboard.general.string(forType: .string) == "brave")
+            #expect(label.selectionRange == NSRange(location: 6, length: 5))
+        }
+
+        @Test func `select all from the Edit menu selects the whole text`() {
+            label.selectAll(nil as Any?)
+            #expect(label.selectionRange == NSRange(location: 0, length: 21))
+        }
+
+        @Test func `services can read the selection but not write back`() {
+            #expect(label.validRequestor(forSendType: .string, returnType: nil) == nil)
+
+            label.selectionRange = NSRange(location: 0, length: 5)
+            #expect(label.validRequestor(forSendType: .string, returnType: nil) as? TextLabelView === label)
+            #expect(label.validRequestor(forSendType: .string, returnType: .string) == nil)
+
+            let pasteboard = NSPasteboard(name: NSPasteboard.Name("litext-services-test"))
+            defer { pasteboard.releaseGlobally() }
+            #expect(label.writeSelection(to: pasteboard, types: [.string, .rtf]))
+            #expect(pasteboard.string(forType: .string) == "Hello")
+            #expect(pasteboard.data(forType: .rtf) != nil)
+        }
+    }
+
+#endif
