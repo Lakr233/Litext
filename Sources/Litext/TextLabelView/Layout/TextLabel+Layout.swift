@@ -942,6 +942,11 @@ extension TextLabel {
 
         private func extractHighlightRegions() {
             guard let lines, let lineMetrics else { return }
+            // The effective range last found for each highlight attribute. A link
+            // styled character by character splits into one run per character, and
+            // looking up the longest effective range again for each of them walks
+            // the whole link every time, which is quadratic in its length.
+            var effectiveRanges: [NSAttributedString.Key: NSRange] = [:]
             enumerateRuns(
                 inLines: 0 ..< lines.count,
                 carrying: Self.highlightRunKeys
@@ -953,7 +958,8 @@ extension TextLabel {
                     glyphRun,
                     attributes: attributes,
                     lineOrigin: lineOrigin,
-                    lineBox: lineMetrics[lineIndex].clippedRect(at: lineOrigin, containerWidth: containerSize.width)
+                    lineBox: lineMetrics[lineIndex].clippedRect(at: lineOrigin, containerWidth: containerSize.width),
+                    effectiveRanges: &effectiveRanges
                 )
             }
         }
@@ -1006,7 +1012,8 @@ extension TextLabel {
             _ glyphRun: CTRun,
             attributes: [NSAttributedString.Key: Any],
             lineOrigin: CGPoint,
-            lineBox: CGRect
+            lineBox: CGRect,
+            effectiveRanges: inout [NSAttributedString.Key: NSRange]
         ) {
             let stringRange = NSRange(CTRunGetStringRange(glyphRun))
             // A link ending a wrapped line includes the whitespace hanging past the
@@ -1014,13 +1021,20 @@ extension TextLabel {
             let runBounds = runBoundingRect(glyphRun, lineOrigin: lineOrigin).clippedHorizontally(to: lineBox)
 
             for attribute in Self.highlightAttributes where attributes[attribute.key] != nil {
+                // A longest effective range is maximal, so every location inside it
+                // has that same range; only a run outside it needs a new lookup.
                 var effectiveRange = NSRange()
-                _ = attributedString.attribute(
-                    attribute.key,
-                    at: stringRange.location,
-                    longestEffectiveRange: &effectiveRange,
-                    in: fullRange
-                )
+                if let cached = effectiveRanges[attribute.key], cached.contains(stringRange.location) {
+                    effectiveRange = cached
+                } else {
+                    _ = attributedString.attribute(
+                        attribute.key,
+                        at: stringRange.location,
+                        longestEffectiveRange: &effectiveRange,
+                        in: fullRange
+                    )
+                    effectiveRanges[attribute.key] = effectiveRange
+                }
                 addHighlightRegion(
                     kind: attribute.kind,
                     attributes: attributes,
