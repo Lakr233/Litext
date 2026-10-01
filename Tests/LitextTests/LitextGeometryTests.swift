@@ -232,6 +232,18 @@ private func makeLaidOutLayout(_ text: NSAttributedString, width: CGFloat) -> Te
     #expect(newline.rangeOfLine(at: 5) == NSRange(location: 0, length: 5))
 }
 
+@Test func rangeOfWordFindsTheWordOrNothingBetweenWords() {
+    let text = "Hello, world!\nsecond line" as NSString
+    #expect(text.rangeOfWord(at: 0) == NSRange(location: 0, length: 5))
+    #expect(text.rangeOfWord(at: 4) == NSRange(location: 0, length: 5))
+    #expect(text.rangeOfWord(at: 9) == NSRange(location: 7, length: 5))
+    #expect(text.rangeOfWord(at: 21) == NSRange(location: 21, length: 4))
+    // Punctuation, spaces and terminators belong to no word.
+    for index in [5, 6, 12, 13, 20] {
+        #expect(text.rangeOfWord(at: index).location == NSNotFound)
+    }
+}
+
 // MARK: - Clusters on bidirectional lines
 
 @MainActor
