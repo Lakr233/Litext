@@ -45,7 +45,9 @@ import Foundation
 
 #if !os(watchOS)
     extension TextLabelView {
-        /// Whether the text layout describes the geometry being painted.
+        /// Whether the text layout describes the geometry being painted, which
+        /// also requires a valid size: nothing is drawn into a NaN, negative or
+        /// infinite one.
         ///
         /// Lines are positioned against `TextLabel.Layout.containerSize`, so painting while
         /// it disagrees with `bounds` offsets every line by the difference — and a shorter
@@ -56,7 +58,7 @@ import Foundation
         /// Repairing the layout from `draw(_:)` is not an option: the host is inside its
         /// display phase, and laying out there would reenter the phase it just left.
         var canDrawTextLayout: Bool {
-            textLayout.containerSize == bounds.size
+            bounds.size.isValidLayoutSize && textLayout.containerSize == bounds.size
         }
     }
 #endif

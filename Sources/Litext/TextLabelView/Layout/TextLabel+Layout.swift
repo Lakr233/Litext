@@ -243,7 +243,11 @@ extension TextLabel {
             }
         }
 
+        /// The size the text needs within `size`. Zero or `.greatestFiniteMagnitude`
+        /// leaves a dimension unconstrained; a proposal with a NaN, negative or
+        /// infinite dimension is invalid and measures as `.zero`.
         open func sizeThatFits(_ size: CGSize) -> CGSize {
+            guard size.isValidLayoutSize else { return .zero }
             if let suggestedSizeCache, suggestedSizeCache.input == size {
                 return suggestedSizeCache.output
             }
@@ -328,7 +332,11 @@ extension TextLabel {
         /// The rect uses a top-left origin in the same space as `containerSize`, matching the
         /// dirty rect handed to a view's `draw(_:)`. Passing `nil` draws every line.
         open func draw(in context: CGContext, visibleRect: CGRect?) {
-            guard let lines, let lineOrigins, !lines.isEmpty else { return }
+            guard containerSize.isValidLayoutSize,
+                  let lines,
+                  let lineOrigins,
+                  !lines.isEmpty
+            else { return }
 
             let textLineIndices = lineIndices(intersecting: visibleRect)
             guard !textLineIndices.isEmpty else { return }
@@ -736,11 +744,12 @@ extension TextLabel {
             lineOrigins = nil
             lineMetrics = nil
 
-            // A NaN width fits no line. It fails every comparison, so the path width
-            // would read it as unconstrained, and measuring it can hand it to the
-            // framesetter, which walks the whole path looking for a line that fits:
-            // about a second for a 1e8-point one.
-            guard !containerSize.width.isNaN else {
+            // An invalid container (NaN, negative or infinite) holds no text. Skip
+            // CoreText entirely: a NaN width, for one, fits no line, yet fails every
+            // comparison, so the path width would read it as unconstrained, and
+            // measuring it can hand it to the framesetter, which walks the whole path
+            // looking for a line that fits: about a second for a 1e8-point one.
+            guard containerSize.isValidLayoutSize else {
                 adopt(FrameFill(
                     lines: [],
                     lineOrigins: [],
@@ -803,9 +812,10 @@ extension TextLabel {
         }
 
         /// The path width lines are broken at. Like `sizeThatFits(_:)` and the
-        /// framesetter, a non-positive width means unconstrained, so a container
-        /// sized to text that measures zero wide (whitespace only) keeps the lines
-        /// that measurement counted.
+        /// framesetter, a zero width means unconstrained, so a container sized to
+        /// text that measures zero wide (whitespace only) keeps the lines that
+        /// measurement counted. A negative width never gets here: it is invalid
+        /// and lays out nothing.
         private var layoutPathWidth: CGFloat {
             containerSize.width > 0 ? containerSize.width : Self.maxLayoutDimension
         }

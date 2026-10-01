@@ -32,9 +32,10 @@ import QuartzCore
                 height: CGFloat.greatestFiniteMagnitude
             )
 
-            if preferredMaxLayoutWidth > 0 {
+            // An invalid width (NaN, negative or infinite) constrains nothing.
+            if preferredMaxLayoutWidth.isValidLayoutDimension, preferredMaxLayoutWidth > 0 {
                 constraintSize.width = preferredMaxLayoutWidth
-            } else if lastContainerSize.width > 0 {
+            } else if lastContainerSize.width.isValidLayoutDimension, lastContainerSize.width > 0 {
                 constraintSize.width = lastContainerSize.width
             }
 

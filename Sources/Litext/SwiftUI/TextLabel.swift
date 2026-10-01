@@ -56,7 +56,7 @@ import SwiftUI
         @available(iOS 16.0, macCatalyst 16.0, tvOS 16.0, visionOS 1.0, macOS 13.0, *)
         @MainActor
         private func fittingSize(for proposal: ProposedViewSize, label: TextLabelView) -> CGSize? {
-            guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
+            guard let width = proposal.width, width.isValidLayoutDimension, width > 0 else { return nil }
             let suggested = label.textLayout.sizeThatFits(
                 CGSize(width: width, height: .greatestFiniteMagnitude)
             )
@@ -327,7 +327,8 @@ import SwiftUI
 
         private func updateLayout(for key: LayoutKey) {
             let width = key.width
-            guard width > 0 else { return }
+            // An invalid width (NaN, negative or infinite) lays out and renders nothing.
+            guard width.isValidLayoutDimension, width > 0 else { return }
             let newLayout = TextLabel.Layout(attributedString: key.text)
             let suggested = newLayout.sizeThatFits(
                 CGSize(width: width, height: .greatestFiniteMagnitude)
@@ -346,6 +347,7 @@ import SwiftUI
             size: CGSize,
             scale: CGFloat
         ) -> CGImage? {
+            guard size.isValidLayoutSize, scale.isFinite, scale > 0 else { return nil }
             // Round up so the last pixel row and column of glyphs are never clipped.
             let pw = Int((size.width * scale).rounded(.up))
             let ph = Int((size.height * scale).rounded(.up))
