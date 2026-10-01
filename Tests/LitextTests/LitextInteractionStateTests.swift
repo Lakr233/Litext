@@ -31,7 +31,7 @@ import Testing
     // MARK: - Content changes reset interaction state
 
     @MainActor
-    @Test func newTextOfTheSameLengthClearsTheSelection() {
+    @Test func `new text of the same length clears the selection`() {
         let label = makeLaidOutLabel(plain("Hello Litext"))
         label.selectionRange = NSRange(location: 0, length: 5)
         #expect(label.selectionRange != nil)
@@ -41,7 +41,7 @@ import Testing
     }
 
     @MainActor
-    @Test func longerUnrelatedTextClearsTheSelection() {
+    @Test func `longer unrelated text clears the selection`() {
         let label = makeLaidOutLabel(plain("Hello Litext"))
         label.selectionRange = NSRange(location: 0, length: 5)
 
@@ -50,7 +50,7 @@ import Testing
     }
 
     @MainActor
-    @Test func appendedTextKeepsTheSelection() {
+    @Test func `appended text keeps the selection`() {
         let label = makeLaidOutLabel(plain("Hello Litext"))
         label.selectionRange = NSRange(location: 0, length: 5)
 
@@ -59,7 +59,7 @@ import Testing
     }
 
     @MainActor
-    @Test func swappedAttachmentInTheKeptPrefixClearsTheSelection() {
+    @Test func `swapped attachment in the kept prefix clears the selection`() {
         let font = PlatformFont.systemFont(ofSize: 16)
         func text(_ attachment: TextLabel.Attachment, tail: String) -> NSAttributedString {
             let result = NSMutableAttributedString(string: "A", attributes: [.font: font])
@@ -82,12 +82,12 @@ import Testing
     }
 
     @MainActor
-    @Test func newTextClearsTheActiveHighlight() throws {
+    @Test func `new text clears the active highlight`() throws {
         let url = try #require(URL(string: "https://example.com"))
         let text = NSMutableAttributedString(attributedString: plain("Open "))
         text.append(NSAttributedString(
             string: "link",
-            attributes: [.font: PlatformFont.systemFont(ofSize: 16), .link: url]
+            attributes: [.font: PlatformFont.systemFont(ofSize: 16), .link: url],
         ))
         let label = makeLaidOutLabel(text)
         let region = try #require(label.highlightRegions.first { $0.kind == .link })
@@ -100,7 +100,7 @@ import Testing
     }
 
     @MainActor
-    @Test func newTextResetsTheMultiClickSequence() {
+    @Test func `new text resets the multi click sequence`() {
         let label = makeLaidOutLabel(plain("Hello Litext"))
         label.interactionState.clickCount = 2
         label.interactionState.lastClickTime = 42
@@ -113,7 +113,7 @@ import Testing
     // MARK: - Hit testing
 
     @MainActor
-    @Test func hitTargetDistinguishesTextFromPassThrough() {
+    @Test func `hit target distinguishes text from pass through`() {
         let label = makeLaidOutLabel(plain("Hello Litext"))
         let inside = CGPoint(x: 10, y: 10)
         #expect(label.hitTarget(at: inside) == .interactiveText)
@@ -125,7 +125,7 @@ import Testing
 
     #if canImport(AppKit) && !targetEnvironment(macCatalyst)
         @MainActor
-        @Test func nonSelectableLabelLetsClicksThroughOnAppKit() {
+        @Test func `non selectable label lets clicks through on app kit`() {
             let container = NSView(frame: CGRect(x: 0, y: 0, width: 400, height: 200))
             let label = makeLaidOutLabel(plain("Hello Litext"))
             label.frame.origin = CGPoint(x: 20, y: 20)
@@ -144,7 +144,7 @@ import Testing
             func textLabelView(
                 _: TextLabelView,
                 didTapHighlightRegion region: TextLabel.HighlightRegion,
-                at _: CGPoint
+                at _: CGPoint,
             ) {
                 if let url = region.linkURL {
                     tappedLinks.append(url)
@@ -153,13 +153,13 @@ import Testing
         }
 
         @MainActor
-        @Test func releasingAfterTheTextChangedDoesNotTapTheNewLink() throws {
+        @Test func `releasing after the text changed does not tap the new link`() throws {
             func linked(_ link: String, _ url: String) throws -> NSAttributedString {
                 let font = PlatformFont.systemFont(ofSize: 16)
                 let text = NSMutableAttributedString(string: "Lead ", attributes: [.font: font])
                 try text.append(NSAttributedString(
                     string: link,
-                    attributes: [.font: font, .link: #require(URL(string: url))]
+                    attributes: [.font: font, .link: #require(URL(string: url))],
                 ))
                 text.append(NSAttributedString(string: " tail", attributes: [.font: font]))
                 return text
@@ -168,7 +168,7 @@ import Testing
                 contentRect: CGRect(x: 0, y: 0, width: 400, height: 200),
                 styleMask: [.titled],
                 backing: .buffered,
-                defer: false
+                defer: false,
             )
             let label = try TextLabelView(attributedText: linked("first", "https://pressed.example"))
             label.frame = CGRect(x: 0, y: 0, width: 400, height: 200)
@@ -190,7 +190,7 @@ import Testing
                     context: nil,
                     eventNumber: 0,
                     clickCount: 1,
-                    pressure: 1
+                    pressure: 1,
                 ))
             }
 
@@ -210,7 +210,7 @@ import Testing
 
     #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS)
         @MainActor
-        @Test func forwardedTouchEndDoesNotEndAHandleDrag() {
+        @Test func `forwarded touch end does not end A handle drag`() {
             let label = makeLaidOutLabel(plain("Hello Litext"))
             label.selectionRange = NSRange(location: 0, length: 5)
             label.selectionHandleDidBeginDrag(.end)

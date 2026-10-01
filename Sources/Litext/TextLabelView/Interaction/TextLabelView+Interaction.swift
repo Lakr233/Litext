@@ -62,12 +62,12 @@ import Foundation
             NSObject.cancelPreviousPerformRequests(
                 withTarget: self,
                 selector: #selector(performContinuousStateReset),
-                object: nil
+                object: nil,
             )
             perform(
                 #selector(performContinuousStateReset),
                 with: nil,
-                afterDelay: kMultiClickTimeThreshold
+                afterDelay: kMultiClickTimeThreshold,
             )
         }
 
@@ -79,7 +79,7 @@ import Foundation
         func isTouchReallyMoved(_ point: CGPoint) -> Bool {
             let distance = hypot(
                 point.x - interactionState.initialTouchLocation.x,
-                point.y - interactionState.initialTouchLocation.y
+                point.y - interactionState.initialTouchLocation.y,
             )
             return distance > kMinimalDistanceToMove
         }

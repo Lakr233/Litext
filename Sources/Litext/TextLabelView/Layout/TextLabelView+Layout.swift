@@ -29,7 +29,7 @@ import QuartzCore
         override open var intrinsicContentSize: CGSize {
             var constraintSize = CGSize(
                 width: CGFloat.greatestFiniteMagnitude,
-                height: CGFloat.greatestFiniteMagnitude
+                height: CGFloat.greatestFiniteMagnitude,
             )
 
             // An invalid width (NaN, negative or infinite) constrains nothing.
@@ -40,13 +40,13 @@ import QuartzCore
             }
 
             let suggested = textLayout.sizeThatFits(
-                constraintSize
+                constraintSize,
             )
             // Round up to the pixel grid so the host layout system never sizes the
             // view fractionally smaller than the measured text.
             return CGSize(
                 width: pixelCeil(suggested.width),
-                height: pixelCeil(suggested.height)
+                height: pixelCeil(suggested.height),
             )
         }
 

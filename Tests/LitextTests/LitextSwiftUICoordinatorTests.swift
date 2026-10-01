@@ -19,14 +19,14 @@ import Testing
         private func makeLabel() -> TextLabelView {
             let label = TextLabelView(attributedText: NSAttributedString(
                 string: "Hello world",
-                attributes: [.font: PlatformFont.systemFont(ofSize: 16)]
+                attributes: [.font: PlatformFont.systemFont(ofSize: 16)],
             ))
             label.isSelectable = true
             return label
         }
 
-        @Test("Selection changes outside an update are reported synchronously")
-        func reportsImmediatelyOutsideUpdate() {
+        @Test
+        func `Selection changes outside an update are reported synchronously`() {
             let recorder = Recorder()
             let coordinator = TextLabel.Coordinator(onTapLink: nil) { recorder.values.append($0) }
             let label = makeLabel()
@@ -35,8 +35,8 @@ import Testing
             #expect(recorder.values == ["Hello"])
         }
 
-        @Test("Selection changes during an update are deferred and coalesced")
-        func defersDuringUpdate() async {
+        @Test
+        func `Selection changes during an update are deferred and coalesced`() async {
             let recorder = Recorder()
             let coordinator = TextLabel.Coordinator(onTapLink: nil) { recorder.values.append($0) }
             let label = makeLabel()
@@ -54,8 +54,8 @@ import Testing
             #expect(recorder.values == [nil])
         }
 
-        @Test("A deferred change never lands after a newer direct one")
-        func directChangeSupersedesADeferredOne() async {
+        @Test
+        func `A deferred change never lands after a newer direct one`() async {
             let recorder = Recorder()
             let coordinator = TextLabel.Coordinator(onTapLink: nil) { recorder.values.append($0) }
             let label = makeLabel()

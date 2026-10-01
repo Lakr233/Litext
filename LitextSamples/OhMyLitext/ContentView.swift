@@ -82,13 +82,13 @@ struct ContentView: View {
             #if os(iOS)
                 .popover(isPresented: Binding(
                     get: { showSettings && horizontalSizeClass != .compact },
-                    set: { showSettings = $0 }
+                    set: { showSettings = $0 },
                 )) {
                     settingsPanel
                 }
                 .sheet(isPresented: Binding(
                     get: { showSettings && horizontalSizeClass == .compact },
-                    set: { showSettings = $0 }
+                    set: { showSettings = $0 },
                 )) {
                     settingsPanel
                         .presentationDetents([.medium])

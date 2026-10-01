@@ -11,7 +11,7 @@ import QuartzCore
 #if !os(watchOS)
 
     private let kDeduplicateSelectionNotification = Notification.Name(
-        rawValue: "TextLabelViewDeduplicateSelectionNotification"
+        rawValue: "TextLabelViewDeduplicateSelectionNotification",
     )
 
     extension TextLabelView {
@@ -70,7 +70,7 @@ import QuartzCore
                 // caret at its edge keeps the handle on the text instead of at `.zero`.
                 let lastCharacter = range.location + range.length - 1
                 var beginRect = textLayout.rects(
-                    for: NSRange(location: range.location, length: 1)
+                    for: NSRange(location: range.location, length: 1),
                 ).first
                     ?? textLayout.caretRect(at: range.location, onLineOf: range.location)
                     ?? .zero
@@ -79,10 +79,10 @@ import QuartzCore
                     x: beginRect.minX - SelectionHandle.handleWidth / 2 - SelectionHandle.stickOutset,
                     y: beginRect.minY - SelectionHandle.knobDiameter,
                     width: SelectionHandle.handleWidth,
-                    height: beginRect.height + SelectionHandle.knobDiameter
+                    height: beginRect.height + SelectionHandle.knobDiameter,
                 )
                 var endRect = textLayout.rects(
-                    for: NSRange(location: lastCharacter, length: 1)
+                    for: NSRange(location: lastCharacter, length: 1),
                 ).first
                     ?? textLayout.caretRect(at: lastCharacter + 1, onLineOf: lastCharacter)
                     ?? .zero
@@ -91,7 +91,7 @@ import QuartzCore
                     x: endRect.maxX - SelectionHandle.handleWidth / 2 + SelectionHandle.stickOutset,
                     y: endRect.minY,
                     width: SelectionHandle.handleWidth,
-                    height: endRect.height + SelectionHandle.knobDiameter
+                    height: endRect.height + SelectionHandle.knobDiameter,
                 )
             #endif
 
@@ -105,7 +105,7 @@ import QuartzCore
                 self,
                 selector: #selector(deduplicateSelection),
                 name: kDeduplicateSelectionNotification,
-                object: nil
+                object: nil,
             )
         }
 

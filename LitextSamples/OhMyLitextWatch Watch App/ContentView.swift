@@ -99,7 +99,7 @@ extension ContentView {
         attachment.size = CGSize(width: blockWidth, height: blockHeight)
         attachment.swiftUIView = AnyView(
             CodeBlockView(code: codeText)
-                .frame(width: blockWidth, height: blockHeight)
+                .frame(width: blockWidth, height: blockHeight),
         )
 
         s.append(attachment.attributedString())
@@ -133,7 +133,7 @@ extension ContentView {
                 .foregroundStyle(.white)
                 .frame(width: 120, height: 28)
                 .background(.blue)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: 6)),
         )
 
         result.append(attachment.attributedString(attributes: [
@@ -166,7 +166,7 @@ extension ContentView {
         _ string: String,
         font: UIFont,
         color: UIColor,
-        underline: Bool = false
+        underline: Bool = false,
     ) -> NSAttributedString {
         var attrs: [NSAttributedString.Key: Any] = [
             .font: font,

@@ -62,7 +62,7 @@ import QuartzCore
             NSObject.cancelPreviousPerformRequests(
                 withTarget: self,
                 selector: #selector(performContinuousStateReset),
-                object: nil
+                object: nil,
             )
             performContinuousStateReset()
             if isInteractionInProgress {
@@ -85,14 +85,14 @@ import QuartzCore
         /// The attachment objects in the first `length` characters of `text`, in order.
         private static func attachments(
             in text: NSAttributedString,
-            upTo length: Int
+            upTo length: Int,
         ) -> [TextLabel.Attachment] {
             var result = [TextLabel.Attachment]()
             guard length > 0 else { return result }
             text.enumerateAttribute(
                 .litextAttachment,
                 in: NSRange(location: 0, length: length),
-                options: []
+                options: [],
             ) { value, _, _ in
                 if let attachment = value as? TextLabel.Attachment {
                     result.append(attachment)

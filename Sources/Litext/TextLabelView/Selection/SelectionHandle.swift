@@ -93,7 +93,7 @@ import Foundation
                 x: bounds.midX - Self.stickWidth / 2,
                 y: bounds.minY,
                 width: Self.stickWidth,
-                height: bounds.height
+                height: bounds.height,
             )
 
             let knobY: CGFloat = switch kind {
@@ -104,7 +104,7 @@ import Foundation
                 x: bounds.midX - Self.knobRadius,
                 y: knobY,
                 width: Self.knobDiameter,
-                height: Self.knobDiameter
+                height: Self.knobDiameter,
             )
         }
 
@@ -122,7 +122,7 @@ import Foundation
                     x: frameAtGestureBegin.origin.x + translation.x,
                     y: frameAtGestureBegin.origin.y + translation.y,
                     width: frameAtGestureBegin.width,
-                    height: frameAtGestureBegin.height
+                    height: frameAtGestureBegin.height,
                 )
                 delegate?.selectionHandleDidMove(kind, toLocationInSuperView: .init(x: newFrame.midX, y: newFrame.midY))
             case .ended, .cancelled, .failed:
@@ -134,7 +134,7 @@ import Foundation
         override open func point(inside point: CGPoint, with _: UIEvent?) -> Bool {
             let touchRect = bounds.insetBy(
                 dx: -Self.knobExtraResponsiveArea,
-                dy: -Self.knobExtraResponsiveArea
+                dy: -Self.knobExtraResponsiveArea,
             )
             return touchRect.contains(point)
         }

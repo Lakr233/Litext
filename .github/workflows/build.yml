@@ -8,7 +8,7 @@ on:
 
 jobs:
   format-check:
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
       - name: Checkout
@@ -24,7 +24,7 @@ jobs:
         run: swiftlint --strict
 
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
@@ -69,7 +69,7 @@ jobs:
             | xcbeautify --disable-logging
 
   test:
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
       - name: Checkout
@@ -80,6 +80,9 @@ jobs:
 
       - name: SwiftPM tests
         run: swift test
+
+      - name: SwiftPM stress tests (quick)
+        run: LITEXT_STRESS=1 swift test --filter Stress
 
       - name: Xcode macOS unit tests
         run: |

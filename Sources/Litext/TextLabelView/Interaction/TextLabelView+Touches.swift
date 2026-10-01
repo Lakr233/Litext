@@ -47,7 +47,7 @@
                     let rect = handler.frame
                         .insetBy(
                             dx: -SelectionHandle.knobExtraResponsiveArea,
-                            dy: -SelectionHandle.knobExtraResponsiveArea
+                            dy: -SelectionHandle.knobExtraResponsiveArea,
                         )
                     if rect.contains(point) {
                         return true
@@ -204,7 +204,7 @@
             NSObject.cancelPreviousPerformRequests(
                 withTarget: self,
                 selector: #selector(performContinuousStateReset),
-                object: nil
+                object: nil,
             )
             performContinuousStateReset()
             deactivateHighlightRegion()
@@ -226,10 +226,8 @@
             }
 
             public func installTextPointerInteraction() {
-                if #available(iOS 13.4, macCatalyst 13.4, *) {
-                    let pointerInteraction = UIPointerInteraction(delegate: self)
-                    addInteraction(pointerInteraction)
-                }
+                let pointerInteraction = UIPointerInteraction(delegate: self)
+                addInteraction(pointerInteraction)
             }
         #endif
     }
@@ -281,7 +279,7 @@
                 Self.menuOwnerIdentifier = id
                 menuController.showMenu(
                     from: self,
-                    rect: unionRect.insetBy(dx: -8, dy: -8)
+                    rect: unionRect.insetBy(dx: -8, dy: -8),
                 )
             }
 
@@ -323,7 +321,7 @@
 
             override open func canPerformAction(
                 _ action: Selector,
-                withSender _: Any?
+                withSender _: Any?,
             ) -> Bool {
                 if action == #selector(copyMenuItemTapped) {
                     return selectionRange != nil
@@ -395,7 +393,7 @@
             public func editMenuInteraction(
                 _: UIEditMenuInteraction,
                 menuFor _: UIEditMenuConfiguration,
-                suggestedActions _: [UIMenuElement]
+                suggestedActions _: [UIMenuElement],
             ) -> UIMenu? {
                 let actions = makeSelectionMenuActions()
                 guard !actions.isEmpty else { return nil }
@@ -404,7 +402,7 @@
 
             public func editMenuInteraction(
                 _: UIEditMenuInteraction,
-                targetRectFor _: UIEditMenuConfiguration
+                targetRectFor _: UIEditMenuConfiguration,
             ) -> CGRect {
                 editMenuTargetRect
             }
@@ -412,7 +410,7 @@
             public func editMenuInteraction(
                 _: UIEditMenuInteraction,
                 willDismissMenuFor _: UIEditMenuConfiguration,
-                animator _: UIEditMenuInteractionAnimating
+                animator _: UIEditMenuInteractionAnimating,
             ) {
                 isEditMenuVisible = false
             }

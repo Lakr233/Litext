@@ -110,20 +110,20 @@ enum ShowcaseDocument {
         text.append(nestedLabelAttachment(
             text: nestedInlineText(),
             identifier: "demo.attachment.inline.view",
-            linkURL: nil
+            linkURL: nil,
         ))
         text.append(style.body(" is a selectable nested label, while "))
         text.append(nestedLabelAttachment(
             text: nestedLinkedText(),
             identifier: "demo.attachment.linked.view",
-            linkURL: linkedAttachmentURL
+            linkURL: linkedAttachmentURL,
         ))
         text.append(style.body(" opens a link when activated.\n"))
 
         text.append(nestedLabelAttachment(
             text: nestedLinkedText(),
             identifier: "demo.attachment.linked.view",
-            linkURL: linkedAttachmentURL
+            linkURL: linkedAttachmentURL,
         ))
         text.append(style.body("\n"))
 
@@ -136,11 +136,11 @@ enum ShowcaseDocument {
         text.append(style.heading("SELECTION\n"))
         text.append(style.body(
             "Try selecting this paragraph. On iOS, drag the selection handles; on macOS, click and drag, " +
-                "double-click for a word, triple-click for a line, then copy with ⌘C or select everything with ⌘A.\n"
+                "double-click for a word, triple-click for a line, then copy with ⌘C or select everything with ⌘A.\n",
         ))
         text.append(style.body(
             "Litext is built for text-heavy interfaces — chat transcripts, articles, and documentation — " +
-                "where CoreText keeps scrolling smooth no matter how much rich content is on screen.\n"
+                "where CoreText keeps scrolling smooth no matter how much rich content is on screen.\n",
         ))
 
         text.append(style.caption("Rendered with CoreText — no TextKit involved. Even the inline boxes above are nested TextLabelViews."))
@@ -175,7 +175,7 @@ enum ShowcaseDocument {
     private static func nestedLabelAttachment(
         text: NSAttributedString,
         identifier: String,
-        linkURL: URL?
+        linkURL: URL?,
     ) -> NSAttributedString {
         let attachment = TextLabel.Attachment()
         let view = makeNestedLabelView(text: text, identifier: identifier)
@@ -201,12 +201,12 @@ enum ShowcaseDocument {
             x: nestedLabelPadding,
             y: nestedLabelPadding,
             width: textSize.width,
-            height: textSize.height
+            height: textSize.height,
         )
 
         let containerSize = CGSize(
             width: textSize.width + nestedLabelPadding * 2,
-            height: textSize.height + nestedLabelPadding * 2
+            height: textSize.height + nestedLabelPadding * 2,
         )
 
         #if canImport(UIKit)
@@ -238,7 +238,7 @@ private final class NestedLabelEventForwarder: NSObject, TextLabelViewDelegate {
     func textLabelView(
         _ label: TextLabelView,
         didTapHighlightRegion region: TextLabel.HighlightRegion,
-        at location: CGPoint
+        at location: CGPoint,
     ) {
         enclosingLabel(of: label)?.delegate?.textLabelView(label, didTapHighlightRegion: region, at: location)
     }
@@ -289,7 +289,7 @@ private struct Stylist {
 
     private func paragraph(
         spacingBefore: CGFloat = 0,
-        spacingAfter: CGFloat = 6
+        spacingAfter: CGFloat = 6,
     ) -> NSParagraphStyle {
         let style = NSMutableParagraphStyle()
         style.lineSpacing = theme.lineSpacing
@@ -302,7 +302,7 @@ private struct Stylist {
         font: PlatformFont,
         color: PlatformColor,
         spacingBefore: CGFloat = 0,
-        spacingAfter: CGFloat = 6
+        spacingAfter: CGFloat = 6,
     ) -> [NSAttributedString.Key: Any] {
         [
             .font: font,
@@ -315,7 +315,7 @@ private struct Stylist {
         NSAttributedString(string: string, attributes: attributes(
             font: .boldSystemFont(ofSize: theme.fontSize * 2.2),
             color: theme.textColor,
-            spacingAfter: 2
+            spacingAfter: 2,
         ))
     }
 
@@ -323,7 +323,7 @@ private struct Stylist {
         NSAttributedString(string: string, attributes: attributes(
             font: bodyFont,
             color: .secondaryLabel,
-            spacingAfter: 10
+            spacingAfter: 10,
         ))
     }
 
@@ -332,14 +332,14 @@ private struct Stylist {
             font: .boldSystemFont(ofSize: max(11, theme.fontSize - 3)),
             color: .secondaryLabel,
             spacingBefore: 18,
-            spacingAfter: 4
+            spacingAfter: 4,
         ))
     }
 
     func body(_ string: String) -> NSAttributedString {
         NSAttributedString(string: string, attributes: attributes(
             font: bodyFont,
-            color: theme.textColor
+            color: theme.textColor,
         ))
     }
 
@@ -347,7 +347,7 @@ private struct Stylist {
         NSAttributedString(string: string, attributes: attributes(
             font: .systemFont(ofSize: max(10, theme.fontSize - 4)),
             color: .secondaryLabel,
-            spacingBefore: 20
+            spacingBefore: 20,
         ))
     }
 
