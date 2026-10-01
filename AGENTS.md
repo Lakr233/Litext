@@ -4,7 +4,10 @@ Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, includi
 
 ## Ground rules
 
-- **Language and platform floors:** Swift 6 in strict concurrency mode. iOS 13, Mac Catalyst 13, macOS 12, tvOS 13, visionOS 1 and watchOS 8 are the floors. Gate newer APIs with `#available`, and keep every floor building; don't raise one to reach an API.
+- **Language and platform floors:**
+  - The package needs Swift 6.2 (Xcode 26) or later and builds in the Swift 6 language mode with strict concurrency.
+  - The floors are iOS 15, Mac Catalyst 15, macOS 12, tvOS 15, visionOS 1 and watchOS 8: the oldest systems the Swift 6.2 toolchain deploys to.
+  - Gate newer APIs with `#available`, and keep every floor building. Don't raise a floor to reach an API.
 - **Signing:** Build and test with `CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO`. Never change signing settings in the projects: no adding `DEVELOPMENT_TEAM`, no switching `CODE_SIGN_STYLE`, no `-allowProvisioningUpdates`.
 - **Formatting and lint:** CI runs `swiftformat --lint .` and `swiftlint --strict`. Both must report nothing before you push.
 - **Commits and pull requests:**

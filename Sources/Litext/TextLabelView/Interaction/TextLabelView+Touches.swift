@@ -226,10 +226,8 @@
             }
 
             public func installTextPointerInteraction() {
-                if #available(iOS 13.4, macCatalyst 13.4, *) {
-                    let pointerInteraction = UIPointerInteraction(delegate: self)
-                    addInteraction(pointerInteraction)
-                }
+                let pointerInteraction = UIPointerInteraction(delegate: self)
+                addInteraction(pointerInteraction)
             }
         #endif
     }

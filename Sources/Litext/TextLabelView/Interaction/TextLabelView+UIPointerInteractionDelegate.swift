@@ -9,7 +9,6 @@
 
     import UIKit
 
-    @available(iOS 13.4, macCatalyst 13.4, *)
     extension TextLabelView: UIPointerInteractionDelegate {
         public func pointerInteraction(
             _: UIPointerInteraction,

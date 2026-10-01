@@ -411,7 +411,6 @@ public extension TextLabel {
 
     /// Creates a label with an AttributedString.
     /// - Parameter attributedString: The attributed string to display.
-    @available(iOS 15.0, macCatalyst 15.0, tvOS 15.0, visionOS 1.0, macOS 12.0, watchOS 8.0, *)
     init(attributedString: AttributedString) {
         content = .attributedString(NSAttributedString(attributedString))
     }
