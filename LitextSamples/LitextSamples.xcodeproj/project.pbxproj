@@ -11,6 +11,8 @@
 		508316D52F2E5C810061E34E /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = 508316D42F2E5C810061E34E /* Litext */; };
 		A10000012F6A000100000015 /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = A10000012F6A000100000014 /* Litext */; };
 		A46DCE6B89854A7DB45AA063 /* Litext in Frameworks */ = {isa = PBXBuildFile; productRef = 270FC1BDBB3940ECB286CB3C /* Litext */; };
+		D1A000012F70000100000001 /* LitextAnimation in Frameworks */ = {isa = PBXBuildFile; productRef = D1A000012F70000100000002 /* LitextAnimation */; };
+		D1A000012F70000100000003 /* LitextAnimation in Frameworks */ = {isa = PBXBuildFile; productRef = D1A000012F70000100000004 /* LitextAnimation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +72,11 @@
 			path = OhMyLitextTests;
 			sourceTree = "<group>";
 		};
+		D1A000012F70000100000005 /* AnimationEffects */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AnimationEffects;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,6 +93,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				508316D52F2E5C810061E34E /* Litext in Frameworks */,
+				D1A000012F70000100000001 /* LitextAnimation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -94,6 +102,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000012F6A000100000015 /* Litext in Frameworks */,
+				D1A000012F70000100000003 /* LitextAnimation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -111,6 +120,7 @@
 			isa = PBXGroup;
 			children = (
 				5083169B2F2E5A7D0061E34E /* OhMyLitext */,
+				D1A000012F70000100000005 /* AnimationEffects */,
 				506D77EB2F5ED142008A1A6C /* OhMyLitextWatch Watch App */,
 				A10000012F6A000100000004 /* OhMyLitextTests */,
 				EDD2ECEC2D64B75B006C1403 /* Products */,
@@ -189,10 +199,12 @@
 			);
 			fileSystemSynchronizedGroups = (
 				5083169B2F2E5A7D0061E34E /* OhMyLitext */,
+				D1A000012F70000100000005 /* AnimationEffects */,
 			);
 			name = OhMyLitext;
 			packageProductDependencies = (
 				508316D42F2E5C810061E34E /* Litext */,
+				D1A000012F70000100000002 /* LitextAnimation */,
 			);
 			productName = OhMyLitext;
 			productReference = 5083169A2F2E5A7D0061E34E /* OhMyLitext.app */;
@@ -212,10 +224,12 @@
 			);
 			fileSystemSynchronizedGroups = (
 				A10000012F6A000100000004 /* OhMyLitextTests */,
+				D1A000012F70000100000005 /* AnimationEffects */,
 			);
 			name = OhMyLitextTests;
 			packageProductDependencies = (
 				A10000012F6A000100000014 /* Litext */,
+				D1A000012F70000100000004 /* LitextAnimation */,
 			);
 			productName = OhMyLitextTests;
 			productReference = A10000012F6A000100000002 /* OhMyLitextTests.xctest */;
@@ -780,6 +794,14 @@
 		A10000012F6A000100000014 /* Litext */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Litext;
+		};
+		D1A000012F70000100000002 /* LitextAnimation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LitextAnimation;
+		};
+		D1A000012F70000100000004 /* LitextAnimation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LitextAnimation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -20,13 +20,31 @@ struct ContentView: View {
     @State private var lastSelectedText = ""
     @State private var showLinkAlert = false
     @State private var showSettings = false
+    #if !os(tvOS)
+        @State private var path = AnimationRoute.launchPath
+    #endif
 
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
     var body: some View {
-        NavigationStack {
+        #if os(tvOS)
+            NavigationStack {
+                documentPage
+            }
+        #else
+            NavigationStack(path: $path) {
+                documentPage
+                    .navigationDestination(for: AnimationRoute.self) { route in
+                        route.page
+                    }
+            }
+        #endif
+    }
+
+    private var documentPage: some View {
+        Group {
             ScrollView {
                 TextLabel(attributedString: document)
                     .selectable(theme.isSelectable)
@@ -48,6 +66,13 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     settingsButton
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    NavigationLink(value: AnimationRoute.gallery) {
+                        Image(systemName: "sparkles")
+                    }
+                    .accessibilityLabel("Animation")
+                    .accessibilityIdentifier("demo.animation.open")
                 }
                 ToolbarItem(placement: .primaryAction) {
                     NavigationLink {
