@@ -11,7 +11,7 @@ import SwiftUI
 struct LitextCatalogApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            CatalogRootView()
         }
         #if os(macOS) || os(visionOS) || targetEnvironment(macCatalyst)
         .windowResizability(.contentMinSize)

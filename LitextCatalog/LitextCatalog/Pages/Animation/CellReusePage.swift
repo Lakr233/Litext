@@ -1,5 +1,5 @@
 //
-//  ReuseDemoView.swift
+//  CellReusePage.swift
 //  LitextCatalog
 //
 //  Created by Litext Team.
@@ -16,10 +16,30 @@ import Litext
 import LitextAnimation
 import SwiftUI
 
+struct CellReusePage: View {
+    private static let code = """
+    // In the cell's configure method: the identity first, then the text.
+    cell.label.animationIdentity = message.id
+    cell.label.attributedText = message.rendered
+    // A new identity shows its text at once; more text for the same
+    // identity animates.
+    """
+
+    var body: some View {
+        #if os(tvOS)
+            CatalogUnavailableView(page: .cellReuse, reason: "The animation pages need sliders and toggles, which tvOS does not have.")
+        #else
+            CatalogFillScaffold(.cellReuse, code: Self.code) {
+                ReuseDemoView()
+            }
+        #endif
+    }
+}
+
 #if !os(tvOS)
 
     struct ReuseDemoView: View {
-        @State private var isAutoScrolling = UserDefaults.standard.bool(forKey: "autoScroll")
+        @State private var isAutoScrolling = CatalogLaunchOptions.current.isAutoScrolling
         @State private var strayAnimations = 0
 
         var body: some View {
@@ -40,7 +60,6 @@ import SwiftUI
                     .padding(.vertical, 10)
                     .background(.bar)
                 }
-                .navigationTitle("Cell Reuse")
         }
     }
 
@@ -209,41 +228,19 @@ import SwiftUI
 
     // MARK: - Table
 
-    private struct ReuseTable {
+    private struct ReuseTable: View {
         var isAutoScrolling: Bool
         var onStrayAnimation: () -> Void
 
-        func update(_ view: ReuseTableView) {
-            view.onStrayAnimation = onStrayAnimation
-            view.isAutoScrolling = isAutoScrolling
+        var body: some View {
+            PlatformViewHost {
+                ReuseTableView()
+            } update: { view in
+                view.onStrayAnimation = onStrayAnimation
+                view.isAutoScrolling = isAutoScrolling
+            }
         }
     }
-
-    #if canImport(UIKit)
-        extension ReuseTable: UIViewRepresentable {
-            func makeUIView(context _: Context) -> ReuseTableView {
-                let view = ReuseTableView()
-                update(view)
-                return view
-            }
-
-            func updateUIView(_ uiView: ReuseTableView, context _: Context) {
-                update(uiView)
-            }
-        }
-    #else
-        extension ReuseTable: NSViewRepresentable {
-            func makeNSView(context _: Context) -> ReuseTableView {
-                let view = ReuseTableView()
-                update(view)
-                return view
-            }
-
-            func updateNSView(_ nsView: ReuseTableView, context _: Context) {
-                update(nsView)
-            }
-        }
-    #endif
 
     /// The platform table, its data source, the live stream and the auto scroll.
     final class ReuseTableView: PlatformView {

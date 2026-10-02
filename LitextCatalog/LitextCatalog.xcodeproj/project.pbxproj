@@ -72,6 +72,11 @@
 			path = LitextCatalogTests;
 			sourceTree = "<group>";
 		};
+		C47A10012F80000100000001 /* CatalogCore */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CatalogCore;
+			sourceTree = "<group>";
+		};
 		D1A000012F70000100000005 /* AnimationEffects */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AnimationEffects;
@@ -120,6 +125,7 @@
 			isa = PBXGroup;
 			children = (
 				5083169B2F2E5A7D0061E34E /* LitextCatalog */,
+				C47A10012F80000100000001 /* CatalogCore */,
 				D1A000012F70000100000005 /* AnimationEffects */,
 				506D77EB2F5ED142008A1A6C /* LitextCatalog Watch App */,
 				A10000012F6A000100000004 /* LitextCatalogTests */,
@@ -200,6 +206,7 @@
 			fileSystemSynchronizedGroups = (
 				5083169B2F2E5A7D0061E34E /* LitextCatalog */,
 				D1A000012F70000100000005 /* AnimationEffects */,
+				C47A10012F80000100000001 /* CatalogCore */,
 			);
 			name = LitextCatalog;
 			packageProductDependencies = (
@@ -225,6 +232,7 @@
 			fileSystemSynchronizedGroups = (
 				A10000012F6A000100000004 /* LitextCatalogTests */,
 				D1A000012F70000100000005 /* AnimationEffects */,
+				C47A10012F80000100000001 /* CatalogCore */,
 			);
 			name = LitextCatalogTests;
 			packageProductDependencies = (

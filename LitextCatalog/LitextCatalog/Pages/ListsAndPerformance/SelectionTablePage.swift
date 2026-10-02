@@ -1,5 +1,5 @@
 //
-//  TableDemoView.swift
+//  SelectionTablePage.swift
 //  LitextCatalog
 //
 //  Created by Litext Team.
@@ -13,6 +13,27 @@
 
 import Litext
 import SwiftUI
+
+struct SelectionTablePage: View {
+    private static let code = """
+    // One label per cell, listed in reading order: row by row.
+    let group = TextSelectionGroup(labels: cells.flatMap(\\.self))
+    group.separator = { previous, next in
+        sameRow(previous, next) ? "\\t" : "\\n"
+    }
+    group.delegate = self   // TextSelectionGroupDelegate
+
+    func textSelectionGroupDidChangeSelection(_ group: TextSelectionGroup) {
+        print(group.selectedPlainText() ?? "")
+    }
+    """
+
+    var body: some View {
+        CatalogFillScaffold(.selectionTable, code: Self.code) {
+            TableDemoView()
+        }
+    }
+}
 
 struct TableDemoView: View {
     @State private var selectedText = ""
@@ -48,7 +69,6 @@ struct TableDemoView: View {
             .frame(maxWidth: .infinity)
             .padding(20)
         }
-        .navigationTitle("Table Selection")
         .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "selection.pin.in.out")
@@ -92,55 +112,21 @@ struct TableDemoView: View {
 
 // MARK: - Table
 
-private struct SelectableTable {
+private struct SelectableTable: View {
     let rows: [[String]]
     let onSelectionChange: (String?) -> Void
 
-    func makeView() -> TableGridView {
-        let view = TableGridView(rows: rows)
-        view.onSelectionChange = onSelectionChange
-        return view
-    }
-
-    func update(_ view: TableGridView) {
-        view.onSelectionChange = onSelectionChange
-    }
-
-    func size(for proposal: ProposedViewSize, view: TableGridView) -> CGSize? {
-        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
-        return CGSize(width: width, height: view.height(forWidth: width))
+    var body: some View {
+        PlatformViewHost {
+            TableGridView(rows: rows)
+        } update: { view in
+            view.onSelectionChange = onSelectionChange
+        } fittingSize: { view, proposal in
+            guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
+            return CGSize(width: width, height: view.height(forWidth: width))
+        }
     }
 }
-
-#if canImport(UIKit)
-    extension SelectableTable: UIViewRepresentable {
-        func makeUIView(context _: Context) -> TableGridView {
-            makeView()
-        }
-
-        func updateUIView(_ uiView: TableGridView, context _: Context) {
-            update(uiView)
-        }
-
-        func sizeThatFits(_ proposal: ProposedViewSize, uiView: TableGridView, context _: Context) -> CGSize? {
-            size(for: proposal, view: uiView)
-        }
-    }
-#else
-    extension SelectableTable: NSViewRepresentable {
-        func makeNSView(context _: Context) -> TableGridView {
-            makeView()
-        }
-
-        func updateNSView(_ nsView: TableGridView, context _: Context) {
-            update(nsView)
-        }
-
-        func sizeThatFits(_ proposal: ProposedViewSize, nsView: TableGridView, context _: Context) -> CGSize? {
-            size(for: proposal, view: nsView)
-        }
-    }
-#endif
 
 /// A bordered grid of labels, one per cell, in one selection group.
 final class TableGridView: PlatformView, TextSelectionGroupDelegate {

@@ -415,21 +415,3 @@ private struct Stylist {
         return NSAttributedString(string: string, attributes: attrs)
     }
 }
-
-// MARK: - Platform Shims
-
-#if canImport(AppKit) && !targetEnvironment(macCatalyst)
-    extension NSColor {
-        static var label: NSColor {
-            .labelColor
-        }
-
-        static var link: NSColor {
-            .linkColor
-        }
-
-        static var secondaryLabel: NSColor {
-            .secondaryLabelColor
-        }
-    }
-#endif

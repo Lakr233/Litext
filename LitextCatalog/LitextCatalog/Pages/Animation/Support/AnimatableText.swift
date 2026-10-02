@@ -26,7 +26,7 @@ import SwiftUI
     ///
     /// AnimatableText(text: streamed, animator: animator)
     /// ```
-    struct AnimatableText {
+    struct AnimatableText: View {
         var text: NSAttributedString
         var animator: (any LTXTextAnimator)?
         /// The label's policy; `nil` keeps `LTXDefaultAnimationPolicy`.
@@ -46,10 +46,12 @@ import SwiftUI
             self.identity = identity
         }
 
-        func makeLabel() -> LTXAnimatableLabel {
-            let label = LTXAnimatableLabel()
-            update(label)
-            return label
+        var body: some View {
+            PlatformViewHost.label {
+                LTXAnimatableLabel()
+            } update: { label in
+                update(label)
+            }
         }
 
         func update(_ label: LTXAnimatableLabel) {
@@ -63,43 +65,6 @@ import SwiftUI
             label.animationIdentity = identity
             label.attributedText = text
         }
-
-        /// The proposed width, and the height the text needs at that width.
-        func size(for proposal: ProposedViewSize, label: LTXAnimatableLabel) -> CGSize? {
-            guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
-            let fitting = label.textLayout.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-            return CGSize(width: width, height: fitting.height.rounded(.up))
-        }
     }
-
-    #if canImport(UIKit)
-        extension AnimatableText: UIViewRepresentable {
-            func makeUIView(context _: Context) -> LTXAnimatableLabel {
-                makeLabel()
-            }
-
-            func updateUIView(_ uiView: LTXAnimatableLabel, context _: Context) {
-                update(uiView)
-            }
-
-            func sizeThatFits(_ proposal: ProposedViewSize, uiView: LTXAnimatableLabel, context _: Context) -> CGSize? {
-                size(for: proposal, label: uiView)
-            }
-        }
-    #else
-        extension AnimatableText: NSViewRepresentable {
-            func makeNSView(context _: Context) -> LTXAnimatableLabel {
-                makeLabel()
-            }
-
-            func updateNSView(_ nsView: LTXAnimatableLabel, context _: Context) {
-                update(nsView)
-            }
-
-            func sizeThatFits(_ proposal: ProposedViewSize, nsView: LTXAnimatableLabel, context _: Context) -> CGSize? {
-                size(for: proposal, label: nsView)
-            }
-        }
-    #endif
 
 #endif

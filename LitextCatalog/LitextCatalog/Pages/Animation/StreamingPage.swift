@@ -1,16 +1,41 @@
 //
-//  StreamingDemoView.swift
+//  StreamingPage.swift
 //  LitextCatalog
 //
 //  Created by Litext Team.
 //
 //  Streams a canned model reply into one animatable label, token by token,
-//  at an adjustable rate, with a choice of effect.
+//  at an adjustable rate, with a choice of effect. Launch with
+//  `-page animation.streaming` (or `-demo streaming`), and add
+//  `-effect none|fade|fadeUp` or `-slowMotion YES`.
 //
 
 import Litext
 import LitextAnimation
 import SwiftUI
+
+struct StreamingPage: View {
+    private static let code = """
+    let label = LTXAnimatableLabel()
+    label.animator = FadeUpAnimator()   // an LTXTextAnimator of your own
+
+    // Keep assigning the text as it streams in: only the new text animates.
+    for await token in reply {
+        streamed.append(token)
+        label.attributedText = streamed
+    }
+    """
+
+    var body: some View {
+        #if os(tvOS)
+            CatalogUnavailableView(page: .streaming, reason: "The animation pages need sliders and toggles, which tvOS does not have.")
+        #else
+            CatalogFillScaffold(.streaming, code: Self.code) {
+                StreamingDemoView()
+            }
+        #endif
+    }
+}
 
 #if !os(tvOS)
 
@@ -26,11 +51,11 @@ import SwiftUI
 
             /// The effect `-effect none|fade|fadeUp` names on the command line.
             static var launchEffect: Effect? {
-                switch UserDefaults.standard.string(forKey: "effect") {
-                case "none": Effect.none
-                case "fade": .fade
-                case "fadeUp": .fadeUp
-                default: nil
+                guard let effect = CatalogLaunchOptions.current.streamingEffect else { return nil }
+                switch effect {
+                case .none: return Effect.none
+                case .fade: return .fade
+                case .fadeUp: return .fadeUp
                 }
             }
         }
@@ -40,7 +65,7 @@ import SwiftUI
         @State private var script = StreamingScript.make()
         @State private var effect = Effect.launchEffect ?? .fadeUp
         @State private var tokensPerSecond = 30.0
-        @State private var isSlowMotion = AnimationDemo.launchesInSlowMotion
+        @State private var isSlowMotion = CatalogLaunchOptions.current.isSlowMotion
         @State private var tokenCount = 0
         @State private var runID = 0
         // The animators live as long as the page, so switching back keeps no state.
@@ -77,12 +102,11 @@ import SwiftUI
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 controls
             }
-            .navigationTitle("Streaming Text")
             .task(id: runID) {
                 await stream()
             }
             .onChange(of: isSlowMotion, initial: true) { _, isSlow in
-                let speed = isSlow ? AnimationDemo.slowMotionSpeed : 1
+                let speed = isSlow ? CatalogLaunchOptions.slowMotionSpeed : 1
                 fade.speed = speed
                 fadeUp.speed = speed
             }
@@ -144,7 +168,7 @@ import SwiftUI
                 } catch {
                     return
                 }
-                let speed = isSlowMotion ? AnimationDemo.slowMotionSpeed : 1
+                let speed = isSlowMotion ? CatalogLaunchOptions.slowMotionSpeed : 1
                 due += tokensPerSecond * speed * 0.016
                 let ready = Int(due)
                 guard ready > 0 else { continue }

@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  ShowcaseDocumentPage.swift
 //  LitextCatalog
 //
 //  Created by Litext Team.
@@ -12,7 +12,27 @@
 import Litext
 import SwiftUI
 
-struct ContentView: View {
+struct ShowcaseDocumentPage: View {
+    private static let code = """
+    // One attributed string, one label: styled runs, links, attachments,
+    // bidi text and LineDrawingAction decorations all in the same text.
+    ScrollView {
+        TextLabel(attributedString: document)
+            .selectable(true)
+            .selectionBackgroundColor(theme.selectionColor)
+            .onTapLink { url in lastTappedURL = url.absoluteString }
+            .onSelectionChange { selected in lastSelectedText = selected ?? "" }
+    }
+    """
+
+    var body: some View {
+        CatalogFillScaffold(.showcaseDocument, code: Self.code) {
+            ShowcaseDocumentView()
+        }
+    }
+}
+
+struct ShowcaseDocumentView: View {
     @State private var theme = DocumentTheme()
     @State private var document = ShowcaseDocument.make(theme: DocumentTheme())
 
@@ -20,30 +40,12 @@ struct ContentView: View {
     @State private var lastSelectedText = ""
     @State private var showLinkAlert = false
     @State private var showSettings = false
-    #if !os(tvOS)
-        @State private var path = AnimationRoute.launchPath
-    #endif
 
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
     var body: some View {
-        #if os(tvOS)
-            NavigationStack {
-                documentPage
-            }
-        #else
-            NavigationStack(path: $path) {
-                documentPage
-                    .navigationDestination(for: AnimationRoute.self) { route in
-                        route.page
-                    }
-            }
-        #endif
-    }
-
-    private var documentPage: some View {
         Group {
             ScrollView {
                 TextLabel(attributedString: document)
@@ -58,30 +60,10 @@ struct ContentView: View {
                     .padding(.top, 12)
                     .padding(.bottom, 32)
             }
-            .navigationTitle("Litext")
-            #if os(iOS) || os(visionOS) || targetEnvironment(macCatalyst)
-                .navigationBarTitleDisplayMode(.inline)
-            #endif
             #if !os(tvOS)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     settingsButton
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    NavigationLink(value: AnimationRoute.gallery) {
-                        Image(systemName: "sparkles")
-                    }
-                    .accessibilityLabel("Animation")
-                    .accessibilityIdentifier("demo.animation.open")
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    NavigationLink {
-                        TableDemoView()
-                    } label: {
-                        Image(systemName: "tablecells")
-                    }
-                    .accessibilityLabel("Table Selection")
-                    .accessibilityIdentifier("demo.table.open")
                 }
             }
             #endif
@@ -97,9 +79,6 @@ struct ContentView: View {
         } message: {
             Text(lastTappedURL)
         }
-        #if os(macOS)
-        .frame(minWidth: 480, minHeight: 400)
-        #endif
     }
 
     // MARK: - Settings
@@ -225,5 +204,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ShowcaseDocumentPage()
 }

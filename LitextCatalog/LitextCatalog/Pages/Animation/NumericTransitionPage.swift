@@ -1,5 +1,5 @@
 //
-//  NumericDemoView.swift
+//  NumericTransitionPage.swift
 //  LitextCatalog
 //
 //  Created by Litext Team.
@@ -12,6 +12,28 @@
 import Litext
 import LitextAnimation
 import SwiftUI
+
+struct NumericTransitionPage: View {
+    private static let code = """
+    let label = LTXAnimatableLabel()
+    label.animator = NumericTransitionAnimator()
+    // Animate every change, including a whole new string.
+    label.animationPolicy = LTXClosureAnimationPolicy { context in
+        context.isInWindow && context.areAnimationsEnabled && !context.isIdentityChange
+    }
+    label.attributedText = counterText(count)   // rolls to the new value
+    """
+
+    var body: some View {
+        #if os(tvOS)
+            CatalogUnavailableView(page: .numericTransition, reason: "The animation pages need sliders and toggles, which tvOS does not have.")
+        #else
+            CatalogPageScaffold(.numericTransition, code: Self.code, demoInsets: 0) {
+                NumericDemoView()
+            }
+        #endif
+    }
+}
 
 #if !os(tvOS)
 
@@ -29,27 +51,24 @@ import SwiftUI
         @State private var titleIndex = 0
         @State private var count = 1024
         @State private var isAutoPlaying = true
-        @State private var isSlowMotion = AnimationDemo.launchesInSlowMotion
+        @State private var isSlowMotion = CatalogLaunchOptions.current.isSlowMotion
         @State private var titleAnimator = NumericTransitionAnimator()
         @State private var counterAnimator = NumericTransitionAnimator()
 
         var body: some View {
-            ScrollView {
-                VStack(spacing: 20) {
-                    titleBar
-                    counter
-                    controls
-                }
-                .frame(maxWidth: 520)
-                .frame(maxWidth: .infinity)
-                .padding(20)
+            VStack(spacing: 20) {
+                titleBar
+                counter
+                controls
             }
-            .navigationTitle("Numeric Transition")
+            .frame(maxWidth: 520)
+            .frame(maxWidth: .infinity)
+            .padding(20)
             .task(id: isAutoPlaying) {
                 await autoPlay()
             }
             .onChange(of: isSlowMotion, initial: true) { _, isSlow in
-                let speed = isSlow ? AnimationDemo.slowMotionSpeed : 1
+                let speed = isSlow ? CatalogLaunchOptions.slowMotionSpeed : 1
                 titleAnimator.speed = speed
                 counterAnimator.speed = speed
             }
