@@ -182,26 +182,43 @@ import Foundation
             }
         }
 
-        /// Tracks the pointer over the bounds to keep the cursor right. Overrides
-        /// must call `super`.
+        /// Tracks the pointer over the visible bounds to keep the cursor right.
+        /// Overrides must call `super`.
+        ///
+        /// - Important: Performance-sensitive: AppKit calls this whenever the
+        ///   label's frame or anything above it changes, so on every step of
+        ///   a window resize. The area follows the visible rect by itself and
+        ///   is added once, not rebuilt each time.
         override open func updateTrackingAreas() {
             super.updateTrackingAreas()
-
-            for trackingArea in trackingAreas {
-                removeTrackingArea(trackingArea)
-            }
+            guard !trackingAreas.contains(where: Self.isPointerTrackingArea) else { return }
 
             // .cursorUpdate lets this view own cursor changes; without it AppKit
             // resets the cursor to arrow between our mouseMoved updates, which
             // reads as flickering between the arrow and the I-beam.
-            let options: NSTrackingArea.Options = [
-                .mouseEnteredAndExited,
-                .mouseMoved,
-                .cursorUpdate,
-                .activeInKeyWindow,
-            ]
-            let trackingArea = NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil)
+            let trackingArea = NSTrackingArea(
+                rect: .zero,
+                options: Self.pointerTrackingOptions,
+                owner: self,
+                userInfo: [Self.pointerTrackingKey: true],
+            )
             addTrackingArea(trackingArea)
+        }
+
+        private static let pointerTrackingKey = "LitextPointerTracking"
+
+        private static let pointerTrackingOptions: NSTrackingArea.Options = [
+            .mouseEnteredAndExited,
+            .mouseMoved,
+            .cursorUpdate,
+            .activeInKeyWindow,
+            .inVisibleRect,
+        ]
+
+        /// The area `updateTrackingAreas()` adds, told apart from any a
+        /// subclass adds.
+        private static func isPointerTrackingArea(_ area: NSTrackingArea) -> Bool {
+            area.userInfo?[pointerTrackingKey] as? Bool == true
         }
 
         /// Shows the I-beam over selectable text and the pointing hand over links.
