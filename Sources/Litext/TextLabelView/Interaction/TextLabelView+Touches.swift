@@ -75,7 +75,7 @@
                 if isSelectable, event?.buttonMask == .secondary {
                     // A right click leaves the selection alone when it lands on it and
                     // otherwise selects the word under it, as the system text views do,
-                    // so the context menu that follows has text to act on.
+                    // so the menu that follows has text to act on.
                     interactionState.isSecondaryClick = true
                     if !selectionContains(location), let index = characterIndexAtPoint(location) {
                         selectWordAtIndex(index)
@@ -153,7 +153,7 @@
         }
 
         override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-            endInteractionUnlessDraggingSelectionHandle()
+            endInteractionUnlessHeldByGesture()
             if interactionState.isForwardingToSuper {
                 interactionState.isForwardingToSuper = false
                 deactivateHighlightRegion()
@@ -169,6 +169,11 @@
             let location = firstTouch.location(in: self)
             defer { deactivateHighlightRegion() }
             if interactionState.isSecondaryClick {
+                #if !targetEnvironment(macCatalyst) && !os(tvOS)
+                    if selectionContains(location) {
+                        showSelectionMenuController()
+                    }
+                #endif
                 return
             }
 
@@ -194,7 +199,7 @@
         }
 
         override open func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-            endInteractionUnlessDraggingSelectionHandle()
+            endInteractionUnlessHeldByGesture()
             if interactionState.isForwardingToSuper {
                 interactionState.isForwardingToSuper = false
                 deactivateHighlightRegion()
@@ -214,16 +219,21 @@
             deactivateHighlightRegion()
         }
 
-        /// A selection handle drag owns the interaction until the handle reports its end,
+        /// A selection handle drag or a long press owns the interaction until it ends,
         /// even if touches the label receives meanwhile end or are cancelled.
-        private func endInteractionUnlessDraggingSelectionHandle() {
-            if !interactionState.isDraggingSelectionHandle {
+        private func endInteractionUnlessHeldByGesture() {
+            if !interactionState.isDraggingSelectionHandle, interactionState.longPressWordRange == nil {
                 isInteractionInProgress = false
             }
         }
 
         #if !os(tvOS) && !os(watchOS)
-            /// for handling right click on iOS
+            /// Adds a context menu interaction that shows the selection menu on a right
+            /// click. The label installs one itself only on Mac Catalyst.
+            ///
+            /// On iOS the label shows the menu for a right click without it. The
+            /// interaction also watches every touch for a long press, and on iOS 18 that
+            /// holds back a selection handle drag over the label until the finger lifts.
             public func installContextMenuInteraction() {
                 let interaction = UIContextMenuInteraction(delegate: self)
                 addInteraction(interaction)

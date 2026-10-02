@@ -260,7 +260,15 @@ import QuartzCore
 
                 backgroundColor = .clear
                 #if !os(tvOS) && !os(watchOS)
-                    installContextMenuInteraction()
+                    // On iOS a right click shows the selection menu from `touchesEnded`.
+                    // A context menu interaction would also watch every touch for a long
+                    // press, and on iOS 18 it holds back a selection handle drag that
+                    // starts over the label until the finger lifts.
+                    #if targetEnvironment(macCatalyst)
+                        installContextMenuInteraction()
+                    #else
+                        installLongPressSelection()
+                    #endif
                     installTextPointerInteraction()
                 #endif
 
@@ -397,9 +405,11 @@ import QuartzCore
             /// Set while a selection handle is being dragged. Touches forwarded to the label
             /// during the drag must not end the interaction the handle started.
             var isDraggingSelectionHandle: Bool = false
-            /// Set when the interaction began with a secondary (right) click, which leaves
-            /// the rest of the sequence to the context menu.
+            /// Set when the interaction began with a secondary (right) click, which shows
+            /// the selection menu when it ends.
             var isSecondaryClick: Bool = false
+            /// The word a long press selected, which a drag that follows extends.
+            var longPressWordRange: NSRange?
         }
 
         struct Flags {
