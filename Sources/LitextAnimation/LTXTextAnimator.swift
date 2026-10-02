@@ -12,95 +12,187 @@ import Foundation
 
 #if !os(watchOS)
 
-    /// An appearance effect for text an animatable label receives.
+    /// An effect for text an animatable label receives.
     ///
-    /// LitextAnimation ships no effects of its own. An animator decides what new text looks
-    /// like while it appears, and the label drives it: it reports each text change the
-    /// animation policy lets through, asks for one step per display frame, redraws the lines
-    /// the step names and hands the animator every line that intersects text in flight.
+    /// LitextAnimation ships no effects of its own. An animator decides what changed text
+    /// looks like while it animates, and the label drives it:
     ///
-    /// Time always comes from the label, as the target timestamp of the frame being drawn,
-    /// so an effect is a pure function of that time and its own timeline. Tests can drive an
-    /// animator with synthetic times.
+    /// 1. ``animateChange(_:at:)`` reports each text change the animation policy lets
+    ///    through, and the label starts its display link.
+    /// 2. ``advance(to:invalidation:)`` runs once per display frame. The animator moves its
+    ///    timeline and names what to redraw; the label redraws only that.
+    /// 3. While the label draws, every line that touches ``animatingRange`` goes to
+    ///    ``draw(_:in:at:)``, and ``drawAdditionalContent(in:at:)`` adds anything that is not
+    ///    part of the new text, such as glyphs on their way out. Other lines are drawn by the
+    ///    label exactly as `TextLabelView` draws them.
+    /// 4. ``finish()`` ends everything at once.
     ///
-    /// The label holds its animator strongly.
+    /// While animating, the label draws the animation region into a layer of its own: the
+    /// strips of the lines that touch ``animatingRange``, across the label's width and halfway
+    /// to the neighbouring lines, plus ``additionalContentBounds``, all widened by
+    /// ``overdrawInsets``. Only that layer is redrawn per frame, so a frame costs the lines in
+    /// flight, however long the text. The rest of the label is redrawn only when the text
+    /// changes or the region moves. Anything the animator draws outside the region is not
+    /// shown.
+    ///
+    /// Time always comes from the label: the change's time, then the target timestamp of each
+    /// frame, on the clock `CACurrentMediaTime()` reads. An effect is a pure function of that
+    /// time and its own timeline, so tests can drive it with synthetic times.
+    ///
+    /// A minimal animator implements ``animateChange(_:at:)``, ``advance(to:invalidation:)``,
+    /// ``animatingRange``, ``draw(_:in:at:)`` and ``finish()``. The label holds its animator
+    /// strongly; an animator shared between labels must keep one timeline per label.
     @MainActor
     public protocol LTXTextAnimator: AnyObject {
         /// The label's text changed and its animation policy chose to animate the change.
         ///
-        /// `change.insertedRange` is the new text, in UTF-16 offsets of the new string and
-        /// aligned to grapheme clusters. Text an earlier change was still animating keeps its
-        /// offsets inside the common prefix and moves by the length difference inside the
+        /// `context.change.insertedRange` is the new text, in UTF-16 offsets of the new string
+        /// and aligned to grapheme clusters. Text an earlier change was still animating keeps
+        /// its offsets inside the common prefix and moves by the length difference inside the
         /// common suffix; the animator maps its own timeline.
         ///
+        /// `context.previousLayout` is still laid out, so read the old geometry here, or
+        /// keep the layout for later. `context.layout` is typeset on the label's next layout
+        /// pass: read its geometry from ``advance(to:invalidation:)`` or while drawing.
+        ///
         /// - Parameters:
-        ///   - change: The difference between the previous and the new string.
-        ///   - context: Everything the policy saw, including `prefersReducedMotion`, which the
-        ///     animator honours by toning its effect down.
-        ///   - time: The time the change happened, on the same clock as frame times.
-        func textDidChange(_ change: LTXTextChange, context: LTXAnimationContext, at time: CFTimeInterval)
+        ///   - context: The change and everything the policy saw, including
+        ///     `prefersReducedMotion`, which the animator honours by toning its effect down.
+        ///   - time: When the change happened, on the same clock as frame times.
+        func animateChange(_ context: LTXAnimationContext, at time: CFTimeInterval)
 
-        /// Moves the animation to `time` and reports what to redraw.
+        /// Moves the animation to `time` and names what to redraw.
         ///
-        /// Called once per display frame while the animation is active.
+        /// Called once per display frame while the label is animating. Invalidate only what
+        /// looks different from the previous frame: the label redraws that and nothing else,
+        /// and a frame that invalidates nothing draws nothing.
         ///
-        /// - Important: Performance-sensitive. Runs on the main thread every frame. Report
-        ///   only the ranges whose look changed since the last step; the label redraws the
-        ///   lines they touch and nothing else.
-        func advance(to time: CFTimeInterval) -> LTXAnimationStep
+        /// - Important: Performance-sensitive. Runs on the main thread every frame. The
+        ///   invalidation context is reused, and invalidating a range costs a binary search.
+        ///
+        /// - Parameters:
+        ///   - time: The target timestamp of the frame being prepared.
+        ///   - invalidation: Collects the characters and rects to redraw.
+        /// - Returns: Whether anything is still in flight. Returning `false` stops the display
+        ///   link until the next animated change; what was invalidated is still redrawn.
+        func advance(to time: CFTimeInterval, invalidation: LTXInvalidationContext) -> Bool
 
-        /// Draws one line that intersects text in flight.
+        /// The characters in flight, in UTF-16 offsets of the label's text, or `nil` when
+        /// none are. Lines that touch it are drawn by ``draw(_:in:at:)``, and their strips
+        /// make up the animation region.
         ///
-        /// The context is already flipped to CoreText coordinates and its text position is
-        /// set to the line's origin, so `CTLineDraw(line, context)` draws the line where the
-        /// label would. Return `false` to have the label draw the line with `CTLineDraw`
-        /// itself.
+        /// Read once per frame and once per draw pass, so it may be computed, but keep it
+        /// cheap. A range that moves to other lines moves the region, which redraws the label
+        /// where the region was and where it is now; let it change with the text and as lines
+        /// finish, not on every frame.
+        var animatingRange: NSRange? { get }
+
+        /// Where ``drawAdditionalContent(in:at:)`` draws, in the label's coordinates (top-left
+        /// origin), or `.null`, the default, when it draws nothing. Part of the animation
+        /// region, so it may reach outside the label's bounds.
+        ///
+        /// Read once per frame. Report the whole area the content covers during the
+        /// animation rather than its tight bounds on each frame: a change moves the region
+        /// and redraws the label around it.
+        var additionalContentBounds: CGRect { get }
+
+        /// Draws one line that touches ``animatingRange``.
+        ///
+        /// The context is flipped to CoreText coordinates of the label's current layout, its
+        /// text matrix is the identity and its text position is the line's
+        /// `baselineOrigin`, so `CTLineDraw(line.line, context)` draws the line where the label
+        /// would. The context is clipped to the area being redrawn, and its graphics state is
+        /// restored after the call.
         ///
         /// - Important: Performance-sensitive. Runs during drawing for every line in flight.
+        ///   Avoid allocating or measuring text here.
         ///
         /// - Parameters:
-        ///   - line: The CoreText line.
-        ///   - stringRange: The line's characters, in UTF-16 offsets of the label's text.
+        ///   - line: The line, with its index, characters and geometry.
         ///   - context: The context to draw into.
         ///   - time: The time of the frame being drawn.
-        /// - Returns: Whether the animator drew the line.
-        func draw(line: CTLine, stringRange: NSRange, in context: CGContext, at time: CFTimeInterval) -> Bool
+        /// - Returns: Whether the animator drew the line. Return `false` to have the label draw
+        ///   it with `CTLineDraw`.
+        func draw(_ line: LTXAnimatedLine, in context: CGContext, at time: CFTimeInterval) -> Bool
 
-        /// How far the effect draws outside a line's box, in points, so the label widens the
-        /// area it redraws. Effects that move or blur glyphs return their reach. Defaults to
-        /// `.zero`.
+        /// Draws content that is not part of the label's text, such as glyphs of the previous
+        /// text on their way out.
+        ///
+        /// Called once per draw of the animation region, after the lines and even when the
+        /// text is empty, in the same space as ``draw(_:in:at:)``: CoreText
+        /// coordinates of the current layout, origin at its bottom left and y pointing up.
+        /// Geometry from `context.previousLayout` uses that layout's own space; when the
+        /// container height changed, convert through view space with
+        /// `previousLayout.viewRect(fromLayoutRect:)` and `layout.layoutRect(fromViewRect:)`.
+        /// Only what falls inside ``additionalContentBounds``, or the strips of the lines in
+        /// flight, is shown. Invalidate the rects this draws into from
+        /// ``advance(to:invalidation:)``.
+        ///
+        /// The default draws nothing.
+        ///
+        /// - Important: Performance-sensitive. Runs on every draw pass while animating.
+        func drawAdditionalContent(in context: CGContext, at time: CFTimeInterval)
+
+        /// How far the effect draws outside the strips of its lines, in points. The label
+        /// widens the animation region and every invalidated range by this much. Effects that
+        /// move, scale or blur glyphs return their reach.
+        ///
+        /// The region may extend past the label's bounds, where the animation layer still
+        /// draws, as long as nothing clips the label: keep `clipsToBounds` `false` on UIKit,
+        /// and `layer?.masksToBounds` `false` on AppKit, and leave room for it around the label.
+        ///
+        /// Defaults to `.zero`. Read once per frame.
         var overdrawInsets: LTXInsets { get }
 
         /// Ends every animation at once, so the next draw shows the final text.
         ///
         /// The label calls this when it finishes its animations, leaves its window, changes
-        /// identity, or lets a change through without animating it.
+        /// identity or animator, lets a change through without animating it, or when reduced
+        /// motion turns on. The label redraws everything afterwards.
         func finish()
     }
 
     public extension LTXTextAnimator {
+        var additionalContentBounds: CGRect {
+            .null
+        }
+
+        func drawAdditionalContent(in _: CGContext, at _: CFTimeInterval) {}
+
         var overdrawInsets: LTXInsets {
             .zero
         }
     }
 
-    /// The result of advancing an animator to a frame's time.
-    public struct LTXAnimationStep: Sendable, Hashable {
-        /// The character ranges whose look changed and must be redrawn. The label turns them
-        /// into line boxes, widened by the animator's `overdrawInsets`.
-        public var dirtyRanges: [NSRange]
+    /// A laid-out line an animator draws, with the geometry an effect usually needs.
+    ///
+    /// Geometry is in CoreText layout space: lower-left origin, y pointing up, the space the
+    /// drawing context is in.
+    public struct LTXAnimatedLine {
+        /// The CoreText line.
+        public let line: CTLine
 
-        /// Whether any text is still in flight. When `false`, the label stops its display
-        /// link until the next animated change.
-        public var isActive: Bool
+        /// The line's position among the laid-out lines, starting at zero.
+        public let index: Int
 
-        public init(dirtyRanges: [NSRange], isActive: Bool) {
-            self.dirtyRanges = dirtyRanges
-            self.isActive = isActive
+        /// The characters the line shows, in UTF-16 offsets of the label's text, including
+        /// any trailing whitespace and line break.
+        public let stringRange: NSRange
+
+        /// Where the line's baseline starts: the text position already set on the context.
+        public let baselineOrigin: CGPoint
+
+        /// The line's typographic box, from the bottom of its descent to the top of its
+        /// ascent, like `TextLabel.LayoutLine.rect`.
+        public let rect: CGRect
+
+        public init(line: CTLine, index: Int, stringRange: NSRange, baselineOrigin: CGPoint, rect: CGRect) {
+            self.line = line
+            self.index = index
+            self.stringRange = stringRange
+            self.baselineOrigin = baselineOrigin
+            self.rect = rect
         }
-
-        /// A step that redraws nothing and ends the animation.
-        public static let finished = LTXAnimationStep(dirtyRanges: [], isActive: false)
     }
 
     /// Distances an effect draws outside a line's box, in points of the label's coordinate
@@ -125,6 +217,26 @@ import Foundation
 
         /// No overdraw.
         public static let zero = LTXInsets(top: 0, left: 0, bottom: 0, right: 0)
+    }
+
+    extension LTXInsets {
+        /// The insets with every invalid or negative distance replaced by zero.
+        var sanitized: LTXInsets {
+            func clean(_ value: CGFloat) -> CGFloat {
+                value.isFinite && value > 0 ? value : 0
+            }
+            return LTXInsets(top: clean(top), left: clean(left), bottom: clean(bottom), right: clean(right))
+        }
+
+        /// `rect` grown by the insets, in top-left view space.
+        func outset(_ rect: CGRect) -> CGRect {
+            CGRect(
+                x: rect.minX - left,
+                y: rect.minY - top,
+                width: rect.width + left + right,
+                height: rect.height + top + bottom,
+            )
+        }
     }
 
 #endif
