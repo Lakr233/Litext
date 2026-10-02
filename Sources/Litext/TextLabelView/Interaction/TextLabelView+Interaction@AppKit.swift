@@ -90,9 +90,8 @@ import Foundation
             }
 
             if interactionState.clickCount <= 1 {
-                if !selectionContains(location) {
-                    clearSelection()
-                }
+                // A click clears the selection, inside it too, as in the system text views.
+                clearSelection()
             } else if interactionState.clickCount == 2 {
                 if let index = characterIndexAtPoint(location) {
                     selectWordAtIndex(index)

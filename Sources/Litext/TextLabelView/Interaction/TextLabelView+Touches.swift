@@ -101,11 +101,14 @@
             }
 
             if interactionState.clickCount <= 1 {
-                // A pointer click inside the selection keeps it so touchesEnded can show the
-                // menu; a drag rebuilds the range from the initial location either way.
-                if isPointerDevice(touch: firstTouch), !selectionContains(location) {
+                // A pointer click clears the selection, inside it too, as on the Mac; a
+                // drag rebuilds the range from the initial location. A finger tap on the
+                // selection keeps it and shows the menu when it ends.
+                if isPointerDevice(touch: firstTouch) {
                     if let index = textIndexAtPoint(location) {
                         selectionRange = NSRange(location: index, length: 0)
+                    } else {
+                        clearSelection()
                     }
                 }
             } else if let index = characterIndexAtPoint(location) {
