@@ -312,7 +312,7 @@ cell.label.attributedText = message.rendered
 
 **Reduced motion.** Every `LTXAnimationContext` carries `prefersReducedMotion`, so the animator can tone its effect down. When the setting turns on mid-animation, the label finishes the animations in flight.
 
-`LitextAnimation` works on iOS, macOS, Mac Catalyst, tvOS and visionOS. On watchOS the product builds but is empty, since there is no `TextLabelView`. The LitextCatalog sample app shows streaming text, a rolling numeric transition and cell reuse; launch it with `-demo streaming`, `-demo numeric` or `-demo reuse` to open one directly.
+`LitextAnimation` works on iOS, macOS, Mac Catalyst, tvOS and visionOS. On watchOS the product builds but is empty, since there is no `TextLabelView`. The [catalog app](#catalog-app) shows streaming text, a rolling numeric transition, cell reuse and the animation policy and controls on their own pages.
 
 ## watchOS
 
@@ -336,6 +336,20 @@ struct WatchContentView: View {
 ```
 
 For inline attachments on watchOS, provide a SwiftUI view via `swiftUIView` instead of `view`.
+
+## Catalog App
+
+`LitextCatalog`, in the `LitextCatalog` folder and opened through `Litext.xcworkspace`, is one app that shows every part of Litext: basics, typography, international text, interaction, attachments, layout, lists and performance, and animation. Each page explains what it shows, runs a live demo with controls for the knobs it is about, and has the code behind it. It runs on iOS, iPadOS, macOS (AppKit), Mac Catalyst, tvOS and visionOS, with a watchOS companion.
+
+Launch arguments open a page directly, which is handy for screenshots and UI tests:
+
+| Argument | Effect |
+|---|---|
+| `-page <id>` | Opens a page, such as `-page layout.geometry` or `-page animation.streaming`. |
+| `-demo streaming\|numeric\|reuse` | Older names for the three animation pages. |
+| `-slowMotion YES` | Starts the animation pages at a tenth of the speed. |
+| `-effect none\|fade\|fadeUp` | The streaming page's starting effect. |
+| `-autoScroll YES` | Starts the cell reuse page scrolling. |
 
 ## License
 
