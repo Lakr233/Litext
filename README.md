@@ -62,6 +62,9 @@ let attributedString = NSMutableAttributedString(
     ]
 )
 label.attributedText = attributedString
+
+// Measure without Auto Layout, as with UILabel: the text wrapped at 300 points.
+let size = label.sizeThatFits(CGSize(width: 300, height: 0))
 ```
 
 ### SwiftUI
@@ -117,6 +120,19 @@ TextLabel(attributedString: mutable)
     }
 ```
 
+To find what lies under a point yourself, for a long-press preview or a hover card, ask the label. Points are in the label's coordinates:
+
+```swift
+if let region = label.highlightRegion(at: point), let url = region.linkURL {
+    showPreview(for: url)
+}
+let index = label.characterIndex(at: point)
+
+// Style the highlight shown while a link is pressed.
+label.linkHighlightColor = UIColor.systemBlue.withAlphaComponent(0.2)
+label.linkHighlightCornerRadius = 6
+```
+
 ### Text Selection
 
 ```swift
@@ -130,6 +146,8 @@ let attributed = label.selectedAttributedText()
 
 // Programmatic selection
 label.selectionRange = NSRange(location: 0, length: 5)
+label.selectWord(at: 7)   // as a double-click does
+label.selectLine(at: 7)   // as a triple-click does
 label.selectAll()
 label.clearSelection()
 
@@ -183,7 +201,32 @@ attachment.size = CGSize(width: 100, height: 50)
 
 // Insert attachment into attributed string
 let attachmentString = attachment.attributedString()
+
+// Sit it on the baseline instead of a tenth of its height below it.
+attachment.descent = 0
+
+// SwiftUI — handle taps on attachments
+TextLabel(attributedString: text)
+    .onTapAttachment { attachment in
+        print("Tapped", attachment)
+    }
 ```
+
+After changing `size` or `descent` of an attachment already on screen, call `reloadTextLayout()` on its label.
+
+### Lines and Geometry
+
+`layoutLines` reports each laid-out line: its character range, its box, and where its baseline starts. Use it to count lines or align with a baseline. `label.textLayout` gives the full `TextLabel.Layout` for anything else, such as `rects(for:)`.
+
+```swift
+let lineCount = label.layoutLines.count
+if let first = label.layoutLines.first {
+    let rect = label.viewRect(fromLayoutRect: first.rect)
+    print(first.stringRange, rect)
+}
+```
+
+Line and run geometry is in CoreText layout space, with the origin at the bottom left; convert it with `viewRect(fromLayoutRect:)`. Each read of `layoutLines` or `layoutRuns(matching:)` builds a new array, so read them once per layout rather than on every frame.
 
 ### Custom Per-Line Drawing
 
