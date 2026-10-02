@@ -302,20 +302,23 @@
                     return
                 }
 
-                let availableItems = availableTextSelectionMenuItems()
-                guard !availableItems.isEmpty else { return }
+                // visionOS always has the edit menu above.
+                #if !os(visionOS)
+                    let availableItems = availableTextSelectionMenuItems()
+                    guard !availableItems.isEmpty else { return }
 
-                let menuController = UIMenuController.shared
+                    let menuController = UIMenuController.shared
 
-                menuController.menuItems = availableItems.map { item in
-                    UIMenuItem(title: item.title, action: item.action)
-                }
+                    menuController.menuItems = availableItems.map { item in
+                        UIMenuItem(title: item.title, action: item.action)
+                    }
 
-                Self.menuOwnerIdentifier = id
-                menuController.showMenu(
-                    from: self,
-                    rect: unionRect.insetBy(dx: -8, dy: -8),
-                )
+                    Self.menuOwnerIdentifier = id
+                    menuController.showMenu(
+                        from: self,
+                        rect: unionRect.insetBy(dx: -8, dy: -8),
+                    )
+                #endif
             }
 
             func hideSelectionMenuController() {
@@ -326,7 +329,9 @@
                         return
                     }
                 #endif
-                UIMenuController.shared.hideMenu()
+                #if !os(visionOS)
+                    UIMenuController.shared.hideMenu()
+                #endif
             }
 
             @objc func copyMenuItemTapped() {
