@@ -156,6 +156,12 @@ extension TextLabel {
     /// highlight regions in step. Typesetting is the expensive part, so it runs only
     /// when `containerSize` changes or `invalidateLayout()` is called; queries read
     /// the stored lines.
+    ///
+    /// Lookups by position (hit testing, draw culling) find their line by binary
+    /// search, so they cost about the same on a long document as on a short one. A
+    /// layout whose line boxes overlap out of order, which mixed font sizes under a
+    /// small `lineHeightMultiple` can produce, falls back to scanning the lines and
+    /// returns the same answers.
     @MainActor
     open class Layout: NSObject {
         /// An immutable snapshot of the string the layout was created with.
@@ -186,6 +192,12 @@ extension TextLabel {
         private var lines: [CTLine]?
         private var lineOrigins: [CGPoint]?
         private var lineMetrics: [LineMetrics]?
+        /// Whether the line boxes descend in order: every box's bottom, middle and
+        /// top lie at or below the previous box's. Line lookups binary-search
+        /// when they do. Mixed font sizes squeezed by a small `lineHeightMultiple`
+        /// can overlap boxes out of order, and those layouts keep the linear scan,
+        /// so a lookup returns the same line either way.
+        private(set) var lineBoxesAreOrdered = true
         private var _highlightRegions: [RegionKey: TextLabel.HighlightRegion]
         private var _highlightRegionsArray: [TextLabel.HighlightRegion] = []
         private var suggestedSizeCache: (input: CGSize, output: CGSize)?
@@ -390,8 +402,8 @@ extension TextLabel {
         /// dirty rect handed to a view's `draw(_:)`. Passing `nil` draws every line.
         ///
         /// - Important: Performance-sensitive: this runs on every display pass.
-        ///   Pass the dirty rect so long text draws only the lines in view; the
-        ///   scan for them stops at the first line below the rect.
+        ///   Pass the dirty rect so long text draws only the lines in view, found
+        ///   by binary search.
         open func draw(in context: CGContext, visibleRect: CGRect?) {
             guard containerSize.isValidLayoutSize,
                   let lines,
@@ -951,6 +963,24 @@ extension TextLabel {
                     CGPoint(x: $0.x, y: $0.y + offsetY)
                 }
             }
+            lineBoxesAreOrdered = computeLineBoxesAreOrdered()
+        }
+
+        /// One pass over the boxes per layout, so every lookup after it can
+        /// binary-search. A NaN in any box fails the comparisons and counts as
+        /// out of order.
+        private func computeLineBoxesAreOrdered() -> Bool {
+            guard let lineOrigins, let lineMetrics, lineMetrics.count > 1 else { return true }
+            var previous = lineMetrics[0].rect(at: lineOrigins[0])
+            for index in 1 ..< lineMetrics.count {
+                let box = lineMetrics[index].rect(at: lineOrigins[index])
+                guard box.minY <= previous.minY,
+                      box.midY <= previous.midY,
+                      box.maxY <= previous.maxY
+                else { return false }
+                previous = box
+            }
+            return true
         }
 
         private func makeFrameFill(constraint: CGSize, clampsToMaxLayoutDimension: Bool) -> FrameFill {
@@ -1070,22 +1100,46 @@ extension TextLabel {
         }
 
         private func lineIndices(intersecting visibleRect: CGRect?) -> Range<Int> {
-            guard let lines, let lineOrigins, let lineMetrics, !lines.isEmpty else { return 0 ..< 0 }
+            guard let lines, !lines.isEmpty else { return 0 ..< 0 }
             guard let visibleRect, !visibleRect.isNull else { return 0 ..< lines.count }
 
             // Line origins live in CoreText's bottom-left space; the visible rect
             // is top-left based against the same containerSize used by draw(in:).
             let layoutRect = layoutRect(fromViewRect: visibleRect)
+            let hits = lineIndices(intersectingLayoutRect: layoutRect)
+            guard !hits.isEmpty else { return 0 ..< 0 }
 
-            var first = lines.count
+            // Glyph ink can slightly overshoot typographic bounds; include one
+            // extra line on each side so partial redraws never clip an overhang.
+            return max(0, hits.lowerBound - 1) ..< min(lines.count, hits.upperBound + 1)
+        }
+
+        /// The lines whose boxes reach into `rect`'s vertical extent, in layout
+        /// space, stopping at the first line wholly below it.
+        func lineIndices(intersectingLayoutRect rect: CGRect) -> Range<Int> {
+            guard let lineCount = lines?.count, lineBoxesAreOrdered, !rect.minY.isNaN, !rect.maxY.isNaN else {
+                return linearLineIndices(intersectingLayoutRect: rect)
+            }
+            // Boxes descend, so the lines above `rect` and those below it each
+            // form one run, found by bisection.
+            let firstBelow = Self.partitionPoint(lineCount) { lineBox(at: $0).maxY < rect.minY }
+            let first = Self.partitionPoint(lineCount) { lineBox(at: $0).minY <= rect.maxY }
+            return first < firstBelow ? first ..< firstBelow : 0 ..< 0
+        }
+
+        /// The reference scan `lineIndices(intersectingLayoutRect:)` must agree
+        /// with, and its path for boxes out of order.
+        func linearLineIndices(intersectingLayoutRect rect: CGRect) -> Range<Int> {
+            guard let lineCount = lines?.count else { return 0 ..< 0 }
+            var first = lineCount
             var lastExclusive = 0
-            for index in 0 ..< lines.count {
-                let lineBox = lineMetrics[index].rect(at: lineOrigins[index])
-                if lineBox.minY > layoutRect.maxY {
+            for index in 0 ..< lineCount {
+                let lineBox = lineBox(at: index)
+                if lineBox.minY > rect.maxY {
                     continue
                 }
                 // Lines only descend from here on, so the remainder is offscreen.
-                if lineBox.maxY < layoutRect.minY {
+                if lineBox.maxY < rect.minY {
                     break
                 }
                 if index < first {
@@ -1093,11 +1147,29 @@ extension TextLabel {
                 }
                 lastExclusive = index + 1
             }
-            guard first < lastExclusive else { return 0 ..< 0 }
+            return first < lastExclusive ? first ..< lastExclusive : 0 ..< 0
+        }
 
-            // Glyph ink can slightly overshoot typographic bounds; include one
-            // extra line on each side so partial redraws never clip an overhang.
-            return max(0, first - 1) ..< min(lines.count, lastExclusive + 1)
+        /// The box of line `index` in layout space, leading included: the box
+        /// hit testing and draw culling share.
+        func lineBox(at index: Int) -> CGRect {
+            lineMetrics![index].rect(at: lineOrigins![index])
+        }
+
+        /// The first index in `0 ..< count` where `predicate` holds, or `count`.
+        /// `predicate` must hold for every index after one where it holds.
+        private static func partitionPoint(_ count: Int, where predicate: (Int) -> Bool) -> Int {
+            var low = 0
+            var high = count
+            while low < high {
+                let mid = (low + high) / 2
+                if predicate(mid) {
+                    high = mid
+                } else {
+                    low = mid + 1
+                }
+            }
+            return low
         }
 
         private func extractHighlightRegions() {
@@ -1306,8 +1378,8 @@ extension TextLabel {
         /// line; `nil` above or between lines.
         ///
         /// A caret index rounds to the nearer edge of a glyph. Use
-        /// `characterIndex(at:)` for the character under the point. Finding the
-        /// line scans the lines in order.
+        /// `characterIndex(at:)` for the character under the point. The line is
+        /// found by binary search, then the caret within it.
         open func textIndex(at point: CGPoint) -> Int? {
             guard let lines, let lineOrigins else { return nil }
 
@@ -1324,8 +1396,8 @@ extension TextLabel {
 
         /// The caret index nearest to `point` (in layout space), on the line
         /// containing it or else on the nearest line. `nil` only when there is no
-        /// text. Selection drags use it, once per move. Finding the line scans the
-        /// lines in order.
+        /// text. Selection drags use it, once per move. The line is found by binary
+        /// search, then the caret within it.
         open func nearestTextIndex(at point: CGPoint) -> Int? {
             guard let hit = findLineContainingPoint(point) ?? nearestLine(to: point) else { return nil }
             return caretIndex(at: point, in: hit)
@@ -1345,9 +1417,10 @@ extension TextLabel {
         /// `point` is in layout space; convert a view point with
         /// `layoutPoint(fromViewPoint:)`. Returns `nil` only when there is no text.
         ///
-        /// - Important: Performance-sensitive. Finding the line scans the lines in
-        ///   order and measuring within it walks its characters, so avoid calling
-        ///   it per frame on very long text.
+        /// - Important: Performance-sensitive. The line is found by binary search,
+        ///   but measuring within it walks its characters, so the cost grows with
+        ///   the length of the line hit: keep it off per-frame paths for text with
+        ///   very long lines.
         open func characterIndex(at point: CGPoint) -> Int? {
             guard let hit = findLineContainingPoint(point) ?? nearestLine(to: point) else { return nil }
             let lineOffset = point.x - hit.origin.x
@@ -1400,42 +1473,85 @@ extension TextLabel {
         // MARK: - Private Text Index Helpers
 
         private func nearestLine(to point: CGPoint) -> LineHit? {
+            guard let lines, let lineOrigins, let index = nearestLineIndex(toLayoutY: point.y) else { return nil }
+            return LineHit(line: lines[index], origin: lineOrigins[index])
+        }
+
+        /// The line for a point between or beyond the lines: the first line when
+        /// `y` is above its baseline, the last when below its baseline, and
+        /// otherwise the line whose box's middle is nearest, the earlier one on a
+        /// tie.
+        func nearestLineIndex(toLayoutY y: CGFloat) -> Int? {
             guard let lines, let lineOrigins, !lines.isEmpty else { return nil }
-
-            if point.y > lineOrigins[0].y {
-                return LineHit(line: lines[0], origin: lineOrigins[0])
+            if y > lineOrigins[0].y {
+                return 0
             }
-
             let lastIndex = lines.count - 1
-            if point.y < lineOrigins[lastIndex].y {
-                return LineHit(line: lines[lastIndex], origin: lineOrigins[lastIndex])
+            if y < lineOrigins[lastIndex].y {
+                return lastIndex
             }
+            guard lineBoxesAreOrdered, !y.isNaN else {
+                return linearNearestLineIndex(toLayoutY: y)
+            }
+            // The middles descend, so the nearest is the last line whose middle is
+            // above `y` or the first one at or below it.
+            let firstAtOrBelow = Self.partitionPoint(lines.count) { lineBox(at: $0).midY <= y }
+            guard firstAtOrBelow > 0 else { return firstAtOrBelow }
+            let lastAbove = firstAtOrBelow - 1
+            let distanceAbove = lineBox(at: lastAbove).midY - y
+            if firstAtOrBelow < lines.count, y - lineBox(at: firstAtOrBelow).midY < distanceAbove {
+                return firstAtOrBelow
+            }
+            // Distances shrink towards `lastAbove`. Of the lines as near as it,
+            // which can differ in middle once rounded, the scan keeps the first.
+            return Self.partitionPoint(lastAbove) { lineBox(at: $0).midY - y <= distanceAbove }
+        }
 
+        /// The reference scan `nearestLineIndex(toLayoutY:)` must agree with, and
+        /// its path for boxes out of order. Skips the first- and last-line cases
+        /// its caller handles.
+        func linearNearestLineIndex(toLayoutY y: CGFloat) -> Int? {
+            guard let lines, !lines.isEmpty else { return nil }
             var closestLineIndex = 0
-            if let lineMetrics {
-                var minDistance = CGFloat.greatestFiniteMagnitude
-                for i in 0 ..< lines.count {
-                    let distance = abs(point.y - lineMetrics[i].rect(at: lineOrigins[i]).midY)
-                    if distance < minDistance {
-                        minDistance = distance
-                        closestLineIndex = i
-                    }
+            var minDistance = CGFloat.greatestFiniteMagnitude
+            for index in 0 ..< lines.count {
+                let distance = abs(y - lineBox(at: index).midY)
+                if distance < minDistance {
+                    minDistance = distance
+                    closestLineIndex = index
                 }
             }
-
-            return LineHit(line: lines[closestLineIndex], origin: lineOrigins[closestLineIndex])
+            return closestLineIndex
         }
 
         private func findLineContainingPoint(_ point: CGPoint) -> LineHit? {
-            guard let lines, let lineOrigins, let lineMetrics else { return nil }
+            guard let lines, let lineOrigins, let index = lineIndex(containingLayoutY: point.y) else { return nil }
+            return LineHit(line: lines[index], origin: lineOrigins[index])
+        }
 
-            for i in 0 ..< lines.count {
-                let lineBox = lineMetrics[i].rect(at: lineOrigins[i])
-                if point.y >= lineBox.minY, point.y <= lineBox.maxY {
-                    return LineHit(line: lines[i], origin: lineOrigins[i])
+        /// The first line whose box spans `y`, or `nil` when `y` falls between
+        /// lines or outside them.
+        func lineIndex(containingLayoutY y: CGFloat) -> Int? {
+            guard let lineCount = lines?.count, lineBoxesAreOrdered else {
+                return linearLineIndex(containingLayoutY: y)
+            }
+            // Every line before the first whose bottom reaches `y` lies above it,
+            // and when that line's top stays below `y`, so do all after it.
+            let index = Self.partitionPoint(lineCount) { lineBox(at: $0).minY <= y }
+            guard index < lineCount, lineBox(at: index).maxY >= y else { return nil }
+            return index
+        }
+
+        /// The reference scan `lineIndex(containingLayoutY:)` must agree with, and
+        /// its path for boxes out of order.
+        func linearLineIndex(containingLayoutY y: CGFloat) -> Int? {
+            guard let lineCount = lines?.count else { return nil }
+            for index in 0 ..< lineCount {
+                let lineBox = lineBox(at: index)
+                if y >= lineBox.minY, y <= lineBox.maxY {
+                    return index
                 }
             }
-
             return nil
         }
 
