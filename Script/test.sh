@@ -72,6 +72,8 @@ test_build "OhMyLitext" "generic/platform=xrOS"
 test_build "OhMyLitext" "generic/platform=xrOS Simulator"
 test_build "OhMyLitextWatch Watch App" "generic/platform=watchOS"
 test_build "OhMyLitextWatch Watch App" "generic/platform=watchOS Simulator"
+test_build "LitextAnimation" "generic/platform=watchOS"
+test_build "LitextAnimation" "generic/platform=watchOS Simulator"
 
 test_scheme "OhMyLitext" "platform=macOS" "-only-testing:OhMyLitextTests"
 
