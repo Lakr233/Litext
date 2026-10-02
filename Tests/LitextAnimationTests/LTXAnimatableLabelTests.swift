@@ -497,6 +497,29 @@
         }
 
         @Test
+        func `the animation layer follows the display to another scale`() throws {
+            let animator = RecordingAnimator()
+            animator.insets = LTXInsets(all: 0.3)
+            let window = makeWindow()
+            let label = makeLabel(animator: animator)
+            addToWindow(label, window)
+            label.attributedText = text("Hello, world")
+            performLayoutPass(label)
+            let layer = try #require(label.animationLayer)
+
+            label.displayScaleOverride = 3
+            #if canImport(UIKit)
+                label.displayScaleDidChange()
+            #else
+                label.viewDidChangeBackingProperties()
+            #endif
+            #expect(layer.contentsScale == 3)
+            let expected = pixelAligned(animator.insets.outset(strip(of: 0 ..< 1, in: label)), scale: 3)
+            #expect(isNearlyEqual(label.animationRegion, expected))
+            #expect(isNearlyEqual(layer.frame, expected))
+        }
+
+        @Test
         func `the animation layer sits behind the selection and is gone when idle`() throws {
             let animator = RecordingAnimator()
             let window = makeWindow()
