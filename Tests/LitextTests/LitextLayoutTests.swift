@@ -538,6 +538,48 @@ private func lineDrawingProbeText(lineCount: Int) -> NSAttributedString {
     return text
 }
 
+#if !os(watchOS)
+    @MainActor
+    @Test func `the pressed link highlight uses the label's color and corner radius`() throws {
+        let url = try #require(URL(string: "https://example.com"))
+        let text = NSMutableAttributedString(string: "Tap here", attributes: [
+            .font: PlatformFont.systemFont(ofSize: 16),
+            .foregroundColor: PlatformColor.red,
+        ])
+        text.addAttribute(.link, value: url, range: NSRange(location: 4, length: 4))
+        let label = TextLabelView(attributedText: text)
+        label.frame = CGRect(x: 0, y: 0, width: 200, height: 40)
+        #if canImport(UIKit)
+            label.layoutIfNeeded()
+        #elseif canImport(AppKit)
+            label.layoutSubtreeIfNeeded()
+        #endif
+        let region = try #require(label.highlightRegions.first { $0.kind == .link })
+
+        func pressedLayer() throws -> CAShapeLayer {
+            label.addActiveHighlightRegion(region)
+            defer { label.deactivateHighlightRegion() }
+            return try #require(region.associatedObject as? CAShapeLayer)
+        }
+
+        // By default the link's own color at 10% opacity.
+        #expect(try pressedLayer().fillColor == PlatformColor.red.withAlphaComponent(0.1).cgColor)
+
+        label.linkHighlightColor = .blue
+        #expect(try pressedLayer().fillColor == PlatformColor.blue.cgColor)
+
+        // A rounded corner leaves the rect's very corner out; a square one fills it.
+        func cornerIsFilled() throws -> Bool {
+            let path = try #require(try pressedLayer().path)
+            let rect = path.boundingBox
+            return path.contains(CGPoint(x: rect.minX + 0.5, y: rect.minY + 0.5))
+        }
+        #expect(try !cornerIsFilled())
+        label.linkHighlightCornerRadius = 0
+        #expect(try cornerIsFilled())
+    }
+#endif
+
 private func makeBitmapContext(size: CGSize) -> CGContext? {
     let width = max(1, Int(size.width.rounded(.up)))
     let height = max(1, Int(size.height.rounded(.up)))
