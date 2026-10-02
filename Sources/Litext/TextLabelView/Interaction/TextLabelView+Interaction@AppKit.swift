@@ -21,10 +21,13 @@ import Foundation
         /// goes stale as soon as another label sets a different cursor.
         fileprivate static var appliedCursor: NSCursor?
 
+        /// Whether the label takes key focus: only while it is selectable.
         override open var acceptsFirstResponder: Bool {
             isSelectable
         }
 
+        /// Handles ⌘C and ⌘A while the label is first responder, for hosts without
+        /// an Edit menu.
         override open func performKeyEquivalent(with event: NSEvent) -> Bool {
             guard window?.firstResponder === self else {
                 return super.performKeyEquivalent(with: event)
@@ -56,6 +59,8 @@ import Foundation
             super.rightMouseDown(with: event)
         }
 
+        /// Starts a click, link press or selection, counting double and triple
+        /// clicks. Overrides must call `super`.
         override open func mouseDown(with event: NSEvent) {
             if event.modifierFlags.contains(.control) {
                 // A control-click is a right click: AppKit shows `menu(for:)`.
@@ -103,6 +108,10 @@ import Foundation
             }
         }
 
+        /// Extends a selection drag. Overrides must call `super`.
+        ///
+        /// - Important: Performance-sensitive: this runs for every drag event, and
+        ///   each one hit-tests the text to place the selection end.
         override open func mouseDragged(with event: NSEvent) {
             if interactionState.isForwardingToSuper {
                 super.mouseDragged(with: event)
@@ -125,6 +134,8 @@ import Foundation
             }
         }
 
+        /// Finishes a click: taps a link or attachment under it. Overrides must
+        /// call `super`.
         override open func mouseUp(with event: NSEvent) {
             isInteractionInProgress = false
             defer { deactivateHighlightRegion() }
@@ -142,6 +153,11 @@ import Foundation
             }
         }
 
+        /// Claims points over links, and over any text while selectable; elsewhere
+        /// clicks reach the views behind, and over an attachment view that view.
+        ///
+        /// - Important: Performance-sensitive: AppKit asks on every mouse event.
+        ///   The test walks the attachment views and the link rects, never typesetting.
         override open func hitTest(_ point: NSPoint) -> NSView? {
             // AppKit hands hitTest the point in the superview's coordinate
             // space; local geometry (bounds, attachment frames, highlight
@@ -166,6 +182,8 @@ import Foundation
             }
         }
 
+        /// Tracks the pointer over the bounds to keep the cursor right. Overrides
+        /// must call `super`.
         override open func updateTrackingAreas() {
             super.updateTrackingAreas()
 
@@ -186,24 +204,31 @@ import Foundation
             addTrackingArea(trackingArea)
         }
 
+        /// Shows the I-beam over selectable text and the pointing hand over links.
         override open func cursorUpdate(with event: NSEvent) {
             // Intentionally not calling super: it would reset to the arrow cursor.
             let point = convert(event.locationInWindow, from: nil)
             applyCursor(desiredCursor(at: point))
         }
 
+        /// Updates the cursor for the point entered.
         override open func mouseEntered(with event: NSEvent) {
             super.mouseEntered(with: event)
             let point = convert(event.locationInWindow, from: nil)
             applyCursor(desiredCursor(at: point))
         }
 
+        /// Restores the arrow cursor.
         override open func mouseExited(with event: NSEvent) {
             super.mouseExited(with: event)
             applyCursor(.arrow)
             Self.appliedCursor = nil
         }
 
+        /// Updates the cursor for the point under it.
+        ///
+        /// - Important: Performance-sensitive: this runs for every pointer move
+        ///   over the label, and hit-tests the links each time.
         override open func mouseMoved(with event: NSEvent) {
             super.mouseMoved(with: event)
             let point = convert(event.locationInWindow, from: nil)

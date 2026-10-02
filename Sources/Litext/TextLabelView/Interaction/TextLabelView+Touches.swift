@@ -14,6 +14,8 @@
     extension TextLabelView {
         fileprivate static var menuOwnerIdentifier: UUID = .init()
 
+        /// Handles ⌘C and ⌘A from a hardware keyboard while the label is selectable,
+        /// and passes other presses on.
         override open func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
             guard isSelectable else {
                 super.pressesBegan(presses, with: event)
@@ -36,10 +38,17 @@
             }
         }
 
+        /// Whether the label takes focus: only while it is selectable.
         override open var canBecomeFocused: Bool {
             isSelectable
         }
 
+        /// Claims points over links, and over any text while selectable. Elsewhere
+        /// touches pass through to the views behind, and over an attachment view to
+        /// that view.
+        ///
+        /// - Important: Performance-sensitive: UIKit asks on every touch. The test
+        ///   walks the attachment views and the link rects, never typesetting.
         override open func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             switch hitTarget(at: point) {
             case .outside, .passThrough:
@@ -51,6 +60,8 @@
             }
         }
 
+        /// Starts a tap, link press or selection. Overrides must call `super` for
+        /// every phase of a sequence they pass on, or the selection stalls.
         override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
             guard touches.count == 1,
                   let firstTouch = touches.first
@@ -136,6 +147,10 @@
             }
         }
 
+        /// Extends a selection drag. Overrides must call `super`.
+        ///
+        /// - Important: Performance-sensitive: this runs for every move, and
+        ///   each one hit-tests the text to place the selection end.
         override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
             guard !interactionState.isForwardingToSuper, touches.count == 1,
                   let firstTouch = touches.first
@@ -158,6 +173,8 @@
             }
         }
 
+        /// Finishes a tap, link press or selection: taps a link or attachment, or
+        /// shows or hides the selection menu. Overrides must call `super`.
         override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             endInteractionUnlessHeldByGesture()
             if interactionState.isForwardingToSuper {
@@ -210,6 +227,7 @@
             }
         }
 
+        /// Ends the sequence without tapping anything. Overrides must call `super`.
         override open func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
             endInteractionUnlessHeldByGesture()
             if interactionState.isForwardingToSuper {
@@ -251,6 +269,8 @@
                 addInteraction(interaction)
             }
 
+            /// Adds a pointer interaction that shows the text beam over a selectable
+            /// label, except over attachment views. The label installs one itself.
             public func installTextPointerInteraction() {
                 let pointerInteraction = UIPointerInteraction(delegate: self)
                 addInteraction(pointerInteraction)
@@ -406,10 +426,13 @@
                 controller.present(activityController, animated: true)
             }
 
+            /// Whether the label can show the selection menu: only while it is selectable.
             override open var canBecomeFirstResponder: Bool {
                 isSelectable
             }
 
+            /// Enables the label's own menu commands — Copy, Select All, Share — for the
+            /// current selection, and nothing else.
             override open func canPerformAction(
                 _ action: Selector,
                 withSender _: Any?,

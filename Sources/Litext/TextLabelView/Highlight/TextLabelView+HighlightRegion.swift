@@ -8,6 +8,20 @@ import QuartzCore
 
 #if !os(watchOS)
 
+    public extension TextLabelView {
+        /// The link or attachment region a tap at `point`, in the label's
+        /// coordinates, would report to the delegate, or `nil`. An attachment wins
+        /// over a link that overlaps it. Use it for long-press previews, hover cards
+        /// or menus of your own.
+        ///
+        /// The test uses the same slightly enlarged rects a tap does. It walks the
+        /// regions and their rects, so it costs nothing on text without links or
+        /// attachments.
+        func highlightRegion(at point: CGPoint) -> TextLabel.HighlightRegion? {
+            highlightRegionForTap(at: point)
+        }
+    }
+
     extension TextLabelView {
         /// Shows the press highlight on the link under `location`, if any.
         func activateLinkRegion(at location: CGPoint) -> Bool {
@@ -55,7 +69,7 @@ import QuartzCore
             // Appending to a bezier path copies it each time, which is quadratic,
             // so the rounded rects are collected in a Core Graphics path instead.
             let highlightPath = CGMutablePath()
-            let cornerRadius: CGFloat = 4
+            let cornerRadius = max(linkHighlightCornerRadius, 0)
             for rect in highlightRegion.rects {
                 let convertedRect = convertRectFromTextLayout(rect, insetForInteraction: true)
                 #if canImport(UIKit)
@@ -66,15 +80,17 @@ import QuartzCore
                 highlightPath.addPath(cgPath(from: subpath))
             }
 
-            let highlightColor: PlatformColor = if let color = highlightRegion.attributes[.foregroundColor] as? PlatformColor {
-                color
+            let highlightColor: PlatformColor = if let linkHighlightColor {
+                linkHighlightColor
+            } else if let color = highlightRegion.attributes[.foregroundColor] as? PlatformColor {
+                color.withAlphaComponent(0.1)
             } else {
-                defaultLinkHighlightFallbackColor
+                defaultLinkHighlightFallbackColor.withAlphaComponent(0.1)
             }
 
             let highlightLayer = CAShapeLayer()
             highlightLayer.path = highlightPath
-            highlightLayer.fillColor = highlightColor.withAlphaComponent(0.1).cgColor
+            highlightLayer.fillColor = highlightColor.cgColor
             backingLayer?.addSublayer(highlightLayer)
 
             highlightRegion.associatedObject = highlightLayer

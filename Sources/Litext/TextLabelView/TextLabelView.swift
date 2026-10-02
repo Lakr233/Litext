@@ -18,8 +18,15 @@ import QuartzCore
 
 #if !os(watchOS)
 
+    /// A label that draws attributed text with CoreText, with tappable links,
+    /// inline attachment views and optional text selection.
+    ///
+    /// Subclasses that override a layout, drawing or interaction method must call
+    /// `super`: the base implementations keep the text layout, the selection and the
+    /// menus in step.
     @MainActor
     open class TextLabelView: PlatformView, Identifiable {
+        /// A stable identity for the label, unique to each instance.
         public let id: UUID = .init()
 
         // MARK: - Public Properties
@@ -30,6 +37,12 @@ import QuartzCore
         /// including the attachment objects there, is unchanged. A reusing host such as a table
         /// or collection view cell should call `clearSelection()` in `prepareForReuse()`, since
         /// unrelated content can still share a prefix with the previous one.
+        ///
+        /// - Important: Performance-sensitive. The string is copied on every
+        ///   assignment and compared with the previous one; an equal string stops
+        ///   there, and a different one builds a new layout through
+        ///   `makeTextLayout(_:)` and is typeset on the next layout pass. Overrides
+        ///   must call `super`.
         open var attributedText: NSAttributedString = .init() {
             didSet {
                 // Keep an immutable snapshot, as UILabel and NSTextField do. Otherwise a
@@ -109,10 +122,16 @@ import QuartzCore
         /// The layout built for every new `attributedText`. Override to hand the
         /// view a `TextLabel.Layout` subclass, for example one that draws lines
         /// differently while keeping Litext's measurement and selection.
+        ///
+        /// Called once for each new string. Return a fresh layout: it should not be
+        /// shared with another label.
         open func makeTextLayout(_ attributedText: NSAttributedString) -> TextLabel.Layout {
             TextLabel.Layout(attributedString: attributedText)
         }
 
+        /// The width `intrinsicContentSize` wraps the text at, like
+        /// `UILabel.preferredMaxLayoutWidth`. Zero, the default, wraps at the width
+        /// the label was last laid out at, or not at all before that.
         open var preferredMaxLayoutWidth: CGFloat = 0 {
             didSet {
                 if preferredMaxLayoutWidth != oldValue {
@@ -121,6 +140,8 @@ import QuartzCore
             }
         }
 
+        /// Moving the label leaves the text layout alone; a size change invalidates it.
+        /// Overrides must call `super`.
         override open var frame: CGRect {
             get { super.frame }
             set {
@@ -138,6 +159,8 @@ import QuartzCore
             }
         }
 
+        /// Whether people can select the text. Turning it off clears the selection
+        /// the label holds. Links stay tappable either way.
         open var isSelectable: Bool = false {
             didSet {
                 if !isSelectable {
@@ -149,24 +172,41 @@ import QuartzCore
             }
         }
 
+        /// The color behind selected text; `nil` uses the system's selection color.
+        /// On iOS the selection handles use it at full opacity.
         open var selectionBackgroundColor: PlatformColor? {
             didSet { updateSelectionLayer() }
         }
 
+        /// The color of the highlight shown while a link is pressed. `nil`, the
+        /// default, uses the link's foreground color at 10% opacity, or the system
+        /// blue when it has none. A color you set is used as it is, alpha included.
+        open var linkHighlightColor: PlatformColor?
+
+        /// The corner radius of the pressed-link highlight, in points.
+        open var linkHighlightCornerRadius: CGFloat = 4
+
         /// Whether a touch or mouse sequence that began on the label is still running.
         public internal(set) var isInteractionInProgress = false
 
+        /// Receives link and attachment taps, selection changes and menu requests.
         open weak var delegate: TextLabelViewDelegate?
 
         /// The group whose selection the label shares, set through
         /// `TextSelectionGroup.labels`.
         public internal(set) var selectionGroup: TextSelectionGroup?
 
-        // MARK: - Internal Properties
-
-        var textLayout: TextLabel.Layout = .init(attributedString: .init()) {
+        /// The layout showing `attributedText`, built by `makeTextLayout(_:)`.
+        ///
+        /// Read it to query geometry the view does not forward, such as
+        /// `rects(for:)` or `nearestTextIndex(at:)`. The label owns it: setting its
+        /// `containerSize` or drawing it elsewhere puts it out of step with the
+        /// view until the next layout pass.
+        public internal(set) var textLayout: TextLabel.Layout = .init(attributedString: .init()) {
             didSet { invalidateTextLayout() }
         }
+
+        // MARK: - Internal Properties
 
         var attachmentViews: Set<PlatformView> = []
         var highlightRegions: [TextLabel.HighlightRegion] {
@@ -181,6 +221,10 @@ import QuartzCore
 
         private var _selectionRange: NSRange?
 
+        /// The selected range of `attributedText`, or `nil` when nothing is
+        /// selected. Setting it shows the selection and its menu; a range past the
+        /// end of the text is clipped to it. In a `TextSelectionGroup` the range
+        /// becomes the group's selection, in this label only.
         open var selectionRange: NSRange? {
             get {
                 _selectionRange
@@ -333,10 +377,13 @@ import QuartzCore
         }
 
         #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
+            /// Hiding the label also stops its selection handles taking touches.
             override open var isHidden: Bool {
                 didSet { updateSelectionHandleGrabGesture() }
             }
 
+            /// Detaches the selection handle gesture from the old window. Overrides must
+            /// call `super`.
             override open func willMove(toWindow newWindow: UIWindow?) {
                 super.willMove(toWindow: newWindow)
                 // Off the old window before the label leaves it; the selection clears once
@@ -348,6 +395,8 @@ import QuartzCore
         #endif
 
         #if canImport(UIKit)
+            /// Clears the selection the label holds and lays the text out again for the
+            /// new window. Overrides must call `super`.
             override open func didMoveToWindow() {
                 super.didMoveToWindow()
                 clearSelectionHeldHere()
@@ -355,6 +404,8 @@ import QuartzCore
             }
 
         #elseif canImport(AppKit)
+            /// Clears the selection the label holds and lays the text out again for the
+            /// new window. Overrides must call `super`.
             override open func viewDidMoveToWindow() {
                 super.viewDidMoveToWindow()
                 clearSelectionHeldHere()
@@ -363,6 +414,7 @@ import QuartzCore
                 invalidateTextLayout()
             }
 
+            /// The layer's background color, mirroring `UIView.backgroundColor`.
             open var backgroundColor: NSColor? {
                 get {
                     guard let cgColor = layer?.backgroundColor else { return nil }

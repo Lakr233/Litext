@@ -21,6 +21,20 @@ import QuartzCore
             guard let range = selectAllRange() else { return }
             selectionRange = range
         }
+
+        /// Selects the word containing the character at `index`, as a double-click
+        /// does. Does nothing when the label is not selectable, the character is
+        /// whitespace or punctuation, or `index` is past the end of the text.
+        func selectWord(at index: Int) {
+            selectWordAtIndex(index)
+        }
+
+        /// Selects the paragraph containing the character at `index`, without its
+        /// line break, as a triple-click does. Does nothing when the label is not
+        /// selectable, the paragraph is empty, or `index` is past the end of the text.
+        func selectLine(at index: Int) {
+            selectLineAtIndex(index)
+        }
     }
 
     extension TextLabelView {

@@ -18,6 +18,7 @@ import SwiftUI
         private var isSelectable: Bool = false
         private var selectionBackgroundColor: PlatformColor?
         private var onTapLink: ((URL) -> Void)?
+        private var onTapAttachment: ((TextLabel.Attachment) -> Void)?
         private var onSelectionChange: ((String?) -> Void)?
 
         @MainActor
@@ -38,6 +39,7 @@ import SwiftUI
             coordinator: Coordinator,
         ) {
             coordinator.onTapLink = onTapLink
+            coordinator.onTapAttachment = onTapAttachment
             coordinator.onSelectionChange = onSelectionChange
             // These assignments can clear a live selection. Hold selection callbacks
             // until the update finishes so they never write state mid-update.
@@ -136,6 +138,18 @@ import SwiftUI
             return copy
         }
 
+        /// Sets a handler for taps on attachments.
+        ///
+        /// Without one, a tap on an attachment that also carries a link follows the
+        /// link like any other.
+        /// - Parameter action: The action to perform with the tapped attachment.
+        /// - Returns: A modified label.
+        func onTapAttachment(_ action: @escaping (TextLabel.Attachment) -> Void) -> TextLabel {
+            var copy = self
+            copy.onTapAttachment = action
+            return copy
+        }
+
         /// Sets a handler for selection changes.
         /// - Parameter action: The action to perform when selected plain text changes.
         /// - Returns: A modified label.
@@ -157,9 +171,12 @@ import SwiftUI
 
     // MARK: - Coordinator
 
-    extension TextLabel {
-        open class Coordinator: NSObject, TextLabelViewDelegate {
+    public extension TextLabel {
+        /// Relays the label's delegate callbacks to the modifiers' handlers.
+        /// SwiftUI creates it; it is public only because `makeCoordinator()` is.
+        final class Coordinator: NSObject, TextLabelViewDelegate {
             var onTapLink: ((URL) -> Void)?
+            var onTapAttachment: ((TextLabel.Attachment) -> Void)?
             var onSelectionChange: ((String?) -> Void)?
 
             /// Set while `TextLabel` pushes SwiftUI state into the view.
@@ -172,11 +189,18 @@ import SwiftUI
                 self.onSelectionChange = onSelectionChange
             }
 
-            open func textLabelView(
+            public func textLabelView(
                 _: TextLabelView,
                 didTapHighlightRegion region: TextLabel.HighlightRegion,
                 at _: CGPoint,
             ) {
+                if region.kind == .attachment,
+                   let onTapAttachment,
+                   let attachment = region.attributes[.litextAttachment] as? TextLabel.Attachment
+                {
+                    onTapAttachment(attachment)
+                    return
+                }
                 guard let url = region.linkURL else { return }
                 if let onTapLink {
                     onTapLink(url)
@@ -185,7 +209,7 @@ import SwiftUI
                 }
             }
 
-            open func textLabelView(_ label: TextLabelView, didChangeSelection _: NSRange?) {
+            public func textLabelView(_ label: TextLabelView, didChangeSelection _: NSRange?) {
                 let selectedText = label.selectedPlainText()
                 guard isApplyingUpdate else {
                     // This value is newer than any deferred one, which must not land after it.
@@ -204,7 +228,7 @@ import SwiftUI
                 }
             }
 
-            open func textLabelView(_: TextLabelView, didDragSelectionAt _: CGPoint) {}
+            public func textLabelView(_: TextLabelView, didDragSelectionAt _: CGPoint) {}
 
             private func flushPendingSelectionChange() {
                 guard hasPendingSelectionChange else { return }

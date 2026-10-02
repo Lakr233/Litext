@@ -106,6 +106,7 @@ private struct FrameFill {
 }
 
 public extension TextLabel {
+    /// One laid-out glyph run, as `TextLabel.Layout.layoutRuns(matching:)` reports it.
     @MainActor
     struct LayoutRun {
         public let lineIndex: Int
@@ -119,16 +120,61 @@ public extension TextLabel {
         /// and trailing whitespace hanging past the container is cut off at its edge.
         public let lineRect: CGRect
     }
+
+    /// One laid-out line, as `TextLabel.Layout.layoutLines` reports it.
+    ///
+    /// Geometry is in CoreText layout space (lower-left origin). Convert it with
+    /// `viewRect(fromLayoutRect:)` before comparing it with view coordinates.
+    @MainActor
+    struct LayoutLine {
+        /// The line's position among the laid-out lines, starting at zero.
+        public let index: Int
+        /// The characters the line shows, including any trailing whitespace and
+        /// line break it ends with.
+        public let stringRange: NSRange
+        /// The line's typographic box, from the bottom of its descent to the top of
+        /// its ascent, matching `LayoutRun.lineRect`: the leading below the descent
+        /// is excluded, and trailing whitespace hanging past the container is cut
+        /// off at its edge.
+        public let rect: CGRect
+        /// Where the line's baseline starts, the point CoreText draws the line from.
+        public let baselineOrigin: CGPoint
+    }
 }
 
 extension TextLabel {
+    /// Measures, lays out and draws an attributed string with CoreText.
+    ///
+    /// `TextLabelView` and the SwiftUI `TextLabel` build one for each string they
+    /// show; a layout can also be used on its own to measure or render text into a
+    /// `CGContext`. Geometry it returns is in CoreText layout space (lower-left
+    /// origin, flipped against `containerSize.height`); convert it with
+    /// `viewRect(fromLayoutRect:)`.
+    ///
+    /// Subclasses that override a method should call `super`: the base
+    /// implementations keep the measurement caches, the laid-out lines and the
+    /// highlight regions in step. Typesetting is the expensive part, so it runs only
+    /// when `containerSize` changes or `invalidateLayout()` is called; queries read
+    /// the stored lines.
     @MainActor
     open class Layout: NSObject {
+        /// An immutable snapshot of the string the layout was created with.
         open private(set) var attributedString: NSAttributedString
+
+        /// The link and attachment regions of the laid-out text, in no particular
+        /// order. Filled by `updateHighlightRegions()`; empty until it runs.
+        ///
+        /// Reading it is free: the array is built once per layout pass.
         open var highlightRegions: [TextLabel.HighlightRegion] {
             _highlightRegionsArray
         }
 
+        /// The size the text is laid out in; zero or `.greatestFiniteMagnitude`
+        /// leaves a dimension unconstrained. Text is anchored to the top.
+        ///
+        /// - Important: Performance-sensitive. Assigning a different size
+        ///   typesets the text again, unless a `sizeThatFits(_:)` call at the same
+        ///   width already did. Assigning an equal size does nothing.
         open var containerSize: CGSize {
             didSet {
                 guard containerSize != oldValue else { return }
@@ -214,6 +260,9 @@ extension TextLabel {
         ///
         /// `containerSize` already triggers layout regeneration when assigned. Call this only after
         /// external state referenced by run delegates or custom drawing callbacks changes.
+        ///
+        /// - Important: Performance-sensitive. This drops every measurement cache,
+        ///   rebuilds the framesetter and typesets the whole string again.
         open func invalidateLayout() {
             suggestedSizeCache = nil
             suggestedSizeHistory.removeAll()
@@ -246,6 +295,12 @@ extension TextLabel {
         /// The size the text needs within `size`. Zero or `.greatestFiniteMagnitude`
         /// leaves a dimension unconstrained; a proposal with a NaN, negative or
         /// infinite dimension is invalid and measures as `.zero`.
+        ///
+        /// - Important: Performance-sensitive. The last few proposals are cached,
+        ///   and a proposal the unconstrained size already fits is answered without
+        ///   typesetting; any other proposal runs CoreText over the whole string.
+        ///   Hosts that probe many widths should reuse a few rather than vary them
+        ///   continuously.
         open func sizeThatFits(_ size: CGSize) -> CGSize {
             guard size.isValidLayoutSize else { return .zero }
             if let suggestedSizeCache, suggestedSizeCache.input == size {
@@ -323,6 +378,8 @@ extension TextLabel {
             }
         }
 
+        /// Draws every laid-out line into `context`, which uses a top-left origin
+        /// like a view's drawing context. Same as `draw(in:visibleRect:)` with `nil`.
         open func draw(in context: CGContext) {
             draw(in: context, visibleRect: nil)
         }
@@ -331,6 +388,10 @@ extension TextLabel {
         ///
         /// The rect uses a top-left origin in the same space as `containerSize`, matching the
         /// dirty rect handed to a view's `draw(_:)`. Passing `nil` draws every line.
+        ///
+        /// - Important: Performance-sensitive: this runs on every display pass.
+        ///   Pass the dirty rect so long text draws only the lines in view; the
+        ///   scan for them stops at the first line below the rect.
         open func draw(in context: CGContext, visibleRect: CGRect?) {
             guard containerSize.isValidLayoutSize,
                   let lines,
@@ -363,11 +424,15 @@ extension TextLabel {
         /// Called by `draw(in:visibleRect:)` for every visible line, with the context
         /// flipped into CoreText's coordinate space. Override to draw a line's glyph
         /// runs yourself — with per-run alpha, say — instead of `CTLineDraw`.
+        ///
+        /// - Important: Performance-sensitive: this runs for every visible line on
+        ///   every display pass. Avoid allocating or measuring text here.
         open func draw(line: CTLine, at _: Int, in context: CGContext) {
             CTLineDraw(line, context)
         }
 
         /// The number of laid-out lines intersecting `rect`; `nil` counts every line.
+        /// `rect` uses a top-left origin, like `draw(in:visibleRect:)`.
         open func visibleLineCount(in rect: CGRect?) -> Int {
             lineIndices(intersecting: rect).count
         }
@@ -376,6 +441,10 @@ extension TextLabel {
         ///
         /// Rects are in the same CoreText layout space returned by `rects(for:)`:
         /// lower-left origin, before a `TextLabelView` converts them to view space.
+        ///
+        /// - Important: Performance-sensitive. Each call walks every glyph run of
+        ///   every line and builds a new array; cache the result for the current
+        ///   layout instead of calling it per frame or per touch.
         open func layoutRuns(matching key: NSAttributedString.Key) -> [TextLabel.LayoutRun] {
             guard let lines, let lineMetrics else { return [] }
 
@@ -398,6 +467,31 @@ extension TextLabel {
                 ))
             }
             return result
+        }
+
+        /// The laid-out lines, top to bottom; empty before `containerSize` is set or
+        /// when there is no text.
+        ///
+        /// Use it to count lines, find where a line breaks, or align with the first
+        /// or last baseline. Geometry is in layout space.
+        ///
+        /// - Important: Performance-sensitive. Each read builds a new array with one
+        ///   entry per line, without typesetting; read it once per layout rather
+        ///   than per frame on very long text.
+        open var layoutLines: [TextLabel.LayoutLine] {
+            guard let lines, let lineOrigins, let lineMetrics else { return [] }
+            return lines.indices.map { index in
+                TextLabel.LayoutLine(
+                    index: index,
+                    stringRange: NSRange(CTLineGetStringRange(lines[index])),
+                    rect: lineMetrics[index].clippedRect(
+                        at: lineOrigins[index],
+                        containerWidth: containerSize.width,
+                        includingLeading: false,
+                    ),
+                    baselineOrigin: lineOrigins[index],
+                )
+            }
         }
 
         private func processLineDrawingActions(in context: CGContext, lineIndices: Range<Int>) {
@@ -451,6 +545,12 @@ extension TextLabel {
             }
         }
 
+        /// Rebuilds `highlightRegions` from the laid-out lines. `TextLabelView` calls
+        /// it after each layout pass that changed the lines; call it yourself after
+        /// setting `containerSize` on a layout you use on its own.
+        ///
+        /// - Important: Performance-sensitive. Text with links or attachments is
+        ///   walked run by run; text with neither returns at once.
         open func updateHighlightRegions() {
             _highlightRegions.removeAll()
             // Extraction walks every glyph run of every line. Text carrying neither
@@ -466,6 +566,10 @@ extension TextLabel {
 
         /// The rects covering `range`, in CoreText layout space (lower-left origin).
         /// Use `viewRect(fromLayoutRect:)` to convert them to view space.
+        ///
+        /// A line gives one rect for the part of `range` it shows, or several on a
+        /// bidirectional line. Lines outside `range` are skipped by a binary search,
+        /// so the cost grows with the lines `range` covers, not the whole text.
         open func rects(for range: NSRange) -> [CGRect] {
             var rects = [CGRect]()
             enumerateTextRects(in: range) { rect in
@@ -474,6 +578,8 @@ extension TextLabel {
             return rects
         }
 
+        /// Calls `block` with each rect `rects(for:)` would return, in line order,
+        /// without collecting them into an array.
         open func enumerateTextRects(in range: NSRange, using block: (CGRect) -> Void) {
             guard let range = NSRange.sanitized(range, within: attributedString.length),
                   let lines,
@@ -1195,6 +1301,13 @@ extension TextLabel {
 
         // MARK: - Text Index Helpers
 
+        /// The caret index nearest to `point` (in layout space) on the line that
+        /// contains it, or the end of the text when `point` lies below the last
+        /// line; `nil` above or between lines.
+        ///
+        /// A caret index rounds to the nearer edge of a glyph. Use
+        /// `characterIndex(at:)` for the character under the point. Finding the
+        /// line scans the lines in order.
         open func textIndex(at point: CGPoint) -> Int? {
             guard let lines, let lineOrigins else { return nil }
 
@@ -1209,6 +1322,10 @@ extension TextLabel {
             return range.location + range.length
         }
 
+        /// The caret index nearest to `point` (in layout space), on the line
+        /// containing it or else on the nearest line. `nil` only when there is no
+        /// text. Selection drags use it, once per move. Finding the line scans the
+        /// lines in order.
         open func nearestTextIndex(at point: CGPoint) -> Int? {
             guard let hit = findLineContainingPoint(point) ?? nearestLine(to: point) else { return nil }
             return caretIndex(at: point, in: hit)
@@ -1224,7 +1341,14 @@ extension TextLabel {
         /// `rects(for:)` measures that way, otherwise the start of the cluster whose
         /// glyph contains the point. Away from every character it falls back to the
         /// caret index, kept on the hit line's last character.
-        func characterIndex(at point: CGPoint) -> Int? {
+        ///
+        /// `point` is in layout space; convert a view point with
+        /// `layoutPoint(fromViewPoint:)`. Returns `nil` only when there is no text.
+        ///
+        /// - Important: Performance-sensitive. Finding the line scans the lines in
+        ///   order and measuring within it walks its characters, so avoid calling
+        ///   it per frame on very long text.
+        open func characterIndex(at point: CGPoint) -> Int? {
             guard let hit = findLineContainingPoint(point) ?? nearestLine(to: point) else { return nil }
             let lineOffset = point.x - hit.origin.x
             let lineStart = CTLineGetStringRange(hit.line).location

@@ -14,6 +14,9 @@
     /// `NSTextView`: Look Up, Translate, Copy, Share and Speech, with the Services
     /// submenu that AppKit appends to any menu of a view that can send text.
     extension TextLabelView {
+        /// The context menu for a right click: link commands over a link, otherwise
+        /// the selection menu, selecting the word under the click first. The delegate
+        /// can replace the selection menu.
         override open func menu(for event: NSEvent) -> NSMenu? {
             let point = convert(event.locationInWindow, from: nil)
             if !selectionContains(point), let linkURL = linkRegion(at: point)?.linkURL {
@@ -183,6 +186,7 @@
             TextLabelSpeech.shared.speak(text)
         }
 
+        /// Stops speech that `startSpeaking(_:)` began, from any label.
         @objc open func stopSpeaking(_: Any?) {
             TextLabelSpeech.shared.stop()
         }
@@ -208,10 +212,14 @@
             copySelectionOrNestedSelection()
         }
 
+        /// Selects the whole text. The Edit menu's Select All reaches it.
         override open func selectAll(_: Any?) {
             selectAll()
         }
 
+        /// Enables Copy only with a selection, Select All only while the label is
+        /// selectable, and Stop Speaking only while speech runs. Overrides should
+        /// call `super` for the items they do not handle.
         open func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
             switch menuItem.action {
             case #selector(copy(_:)):
@@ -225,6 +233,8 @@
             }
         }
 
+        /// Offers the selection to Services as plain text or RTF. The label is
+        /// read-only, so it accepts nothing back.
         override open func validRequestor(
             forSendType sendType: NSPasteboard.PasteboardType?,
             returnType: NSPasteboard.PasteboardType?,
@@ -250,6 +260,7 @@
     }
 
     extension TextLabelView: @preconcurrency NSServicesMenuRequestor {
+        /// Writes the selection as plain text and RTF for a Services menu command.
         public func writeSelection(to pboard: NSPasteboard, types: [NSPasteboard.PasteboardType]) -> Bool {
             guard let text = commandSelectedText(), text.length > 0 else { return false }
             pboard.clearContents()

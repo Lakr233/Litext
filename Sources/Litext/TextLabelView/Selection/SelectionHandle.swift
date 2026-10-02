@@ -7,6 +7,11 @@ import Foundation
 
 #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
 
+    /// One of the two grabbers at the ends of a selection on iOS and visionOS.
+    ///
+    /// The label creates and places its own pair, colored by
+    /// `selectionBackgroundColor`; there is no hook that substitutes a subclass, so
+    /// the class stays `open` only for source compatibility.
     open class SelectionHandle: UIView {
         /// Sized and placed like the grabbers of the system text views, measured on
         /// iOS 18 and later: a 16.5 pt knob that reaches 3 pt into the line it caps, over
@@ -32,11 +37,13 @@ import Foundation
         static let stickWidth: CGFloat = 2
         static let knobExtraResponsiveArea: CGFloat = 20
 
+        /// Which end of the selection a handle marks.
         public enum Kind {
             case start
             case end
         }
 
+        /// The end of the selection this handle marks.
         public let kind: Kind
 
         private(set) var handleColor: UIColor = defaultSelectionHandleTint {
@@ -68,6 +75,7 @@ import Foundation
             handleColor = color ?? defaultSelectionHandleTint
         }
 
+        /// Creates a handle for one end of a selection.
         public init(kind: Kind) {
             self.kind = kind
             super.init(frame: .zero)
@@ -125,6 +133,7 @@ import Foundation
             CGPoint(x: bounds.midX, y: (lineSpan.minY + lineSpan.maxY) / 2)
         }
 
+        /// Lays out the knob and the stick for the handle's kind.
         override open func layoutSubviews() {
             super.layoutSubviews()
             // The stick runs from the knob's centre, where the knob hides its end, to

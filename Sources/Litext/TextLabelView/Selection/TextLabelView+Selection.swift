@@ -40,6 +40,16 @@ import QuartzCore
             writeToPasteboard(selectedText.string)
             return selectedText.copy() as! NSAttributedString
         }
+
+        /// The index of the character under `point`, in the label's coordinates,
+        /// on the nearest line, or `nil` when there is no text. This is the
+        /// character a double-click there selects the word of.
+        ///
+        /// - Important: Performance-sensitive on very long text: see
+        ///   `TextLabel.Layout.characterIndex(at:)`.
+        func characterIndex(at point: CGPoint) -> Int? {
+            characterIndexAtPoint(point)
+        }
     }
 
     extension TextLabelView {
@@ -75,6 +85,8 @@ import QuartzCore
             textLayout.textIndex(at: convertPointForTextLayout(point))
         }
 
+        /// Whether `location`, in the label's coordinates, falls on the selected
+        /// text, using the slightly enlarged rects a tap uses.
         public func selectionContains(_ location: CGPoint) -> Bool {
             guard let range = selectionRange, range.length > 0 else { return false }
             let rects = textLayout.rects(for: range)
@@ -83,6 +95,10 @@ import QuartzCore
             }.contains { $0.contains(location) }
         }
 
+        /// The selected text of this label, with each attachment replaced by its
+        /// `attributedStringRepresentation()`, or `nil` without a selection. In a
+        /// group, use `TextSelectionGroup.selectedAttributedText()` for the whole
+        /// selection.
         public func selectedAttributedText() -> NSAttributedString? {
             guard let safeRange = NSRange.sanitized(
                 selectionRange,
@@ -112,6 +128,7 @@ import QuartzCore
             return mutableResult
         }
 
+        /// The plain string of `selectedAttributedText()`.
         public func selectedPlainText() -> String? {
             selectedAttributedText()?.string
         }

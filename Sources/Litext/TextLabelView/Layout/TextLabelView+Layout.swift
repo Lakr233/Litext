@@ -17,28 +17,73 @@ import QuartzCore
         /// Assigning `attributedText` skips the rebuild when the new string equals the old
         /// one. Use this when the string is unchanged but external state read by a run
         /// delegate or a custom line-drawing callback has changed.
+        ///
+        /// - Important: Performance-sensitive: this typesets the whole text again.
         public func reloadTextLayout() {
             textLayout.invalidateLayout()
             invalidateTextLayout()
         }
 
+        /// Marks the text layout dirty, so the next layout pass lays the text out
+        /// again and redraws it. Cheap: the work happens in that pass, once.
         public func invalidateTextLayout() {
             invalidateTextLayout(invalidatesIntrinsicSize: true)
         }
 
+        /// The size the text needs when wrapped at `preferredMaxLayoutWidth`, or
+        /// else at the width the label was last laid out at.
+        ///
+        /// - Important: Performance-sensitive: Auto Layout reads it often. It is
+        ///   answered from the layout's measurement cache whenever the width is
+        ///   unchanged.
         override open var intrinsicContentSize: CGSize {
-            var constraintSize = CGSize(
-                width: CGFloat.greatestFiniteMagnitude,
-                height: CGFloat.greatestFiniteMagnitude,
-            )
-
+            var width = CGFloat.greatestFiniteMagnitude
             // An invalid width (NaN, negative or infinite) constrains nothing.
             if preferredMaxLayoutWidth.isValidLayoutDimension, preferredMaxLayoutWidth > 0 {
-                constraintSize.width = preferredMaxLayoutWidth
+                width = preferredMaxLayoutWidth
             } else if lastContainerSize.width.isValidLayoutDimension, lastContainerSize.width > 0 {
-                constraintSize.width = lastContainerSize.width
+                width = lastContainerSize.width
+            }
+            return textSize(wrappingAt: width)
+        }
+
+        #if canImport(UIKit)
+            /// The size the text needs when wrapped at `size.width`, like
+            /// `UILabel.sizeThatFits(_:)`: the height is never limited, and a zero
+            /// or invalid width leaves the text unwrapped. Both dimensions are
+            /// rounded up to the pixel grid.
+            ///
+            /// - Important: Performance-sensitive. The layout caches the last few
+            ///   widths; each new width measures the whole text with CoreText.
+            override open func sizeThatFits(_ size: CGSize) -> CGSize {
+                textSize(wrappingAt: Self.wrappingWidth(for: size))
             }
 
+        #elseif canImport(AppKit)
+            /// The size the text needs when wrapped at `size.width`, like
+            /// `NSControl.sizeThatFits(_:)`: the height is never limited, and a zero
+            /// or invalid width leaves the text unwrapped. Both dimensions are
+            /// rounded up to the pixel grid.
+            ///
+            /// - Important: Performance-sensitive. The layout caches the last few
+            ///   widths; each new width measures the whole text with CoreText.
+            @objc open func sizeThatFits(_ size: CGSize) -> CGSize {
+                textSize(wrappingAt: Self.wrappingWidth(for: size))
+            }
+        #endif
+
+        /// The laid-out lines of the text, top to bottom, in layout space. Empty
+        /// until the label has been laid out. See `TextLabel.Layout.layoutLines`.
+        public var layoutLines: [TextLabel.LayoutLine] {
+            textLayout.layoutLines
+        }
+
+        private static func wrappingWidth(for size: CGSize) -> CGFloat {
+            size.width.isValidLayoutDimension && size.width > 0 ? size.width : .greatestFiniteMagnitude
+        }
+
+        private func textSize(wrappingAt wrappingWidth: CGFloat) -> CGSize {
+            let constraintSize = CGSize(width: wrappingWidth, height: CGFloat.greatestFiniteMagnitude)
             let suggested = textLayout.sizeThatFits(
                 constraintSize,
             )
@@ -60,17 +105,25 @@ import QuartzCore
         /// Rects are in CoreText layout space (lower-left origin), exactly as
         /// `TextLabel.Layout.layoutRuns(matching:)` returns them. Convert them with
         /// `viewRect(fromLayoutRect:)` before using them as view coordinates.
+        ///
+        /// - Important: Performance-sensitive: each call walks every glyph run.
         public func layoutRuns(matching key: NSAttributedString.Key) -> [TextLabel.LayoutRun] {
             textLayout.layoutRuns(matching: key)
         }
 
         #if canImport(UIKit)
+            /// Lays the text out for the current bounds when it is dirty, then places
+            /// attachment views and the selection. Overrides must call `super`.
+            ///
+            /// - Important: Performance-sensitive: a size change typesets the text.
             override open func layoutSubviews() {
                 super.layoutSubviews()
                 performLayout()
             }
 
             #if !os(visionOS)
+                /// Lays the text out again, since dynamic colors and the display scale may
+                /// have changed. Overrides must call `super`.
                 override open func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
                     super.traitCollectionDidChange(previousTraitCollection)
                     invalidateTextLayout()
@@ -78,6 +131,10 @@ import QuartzCore
             #endif
 
         #elseif canImport(AppKit)
+            /// Lays the text out for the current bounds when it is dirty, then places
+            /// attachment views and the selection. Overrides must call `super`.
+            ///
+            /// - Important: Performance-sensitive: a size change typesets the text.
             override open func layout() {
                 super.layout()
                 performLayout()
@@ -95,6 +152,8 @@ import QuartzCore
                 invalidateTextLayout(invalidatesIntrinsicSize: oldSize.width != newSize.width)
             }
 
+            /// Invalidates the text layout when the size changes. Overrides must call
+            /// `super`.
             override open func setBoundsSize(_ newSize: NSSize) {
                 let oldSize = bounds.size
                 super.setBoundsSize(newSize)
@@ -102,6 +161,8 @@ import QuartzCore
                 invalidateTextLayout(invalidatesIntrinsicSize: oldSize.width != newSize.width)
             }
 
+            /// Lays the text out again once a live resize ends. Overrides must call
+            /// `super`.
             override open func viewDidEndLiveResize() {
                 super.viewDidEndLiveResize()
                 invalidateTextLayout()
@@ -139,6 +200,8 @@ import QuartzCore
             setNeedsTextDisplay()
         }
 
+        /// Redraws the text without laying it out again, for example after state a
+        /// line-drawing action reads has changed.
         public func setNeedsTextDisplay() {
             #if canImport(UIKit)
                 setNeedsDisplay()
