@@ -80,7 +80,7 @@ Measured on 2026-10-01, before the release that follows 2.2.2. Performance work 
 2. **`rectsLargeRange` on `long` and `cjk`:**
    - Both are 7× to 9× slower: 38 to 293 µs on `long`, and 0.8 to 7 µs on `cjk`.
    - The cause is the same per-line extent work.
-3. **`visibleLineCount900/long` is 3.9× slower:** 0.9 µs became 3.5 µs. A binary search over the line origins would bring it back.
+3. **`visibleLineCount900/long` is 3.9× slower:** 0.9 µs became 3.5 µs. A binary search over the line origins would bring it back. *Resolved after 3.3.0: line lookups now binary-search. See `Line-Lookup.md`.*
 4. **`highlightRegions` and `linkRuns` on `cjk`, `rtl`, `emoji` and `attachments`:**
    - They are 30% to 90% slower, because highlight paths are now clipped to line boxes.
    - These are microsecond costs per layout.
