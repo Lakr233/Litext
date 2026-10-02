@@ -176,6 +176,10 @@ final class TableGridView: PlatformView, TextSelectionGroupDelegate {
         super.init(frame: .zero)
         #if canImport(AppKit) && !targetEnvironment(macCatalyst)
             wantsLayer = true
+        #else
+            registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in
+                self.updateColors()
+            }
         #endif
         platformLayer.addSublayer(headerLayer)
         platformLayer.addSublayer(gridLayer)
@@ -242,11 +246,6 @@ final class TableGridView: PlatformView, TextSelectionGroupDelegate {
         override func layoutSubviews() {
             super.layoutSubviews()
             layoutGrid()
-        }
-
-        override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-            super.traitCollectionDidChange(previousTraitCollection)
-            updateColors()
         }
     #else
         override var isFlipped: Bool {

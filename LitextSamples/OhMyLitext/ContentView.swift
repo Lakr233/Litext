@@ -64,7 +64,7 @@ struct ContentView: View {
                 statusBar
             }
         }
-        .onChange(of: theme) { newTheme in
+        .onChange(of: theme) { _, newTheme in
             document = ShowcaseDocument.make(theme: newTheme)
         }
         .alert("Link Tapped", isPresented: $showLinkAlert) {
