@@ -16,11 +16,29 @@ let package = Package(
     ],
     products: [
         .library(name: "Litext", targets: ["Litext"]),
+        .library(name: "LitextAnimation", targets: ["LitextAnimation"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/Lakr233/DisplayLink.git", from: "3.0.1"),
     ],
     targets: [
         .target(
             name: "Litext",
             resources: [.process("Resources")],
+            swiftSettings: [
+                .swiftLanguageMode(.v6),
+            ],
+        ),
+        .target(
+            name: "LitextAnimation",
+            dependencies: [
+                "Litext",
+                .product(
+                    name: "DisplayLink",
+                    package: "DisplayLink",
+                    condition: .when(platforms: [.iOS, .macCatalyst, .macOS, .tvOS, .visionOS]),
+                ),
+            ],
             swiftSettings: [
                 .swiftLanguageMode(.v6),
             ],
