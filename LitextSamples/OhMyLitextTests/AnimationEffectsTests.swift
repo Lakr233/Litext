@@ -267,6 +267,41 @@ struct AnimatorTests {
         #expect(animator.animatingRange == nil)
     }
 
+    @Test(arguments: [1.0, 0.1])
+    func `a fast stream keeps its chunks in order with a bounded lag`(speed: Double) {
+        let size = CGSize(width: 2000, height: 200)
+        let animator = FadeInAnimator()
+        animator.speed = speed
+        var previous = layout(text(""), size: size)
+        var string = ""
+        let words = ["CTRunDraw", " draws", " each", " stretch", " of", " glyphs", " at", " its", " own", " opacity."]
+        var arrivals: [Double] = []
+        // Twenty chunks: fewer than the most changes the animator keeps in flight.
+        for round in 0 ..< 2 {
+            for (index, word) in words.enumerated() {
+                string += word
+                let next = layout(text(string), size: size)
+                let time = Double(round * words.count + index) * 0.033 / speed
+                arrivals.append(time)
+                animator.animateChange(context(from: previous, to: next), at: time)
+                previous = next
+            }
+        }
+
+        let batches = animator.batches
+        #expect(batches.count == arrivals.count)
+        let maxLag = animator.configuration.stagger.maxTotalDelay / speed
+        for (index, batch) in batches.enumerated() {
+            let lastStart = batch.startTime + Double(batch.unitStarts.count - 1) * batch.interval / speed
+            // The last unit starts within the lag bound, plus one step.
+            #expect(lastStart - arrivals[index] <= maxLag + 0.02 / speed)
+            guard index > 0 else { continue }
+            let earlier = batches[index - 1]
+            let earlierLast = earlier.startTime + Double(earlier.unitStarts.count - 1) * earlier.interval / speed
+            #expect(batch.startTime >= earlierLast)
+        }
+    }
+
     @Test
     func `fade-up reports its rise as overdraw below the line`() {
         let animator = FadeUpAnimator(rise: 6)
