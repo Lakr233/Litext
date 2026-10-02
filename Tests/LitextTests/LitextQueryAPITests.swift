@@ -51,6 +51,24 @@ struct LitextQueryAPITests {
     }
 
     @Test
+    func `a layout line hands out the line it typeset`() {
+        let layout = TextLabel.Layout(attributedString: NSAttributedString(
+            string: "One\nTwo",
+            attributes: [.font: Self.font],
+        ))
+        layout.containerSize = CGSize(width: 300, height: 200)
+
+        let lines = layout.layoutLines
+        #expect(lines.count == 2)
+        for line in lines {
+            let range = CTLineGetStringRange(line.line)
+            #expect(NSRange(location: range.location, length: range.length) == line.stringRange)
+        }
+        // Reading the lines again hands out the same typeset lines, not new ones.
+        #expect(zip(lines, layout.layoutLines).allSatisfy { $0.line === $1.line })
+    }
+
+    @Test
     func `an attachment's descent places it against the baseline`() throws {
         let attachment = TextLabel.Attachment(size: CGSize(width: 20, height: 20))
         let text = NSMutableAttributedString(string: "A", attributes: [.font: Self.font])
