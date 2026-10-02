@@ -14,6 +14,7 @@ A lightweight, high-performance rich-text library for all Apple platforms — UI
 - ✏️ Text selection with copy/paste
 - 🔗 One selection across several labels, such as the cells of a table
 - 🎨 Custom per-line drawing callbacks
+- 🎞️ Animated text changes, such as streamed text fading in, through the optional `LitextAnimation` product
 - 📐 Auto layout integration (experimental)
 - 🖥️ SwiftUI support on all platforms, including watchOS
 
@@ -226,6 +227,8 @@ if let first = label.layoutLines.first {
 }
 ```
 
+Each line also carries its typeset `CTLine` as `line`, so an effect can read glyph runs and positions without typesetting the text again.
+
 Line and run geometry is in CoreText layout space, with the origin at the bottom left; convert it with `viewRect(fromLayoutRect:)`. Each read of `layoutLines` or `layoutRuns(matching:)` builds a new array, so read them once per layout rather than on every frame.
 
 ### Custom Per-Line Drawing
@@ -245,6 +248,71 @@ attributedString.addAttribute(
     range: fullRange
 )
 ```
+
+## LitextAnimation
+
+`LitextAnimation` is a separate product that animates text as it changes, for example a model's reply fading in as it streams. Its `LTXAnimatableLabel` is a `TextLabelView` subclass. The library provides only the base layer: a display link that runs while something animates, a diff of each change aligned to grapheme clusters, redrawing of the lines in flight only, and a policy for cell reuse. Effects live in your app, behind the `LTXTextAnimator` protocol.
+
+```swift
+dependencies: [
+    .product(name: "LitextAnimation", package: "Litext"),
+]
+```
+
+An animator needs five members. This one fades in each line that new text lands on:
+
+```swift
+import LitextAnimation
+
+final class FadeInAnimator: LTXTextAnimator {
+    private(set) var animatingRange: NSRange?
+    private var start: CFTimeInterval = 0
+    private let duration: CFTimeInterval = 0.3
+
+    func animateChange(_ context: LTXAnimationContext, at time: CFTimeInterval) {
+        animatingRange = context.change.insertedRange
+        start = time
+    }
+
+    // Once per frame: name what to redraw, and return false when done.
+    func advance(to time: CFTimeInterval, invalidation: LTXInvalidationContext) -> Bool {
+        guard let range = animatingRange else { return false }
+        invalidation.invalidateCharacters(in: range)
+        if time - start >= duration { animatingRange = nil }
+        return animatingRange != nil
+    }
+
+    // Lines touching `animatingRange` come here, in CoreText space with the text position set.
+    func draw(_ line: LTXAnimatedLine, in context: CGContext, at time: CFTimeInterval) -> Bool {
+        context.setAlpha(min(max((time - start) / duration, 0), 1))
+        CTLineDraw(line.line, context)
+        return true // false lets the label draw the line as usual
+    }
+
+    func finish() {
+        animatingRange = nil
+    }
+}
+
+let label = LTXAnimatableLabel()
+label.animator = FadeInAnimator()
+label.attributedText = reply // each later assignment animates only what was added
+```
+
+Lines outside `animatingRange` are drawn exactly as `TextLabelView` draws them, and an idle label has no display link and no extra subviews. For effects that draw past the line boxes, or draw glyphs on their way out, implement `overdrawInsets`, `additionalContentBounds` and `drawAdditionalContent(in:at:)`.
+
+**Reuse.** In a reused cell, set `animationIdentity` before the text. A new identity shows its text at once; the same identity keeps animating what arrives:
+
+```swift
+cell.label.animationIdentity = message.id
+cell.label.attributedText = message.rendered
+```
+
+**Policy.** `animationPolicy` decides for each change. The default animates when the label is in a window, animations are enabled (not inside `performWithoutAnimation`), the identity is unchanged, the change is not a whole replacement, and it adds text (or arrives while an animation is still running). Use `LTXClosureAnimationPolicy` for your own rule, `setAttributedText(_:animated: false)` to skip animation once, and `finishAnimations()` to jump to the final state.
+
+**Reduced motion.** Every `LTXAnimationContext` carries `prefersReducedMotion`, so the animator can tone its effect down. When the setting turns on mid-animation, the label finishes the animations in flight.
+
+`LitextAnimation` works on iOS, macOS, Mac Catalyst, tvOS and visionOS. On watchOS the product builds but is empty, since there is no `TextLabelView`. The OhMyLitext sample app shows streaming text, a rolling numeric transition and cell reuse; launch it with `-demo streaming`, `-demo numeric` or `-demo reuse` to open one directly.
 
 ## watchOS
 

@@ -1,6 +1,6 @@
 # Litext
 
-Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, including watchOS. The package is in `Sources/Litext`, the tests are in `Tests/LitextTests`, and the sample apps (`OhMyLitext` and its watch app) are in `LitextSamples`, opened through `Litext.xcworkspace`.
+Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, including watchOS. The package is in `Sources/Litext`, the tests are in `Tests/LitextTests`. The optional `LitextAnimation` product (`Sources/LitextAnimation`, tests in `Tests/LitextAnimationTests`) adds `LTXAnimatableLabel`, a `TextLabelView` subclass that animates text changes; it holds no effects of its own and is empty on watchOS. The sample apps (`OhMyLitext` and its watch app) are in `LitextSamples`, opened through `Litext.xcworkspace`.
 
 ## Ground rules
 
@@ -43,6 +43,8 @@ xcodebuild test -scheme Litext -destination 'platform=iOS Simulator,id=<UDID>' \
   -parallel-testing-enabled NO \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 ```
+
+The shared `Litext` and `LitextAnimation` schemes in `Litext.xcworkspace` each test their own target; run the command again with `-scheme LitextAnimation`. Keep the `Litext` scheme free of the animation targets: building them into it makes the `Presentation gate` tests crash on the simulator.
 
 - **Test framework:** The tests use Swift Testing.
 - **Stress suites:**
