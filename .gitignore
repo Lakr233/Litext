@@ -15,3 +15,6 @@ xcuserdata/
 *.xcscmblueprint
 *.build/
 *.swiftpm/
+
+# A library leaves dependency resolution to the app that uses it.
+Package.resolved
