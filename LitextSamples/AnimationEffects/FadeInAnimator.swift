@@ -185,16 +185,24 @@ import QuartzCore
                     granularity: configuration.granularity,
                     maxCount: configuration.maxUnitsPerBatch,
                 )
-            let interval = configuration.stagger.interval(forUnitCount: starts.count)
+            var interval = configuration.stagger.interval(forUnitCount: starts.count)
             let position = batches.firstIndex { $0.range.location > range.location } ?? batches.count
             var startTime = time
             if !reduced, position > 0, speed > 0 {
                 // Carry on the stagger of the text just before, so a chunk never shows
-                // before the end of the previous one. Capped, so a fast stream never lags.
+                // ahead of the previous one. A fast stream would pile that delay up, so a
+                // chunk that would end more than `maxTotalDelay` after it arrived
+                // compresses its own stagger instead; the lag stays bounded and the order
+                // is kept.
                 let previous = batches[position - 1]
-                let previousLast = previous.startTime + Double(previous.unitStarts.count - 1) * previous.interval / speed
-                let next = previousLast + max(interval, previous.interval) / speed
-                startTime = min(max(time, next), time + configuration.stagger.maxTotalDelay / speed)
+                let previousLast = previous.startTime
+                    + Double(previous.unitStarts.count - 1) * previous.interval / speed
+                startTime = max(time, previousLast + max(interval, previous.interval) / speed)
+                if starts.count > 1 {
+                    let latest = time + configuration.stagger.maxTotalDelay / speed
+                    let room = max(latest - startTime, 0) * speed
+                    interval = min(interval, room / Double(starts.count - 1))
+                }
             }
             let batch = Batch(
                 range: range,
