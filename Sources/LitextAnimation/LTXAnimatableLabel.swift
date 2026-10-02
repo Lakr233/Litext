@@ -54,6 +54,10 @@ import QuartzCore
     /// redrawn when the text changes and when lines start or finish animating. See
     /// ``LTXTextAnimator`` for the region the sublayer covers.
     ///
+    /// Because the lines in flight live on that sublayer, a snapshot that draws only the
+    /// view, such as AppKit's `cacheDisplay(in:to:)`, leaves them out while the label
+    /// animates. Call ``finishAnimations()`` before taking one.
+    ///
     /// The label lays its text out through `makeTextLayout(_:)`. A subclass that returns a
     /// layout of its own keeps the animator, but no line reaches it: the animation region is
     /// then only the animator's `additionalContentBounds`.
@@ -159,6 +163,9 @@ import QuartzCore
         /// Replaces the system's reduced-motion setting, for tests.
         var reducedMotionOverride: Bool?
 
+        /// Replaces the scale of the display the label is on, for tests.
+        var displayScaleOverride: CGFloat?
+
         let invalidation = LTXInvalidationContext()
 
         /// The layer that draws the animation region while animating, `nil` otherwise.
@@ -177,6 +184,7 @@ import QuartzCore
         private var identityOfDisplayedText: AnyHashable?
         private var isAssigningWithoutAnimation = false
         private var isObservingReducedMotion = false
+        private var isObservingDisplayScale = false
 
         /// The animator to draw with, `nil` while nothing is in flight.
         var drawingAnimator: (any LTXTextAnimator)? {
@@ -303,11 +311,16 @@ import QuartzCore
             if window == nil {
                 finishAnimations()
             }
-            if let animationLayer, animationLayer.contentsScale != backingScale {
-                animationLayer.contentsScale = backingScale
-                updateAnimationRegion()
-                setNeedsAnimationLayerDisplay()
-            }
+            displayScaleDidChange()
+        }
+
+        /// Renders the animation layer at the scale of the display the label is now on, and
+        /// realigns the animation region to that display's pixels.
+        func displayScaleDidChange() {
+            guard let animationLayer, animationLayer.contentsScale != backingScale else { return }
+            animationLayer.contentsScale = backingScale
+            updateAnimationRegion()
+            setNeedsAnimationLayerDisplay()
         }
 
         private func observeReducedMotion(_ observes: Bool) {
@@ -365,6 +378,29 @@ import QuartzCore
             func setNeedsDisplayWithoutAnimationLayer(_ rect: CGRect) {
                 setNeedsDisplay(rect)
             }
+
+            #if !os(visionOS)
+                /// Follows a change of display scale on systems before iOS 17 and tvOS 17,
+                /// which have no trait change registration. Overrides must call `super`.
+                override open func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+                    super.traitCollectionDidChange(previousTraitCollection)
+                    if #unavailable(iOS 17.0, tvOS 17.0) {
+                        displayScaleDidChange()
+                    }
+                }
+            #endif
+
+            /// Follows changes of display scale while the label has an animation layer, on
+            /// systems that register for trait changes. Registers once per label.
+            func observeDisplayScale() {
+                guard !isObservingDisplayScale else { return }
+                if #available(iOS 17.0, tvOS 17.0, visionOS 1.0, *) {
+                    isObservingDisplayScale = true
+                    registerForTraitChanges([UITraitDisplayScale.self]) { (self: Self, _) in
+                        self.displayScaleDidChange()
+                    }
+                }
+            }
         #else
             /// Also redraws the animation layer, since the whole text is being redrawn.
             override open var needsDisplay: Bool {
@@ -392,6 +428,9 @@ import QuartzCore
 
         /// The scale of the display the label is on.
         var backingScale: CGFloat {
+            if let displayScaleOverride {
+                return displayScaleOverride
+            }
             #if os(visionOS)
                 let scale = traitCollection.displayScale
             #elseif canImport(UIKit)

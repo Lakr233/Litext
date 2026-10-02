@@ -169,6 +169,7 @@ import QuartzCore
             layer.zPosition = -1
             #if canImport(UIKit)
                 self.layer.insertSublayer(layer, at: 0)
+                observeDisplayScale()
             #else
                 wantsLayer = true
                 self.layer?.insertSublayer(layer, at: 0)

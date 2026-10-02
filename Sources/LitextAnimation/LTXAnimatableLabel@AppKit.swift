@@ -17,6 +17,12 @@
             windowDidChange()
         }
 
+        /// Follows the label to a display of another scale. Overrides must call `super`.
+        override open func viewDidChangeBackingProperties() {
+            super.viewDidChangeBackingProperties()
+            displayScaleDidChange()
+        }
+
         /// Moves the animation region with the laid-out lines. Overrides must call `super`.
         override open func layout() {
             super.layout()
