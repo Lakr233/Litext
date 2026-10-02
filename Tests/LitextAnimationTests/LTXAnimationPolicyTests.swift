@@ -9,6 +9,7 @@
 #if !os(watchOS)
 
     import Foundation
+    import Litext
     import LitextAnimation
     import Testing
 
@@ -24,14 +25,18 @@
             isInWindow: Bool = true,
             areAnimationsEnabled: Bool = true,
             prefersReducedMotion: Bool = false,
+            wasAnimating: Bool = false,
         ) -> LTXAnimationContext {
             LTXAnimationContext(
                 change: change,
                 previousIdentity: previousIdentity,
                 identity: identity,
+                previousLayout: TextLabel.Layout(attributedString: NSAttributedString(string: "Hello")),
+                layout: TextLabel.Layout(attributedString: NSAttributedString(string: "Hello, world")),
                 isInWindow: isInWindow,
                 areAnimationsEnabled: areAnimationsEnabled,
                 prefersReducedMotion: prefersReducedMotion,
+                wasAnimating: wasAnimating,
             )
         }
 
@@ -84,10 +89,24 @@
         }
 
         @Test
+        func `a change without new text animates while earlier text is in flight`() {
+            let deletion = LTXTextChange(from: "Hello, world", to: "Hello, wor")
+            #expect(policy.shouldAnimate(Self.context(change: deletion, wasAnimating: true)))
+
+            let restyled = LTXTextChange(
+                from: NSAttributedString(string: "Hello", attributes: [.testStyle: 1]),
+                to: NSAttributedString(string: "Hello", attributes: [.testStyle: 2]),
+            )
+            #expect(policy.shouldAnimate(Self.context(change: restyled, wasAnimating: true)))
+            #expect(!policy.shouldAnimate(Self.context(change: restyled, identity: "other", wasAnimating: true)))
+        }
+
+        @Test
         func `replacing the whole text does not animate`() {
             let replacement = LTXTextChange(from: "Hello", to: "Goodbye")
             #expect(replacement.isReplacement)
             #expect(!policy.shouldAnimate(Self.context(change: replacement)))
+            #expect(!policy.shouldAnimate(Self.context(change: replacement, wasAnimating: true)))
         }
 
         @Test
@@ -104,16 +123,16 @@
 
         @Test
         func `the closure policy answers with its closure`() {
-            var seen: [LTXAnimationContext] = []
+            var seen: [Bool] = []
             let policy = LTXClosureAnimationPolicy { context in
-                seen.append(context)
+                seen.append(context.isInWindow)
                 return context.prefersReducedMotion
             }
             let calm = Self.context(prefersReducedMotion: true)
             let lively = Self.context(isInWindow: false)
             #expect(policy.shouldAnimate(calm))
             #expect(!policy.shouldAnimate(lively))
-            #expect(seen == [calm, lively])
+            #expect(seen == [true, false])
         }
     }
 
