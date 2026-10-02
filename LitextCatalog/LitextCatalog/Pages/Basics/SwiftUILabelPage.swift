@@ -56,6 +56,10 @@ struct SwiftUILabelPage: View {
             CatalogReadout("Last link", value: lastLink.isEmpty ? "none" : lastLink, identifier: "state.lastTappedURL")
             CatalogReadout("Attachment taps", value: "\(attachmentTaps)", identifier: "state.attachmentTaps")
             CatalogReadout("Selected text", value: selectedText.isEmpty ? "none" : selectedText, identifier: "state.selectedText")
+            CatalogNote(
+                "Touches over an attachment's view go to that view, so onTapAttachment reports taps on attachments without a view and on the few points around one.",
+                systemImage: "info.circle",
+            )
         }
     }
 
@@ -78,7 +82,7 @@ struct SwiftUILabelPage: View {
         )
         text.append(attachment.attributedString(attributes: body))
         text.append(NSAttributedString(
-            string: " that report their own taps, and a selection that reports what it covers. Drag across the text to select it.",
+            string: " that host their own views, and a selection that reports what it covers. Drag across the text to select it.",
             attributes: body,
         ))
         return text

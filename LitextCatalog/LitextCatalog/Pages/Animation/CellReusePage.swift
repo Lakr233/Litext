@@ -273,6 +273,30 @@ struct CellReusePage: View {
             fatalError()
         }
 
+        // MARK: Width
+
+        #if canImport(UIKit)
+            override func layoutSubviews() {
+                super.layoutSubviews()
+                tableWidthMayHaveChanged()
+            }
+        #else
+            override func layout() {
+                super.layout()
+                tableWidthMayHaveChanged()
+            }
+        #endif
+
+        /// Measures every row again when the table's width changes. The tables ask for row
+        /// heights before they have their final width, and keep those heights until told.
+        private func tableWidthMayHaveChanged() {
+            let width = tableView.bounds.width
+            guard width > 0, width != cachedWidth else { return }
+            cachedWidth = width
+            heightCache.removeAll()
+            noteAllHeightsChanged()
+        }
+
         // MARK: Live stream
 
         #if canImport(UIKit)
@@ -388,6 +412,12 @@ struct CellReusePage: View {
             private func scroll(toRow row: Int) {
                 tableView.scrollToRow(at: IndexPath(row: row, section: 0), at: .top, animated: true)
             }
+
+            private func noteAllHeightsChanged() {
+                UIView.performWithoutAnimation {
+                    tableView.performBatchUpdates(nil)
+                }
+            }
         #else
             private func setUpTable() {
                 let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("message"))
@@ -418,6 +448,13 @@ struct CellReusePage: View {
 
             private func scroll(toRow row: Int) {
                 tableView.scrollRowToVisible(row)
+            }
+
+            private func noteAllHeightsChanged() {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0
+                    tableView.noteHeightOfRows(withIndexesChanged: IndexSet(integersIn: 0 ..< feed.messages.count))
+                }
             }
         #endif
     }

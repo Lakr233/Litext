@@ -148,6 +148,7 @@ struct StreamingPage: View {
                         Label("Restart", systemImage: "arrow.counterclockwise")
                     }
                     .buttonStyle(.bordered)
+                    .fixedSize()
                     .accessibilityIdentifier("demo.streaming.restart")
                 }
             }

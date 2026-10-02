@@ -89,11 +89,20 @@ extension PlatformViewHost where Content: TextLabelView {
         }
     }
 
-    /// The proposed width, and the height `label` needs at that width; `nil` when the
-    /// proposal has no usable width, so SwiftUI falls back to the intrinsic size.
+    /// The proposed width, and the height `label` needs at that width.
+    ///
+    /// Always answers, so SwiftUI never falls back to the label's unwrapped intrinsic
+    /// size as its minimum width, which pushes a long line past the column on macOS.
+    /// A missing or infinite width asks for the ideal size, the text on one line per
+    /// paragraph; a zero width is SwiftUI probing the minimum, which is no width at all.
     static func fittingLabelSize(_ label: Content, proposal: ProposedViewSize) -> CGSize? {
-        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
-        let fitting = label.textLayout.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: fitting.height.rounded(.up))
+        let unbounded = CGFloat.greatestFiniteMagnitude
+        guard let width = proposal.width, width.isFinite else {
+            let natural = label.textLayout.sizeThatFits(CGSize(width: unbounded, height: unbounded))
+            return CGSize(width: natural.width.rounded(.up), height: natural.height.rounded(.up))
+        }
+        let proposed = max(width, 0)
+        let fitting = label.textLayout.sizeThatFits(CGSize(width: proposed, height: unbounded))
+        return CGSize(width: proposed, height: fitting.height.rounded(.up))
     }
 }

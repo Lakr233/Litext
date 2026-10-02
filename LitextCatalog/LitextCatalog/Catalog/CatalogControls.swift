@@ -67,6 +67,9 @@ struct CatalogSlider: View {
 }
 
 /// A picker over a fixed set of choices, segmented where the platform has segments.
+///
+/// The title is drawn above the picker on every platform: SwiftUI hides a segmented
+/// picker's own title outside a `Form` on iOS.
 struct CatalogPicker<Option: Hashable>: View {
     let title: String
     @Binding var selection: Option
@@ -86,16 +89,20 @@ struct CatalogPicker<Option: Hashable>: View {
     }
 
     var body: some View {
-        Picker(title, selection: $selection) {
-            ForEach(options, id: \.self) { option in
-                Text(label(option)).tag(option)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+            Picker(title, selection: $selection) {
+                ForEach(options, id: \.self) { option in
+                    Text(label(option)).tag(option)
+                }
             }
+            .labelsHidden()
+            #if os(tvOS) || os(watchOS)
+                .pickerStyle(.automatic)
+            #else
+                .pickerStyle(.segmented)
+            #endif
         }
-        #if os(tvOS) || os(watchOS)
-        .pickerStyle(.automatic)
-        #else
-        .pickerStyle(.segmented)
-        #endif
     }
 }
 

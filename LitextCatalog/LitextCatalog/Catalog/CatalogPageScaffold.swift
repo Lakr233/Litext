@@ -138,6 +138,10 @@ struct CatalogFillScaffold<Content: View>: View {
 }
 
 /// The explanation at the top of a page.
+///
+/// The text takes the height it is offered rather than fixing its own: on a fill page
+/// the window's minimum-size pass proposes almost no width, and a fixed height there
+/// wraps a word per line and pushes the window's content off screen on macOS.
 struct CatalogPageHeader: View {
     let page: CatalogPageID
 
@@ -145,7 +149,6 @@ struct CatalogPageHeader: View {
         Text(page.summary)
             .font(.callout)
             .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("catalog.summary")
     }
 }
