@@ -568,8 +568,8 @@ private func lineDrawingProbeText(lineCount: Int) -> NSAttributedString {
         label.linkHighlightColor = .blue
         #expect(try pressedLayer().fillColor == PlatformColor.blue.cgColor)
 
-        // A rounded corner leaves the rect's very corner out; a square one fills it.
         func cornerIsFilled() throws -> Bool {
+            // A rounded corner leaves the rect's very corner out; a square one fills it.
             let path = try #require(try pressedLayer().path)
             let rect = path.boundingBox
             return path.contains(CGPoint(x: rect.minX + 0.5, y: rect.minY + 0.5))
