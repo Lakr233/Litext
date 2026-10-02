@@ -35,12 +35,21 @@
 
         /// A right click at the middle of the character at `index`, in window coordinates.
         private func rightClick(atCharacter index: Int, modifierFlags: NSEvent.ModifierFlags = []) -> NSEvent {
+            mouseEvent(.rightMouseDown, atCharacter: index, modifierFlags: modifierFlags)
+        }
+
+        /// A mouse event at the middle of the character at `index`, in window coordinates.
+        private func mouseEvent(
+            _ type: NSEvent.EventType,
+            atCharacter index: Int,
+            modifierFlags: NSEvent.ModifierFlags = [],
+        ) -> NSEvent {
             let rect = label.viewRect(fromLayoutRect: label.textLayout.rects(
                 for: NSRange(location: index, length: 1),
             )[0])
             let point = label.convert(CGPoint(x: rect.midX, y: rect.midY), to: nil)
             return NSEvent.mouseEvent(
-                with: .rightMouseDown,
+                with: type,
                 location: point,
                 modifierFlags: modifierFlags,
                 timestamp: 0,
@@ -95,6 +104,13 @@
             label.selectionRange = NSRange(location: 0, length: 11)
             _ = try #require(label.menu(for: rightClick(atCharacter: 7)))
             #expect(label.selectionRange == NSRange(location: 0, length: 11))
+        }
+
+        @Test func `a click inside the selection clears it`() {
+            label.selectionRange = NSRange(location: 0, length: 11)
+            label.mouseDown(with: mouseEvent(.leftMouseDown, atCharacter: 7))
+            label.mouseUp(with: mouseEvent(.leftMouseUp, atCharacter: 7))
+            #expect(label.selectionRange == nil)
         }
 
         @Test func `a label that is not selectable shows no selection menu`() {
