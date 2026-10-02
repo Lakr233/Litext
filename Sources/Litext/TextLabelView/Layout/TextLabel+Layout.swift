@@ -139,6 +139,12 @@ public extension TextLabel {
         public let rect: CGRect
         /// Where the line's baseline starts, the point CoreText draws the line from.
         public let baselineOrigin: CGPoint
+        /// The typeset line itself, shared with the layout that drew it.
+        ///
+        /// Read glyph runs, positions and string indices from it to draw or animate
+        /// the line yourself without typesetting the text again. Treat it as
+        /// read-only and use it on the main actor, like the layout it came from.
+        public let line: CTLine
     }
 }
 
@@ -502,6 +508,7 @@ extension TextLabel {
                         includingLeading: false,
                     ),
                     baselineOrigin: lineOrigins[index],
+                    line: lines[index],
                 )
             }
         }
