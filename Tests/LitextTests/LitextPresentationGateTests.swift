@@ -115,6 +115,23 @@
                 #expect(!label.isEditMenuVisible)
             #endif
         }
+
+        @Test func `a menu the touch dismissed counts as showing when it began`() {
+            defer { tearDown() }
+            guard #available(iOS 16.0, *) else { return }
+            #if !targetEnvironment(macCatalyst)
+                label.selectionRange = NSRange(location: 0, length: 5)
+                let touchTime = ProcessInfo.processInfo.systemUptime
+                #expect(label.selectionMenuShowed(atTouchTime: touchTime))
+
+                // The system dismisses the menu just before the label sees the touch.
+                label.isEditMenuVisible = false
+                label.editMenuDismissalTime = touchTime + 0.001
+                #expect(label.selectionMenuShowed(atTouchTime: touchTime))
+                // A later touch finds the menu gone.
+                #expect(!label.selectionMenuShowed(atTouchTime: touchTime + 1))
+            #endif
+        }
     }
 
 #elseif canImport(AppKit) && !targetEnvironment(macCatalyst)
