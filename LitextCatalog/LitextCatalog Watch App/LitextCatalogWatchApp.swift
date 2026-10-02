@@ -1,6 +1,6 @@
 //
-//  OhMyLitextWatchApp.swift
-//  OhMyLitextWatch Watch App
+//  LitextCatalogWatchApp.swift
+//  LitextCatalog Watch App
 //
 //  Created by Litext Team.
 //
@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct OhMyLitextWatch_Watch_AppApp: App {
+struct LitextCatalogWatchApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

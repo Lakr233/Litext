@@ -1,6 +1,6 @@
 //
 //  TableDemoView.swift
-//  OhMyLitext
+//  LitextCatalog
 //
 //  Created by Litext Team.
 //

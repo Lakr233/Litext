@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  OhMyLitextWatch Watch App
+//  LitextCatalog Watch App
 //
 
 import CoreText

@@ -28,7 +28,7 @@ HARD, OWNER-MANDATED CONSTRAINTS (a "fix" that violates these is WRONG — flag 
 REPO LAYOUT (paths relative to repo root):
 - Sources/Litext/**            the library (primary audit surface, ~3467 LOC, 32 files)
 - Tests/LitextTests/**         SwiftPM unit tests
-- LitextSamples/**             sample apps (UIKit/SwiftUI/watchOS) + xcodeproj unit/UI tests
+- LitextCatalog/**             catalog app (UIKit/AppKit/SwiftUI/watchOS) + xcodeproj unit/UI tests
 - Script/**, .github/**        build/test/perf scripts and CI
 - Package.swift, .swiftlint.yml, .swiftformat   config`
 
@@ -191,7 +191,7 @@ ${l.focus}
 INSTRUCTIONS:
 - Read the actual code. Use Read on the files above (start with the largest/most relevant to your
   lens) and Grep to trace patterns across files. Primary surface is Sources/Litext/**, but you may
-  also flag issues in Tests/, LitextSamples/, Script/, .github/, or config files when they fall
+  also flag issues in Tests/, LitextCatalog/, Script/, .github/, or config files when they fall
   squarely in your lens.
 - Report ONLY through your lens — do not duplicate other lenses' territory.
 - Every finding MUST cite a real file:line you actually read, describe the problem grounded in the

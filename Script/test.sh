@@ -38,7 +38,7 @@ function test_scheme() {
 }
 
 function first_available_ios_simulator_id() {
-	SCHEME=${1:-OhMyLitext}
+	SCHEME=${1:-LitextCatalog}
 	xcodebuild -scheme "$SCHEME" -workspace "$WORKSPACE" -showdestinations 2>/dev/null \
 		| awk -F '[{},]' '
 			/platform:iOS Simulator/ && /name:iPhone/ {
@@ -62,24 +62,24 @@ function first_available_ios_simulator_id() {
 # rm -rf ~/Library/Caches/org.swift.swiftpm
 # rm -rf ~/Library/org.swift.swiftpm
 
-test_build "OhMyLitext" "generic/platform=macOS"
-test_build "OhMyLitext" "generic/platform=macOS,variant=Mac Catalyst"
-test_build "OhMyLitext" "generic/platform=iOS"
-test_build "OhMyLitext" "generic/platform=iOS Simulator"
-test_build "OhMyLitext" "generic/platform=tvOS"
-test_build "OhMyLitext" "generic/platform=tvOS Simulator"
-test_build "OhMyLitext" "generic/platform=xrOS"
-test_build "OhMyLitext" "generic/platform=xrOS Simulator"
-test_build "OhMyLitextWatch Watch App" "generic/platform=watchOS"
-test_build "OhMyLitextWatch Watch App" "generic/platform=watchOS Simulator"
+test_build "LitextCatalog" "generic/platform=macOS"
+test_build "LitextCatalog" "generic/platform=macOS,variant=Mac Catalyst"
+test_build "LitextCatalog" "generic/platform=iOS"
+test_build "LitextCatalog" "generic/platform=iOS Simulator"
+test_build "LitextCatalog" "generic/platform=tvOS"
+test_build "LitextCatalog" "generic/platform=tvOS Simulator"
+test_build "LitextCatalog" "generic/platform=xrOS"
+test_build "LitextCatalog" "generic/platform=xrOS Simulator"
+test_build "LitextCatalog Watch App" "generic/platform=watchOS"
+test_build "LitextCatalog Watch App" "generic/platform=watchOS Simulator"
 test_build "LitextAnimation" "generic/platform=watchOS"
 test_build "LitextAnimation" "generic/platform=watchOS Simulator"
 
-test_scheme "OhMyLitext" "platform=macOS" "-only-testing:OhMyLitextTests"
+test_scheme "LitextCatalog" "platform=macOS" "-only-testing:LitextCatalogTests"
 
-IOS_SIMULATOR_ID=$(first_available_ios_simulator_id "OhMyLitext")
+IOS_SIMULATOR_ID=$(first_available_ios_simulator_id "LitextCatalog")
 if [ -z "$IOS_SIMULATOR_ID" ]; then
 	echo "[!] failed to locate an available iPhone simulator"
 	exit 1
 fi
-test_scheme "OhMyLitext" "id=$IOS_SIMULATOR_ID" "-only-testing:OhMyLitextTests"
+test_scheme "LitextCatalog" "id=$IOS_SIMULATOR_ID" "-only-testing:LitextCatalogTests"

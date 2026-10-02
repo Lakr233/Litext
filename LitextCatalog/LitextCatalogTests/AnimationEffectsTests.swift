@@ -1,6 +1,6 @@
 //
 //  AnimationEffectsTests.swift
-//  OhMyLitextTests
+//  LitextCatalogTests
 //
 //  Created by Litext Team.
 //

@@ -1,6 +1,6 @@
 //
 //  NumericDemoView.swift
-//  OhMyLitext
+//  LitextCatalog
 //
 //  Created by Litext Team.
 //

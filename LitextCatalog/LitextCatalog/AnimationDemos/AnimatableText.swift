@@ -1,6 +1,6 @@
 //
 //  AnimatableText.swift
-//  OhMyLitext
+//  LitextCatalog
 //
 //  Created by Litext Team.
 //

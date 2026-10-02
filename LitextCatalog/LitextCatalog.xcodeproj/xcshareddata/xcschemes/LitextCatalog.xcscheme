@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "508316992F2E5A7D0061E34E"
-               BuildableName = "OhMyLitext.app"
-               BlueprintName = "OhMyLitext"
-               ReferencedContainer = "container:LitextSamples.xcodeproj">
+               BuildableName = "LitextCatalog.app"
+               BlueprintName = "LitextCatalog"
+               ReferencedContainer = "container:LitextCatalog.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "508316992F2E5A7D0061E34E"
-            BuildableName = "OhMyLitext.app"
-            BlueprintName = "OhMyLitext"
-            ReferencedContainer = "container:LitextSamples.xcodeproj">
+            BuildableName = "LitextCatalog.app"
+            BlueprintName = "LitextCatalog"
+            ReferencedContainer = "container:LitextCatalog.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -45,9 +45,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A10000012F6A00010000000C"
-               BuildableName = "OhMyLitextTests.xctest"
-               BlueprintName = "OhMyLitextTests"
-               ReferencedContainer = "container:LitextSamples.xcodeproj">
+               BuildableName = "LitextCatalogTests.xctest"
+               BlueprintName = "LitextCatalogTests"
+               ReferencedContainer = "container:LitextCatalog.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -67,9 +67,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "508316992F2E5A7D0061E34E"
-            BuildableName = "OhMyLitext.app"
-            BlueprintName = "OhMyLitext"
-            ReferencedContainer = "container:LitextSamples.xcodeproj">
+            BuildableName = "LitextCatalog.app"
+            BlueprintName = "LitextCatalog"
+            ReferencedContainer = "container:LitextCatalog.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -84,9 +84,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "508316992F2E5A7D0061E34E"
-            BuildableName = "OhMyLitext.app"
-            BlueprintName = "OhMyLitext"
-            ReferencedContainer = "container:LitextSamples.xcodeproj">
+            BuildableName = "LitextCatalog.app"
+            BlueprintName = "LitextCatalog"
+            ReferencedContainer = "container:LitextCatalog.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

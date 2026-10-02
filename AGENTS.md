@@ -1,6 +1,6 @@
 # Litext
 
-Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, including watchOS. The package is in `Sources/Litext`, the tests are in `Tests/LitextTests`. The optional `LitextAnimation` product (`Sources/LitextAnimation`, tests in `Tests/LitextAnimationTests`) adds `LTXAnimatableLabel`, a `TextLabelView` subclass that animates text changes; it holds no effects of its own and is empty on watchOS. The sample apps (`OhMyLitext` and its watch app) are in `LitextSamples`, opened through `Litext.xcworkspace`.
+Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, including watchOS. The package is in `Sources/Litext`, the tests are in `Tests/LitextTests`. The optional `LitextAnimation` product (`Sources/LitextAnimation`, tests in `Tests/LitextAnimationTests`) adds `LTXAnimatableLabel`, a `TextLabelView` subclass that animates text changes; it holds no effects of its own and is empty on watchOS. The catalog app `LitextCatalog`, which demonstrates every part of the API, and its watch companion are in `LitextCatalog`, opened through `Litext.xcworkspace`.
 
 ## Ground rules
 
@@ -33,7 +33,7 @@ swift build
 swift test                                        # macOS, about 12 s; skips the stress suites
 LITEXT_STRESS=1 swift test --filter Stress        # stress suites at quick sizes, about 25 s
 LITEXT_STRESS=full swift test --filter Stress     # stress suites at full sizes, about 6 min
-Script/test.sh                                    # every platform build plus sample-app tests
+Script/test.sh                                    # every platform build plus catalog-app tests
 ```
 
 Run the package tests on an iOS simulator through Xcode:

@@ -312,7 +312,7 @@ cell.label.attributedText = message.rendered
 
 **Reduced motion.** Every `LTXAnimationContext` carries `prefersReducedMotion`, so the animator can tone its effect down. When the setting turns on mid-animation, the label finishes the animations in flight.
 
-`LitextAnimation` works on iOS, macOS, Mac Catalyst, tvOS and visionOS. On watchOS the product builds but is empty, since there is no `TextLabelView`. The OhMyLitext sample app shows streaming text, a rolling numeric transition and cell reuse; launch it with `-demo streaming`, `-demo numeric` or `-demo reuse` to open one directly.
+`LitextAnimation` works on iOS, macOS, Mac Catalyst, tvOS and visionOS. On watchOS the product builds but is empty, since there is no `TextLabelView`. The LitextCatalog sample app shows streaming text, a rolling numeric transition and cell reuse; launch it with `-demo streaming`, `-demo numeric` or `-demo reuse` to open one directly.
 
 ## watchOS
 

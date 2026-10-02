@@ -1,7 +1,7 @@
 included:
   - Package.swift
   - Sources
-  - LitextSamples
+  - LitextCatalog
 
 excluded:
   - .build

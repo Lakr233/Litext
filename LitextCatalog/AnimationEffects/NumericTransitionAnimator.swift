@@ -1,6 +1,6 @@
 //
 //  NumericTransitionAnimator.swift
-//  OhMyLitext
+//  LitextCatalog
 //
 //  Created by Litext Team.
 //

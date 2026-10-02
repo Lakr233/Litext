@@ -29,25 +29,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - scheme: OhMyLitext
+          - scheme: LitextCatalog
             destination: platform=macOS
-          - scheme: OhMyLitext
+          - scheme: LitextCatalog
             destination: "platform=macOS,variant=Mac Catalyst"
-          - scheme: OhMyLitext
+          - scheme: LitextCatalog
             destination: platform=iOS
-          - scheme: OhMyLitext
+          - scheme: LitextCatalog
             destination: platform=iOS Simulator
-          - scheme: OhMyLitext
+          - scheme: LitextCatalog
             destination: platform=tvOS
-          - scheme: OhMyLitext
+          - scheme: LitextCatalog
             destination: platform=tvOS Simulator
-          - scheme: OhMyLitext
+          - scheme: LitextCatalog
             destination: platform=xrOS
-          - scheme: OhMyLitext
+          - scheme: LitextCatalog
             destination: platform=xrOS Simulator
-          - scheme: OhMyLitextWatch Watch App
+          - scheme: LitextCatalog Watch App
             destination: platform=watchOS
-          - scheme: OhMyLitextWatch Watch App
+          - scheme: LitextCatalog Watch App
             destination: platform=watchOS Simulator
 
     steps:
@@ -85,10 +85,10 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -scheme OhMyLitext \
+            -scheme LitextCatalog \
             -workspace Litext.xcworkspace \
             -destination "platform=macOS" \
-            -only-testing:OhMyLitextTests \
+            -only-testing:LitextCatalogTests \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -97,7 +97,7 @@ jobs:
       - name: Xcode iOS simulator unit tests
         run: |
           set -o pipefail
-          IOS_SIMULATOR_ID=$(xcodebuild -scheme OhMyLitext -workspace Litext.xcworkspace -showdestinations 2>/dev/null \
+          IOS_SIMULATOR_ID=$(xcodebuild -scheme LitextCatalog -workspace Litext.xcworkspace -showdestinations 2>/dev/null \
             | awk -F '[{},]' '/platform:iOS Simulator/ && /name:iPhone/ {
                 for (field = 1; field <= NF; field++) {
                   gsub(/^ +| +$/, "", $field)
@@ -113,10 +113,10 @@ jobs:
             exit 1
           fi
           xcodebuild test \
-            -scheme OhMyLitext \
+            -scheme LitextCatalog \
             -workspace Litext.xcworkspace \
             -destination "id=$IOS_SIMULATOR_ID" \
-            -only-testing:OhMyLitextTests \
+            -only-testing:LitextCatalogTests \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
