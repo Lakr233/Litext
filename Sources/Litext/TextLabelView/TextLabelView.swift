@@ -239,6 +239,9 @@ import QuartzCore
             /// Created the first time the handles show in a window.
             nonisolated(unsafe) var selectionHandleGrabGesture: SelectionHandleGrabGesture?
             var isEditMenuVisible = false
+            /// When the edit menu last began to dismiss, in system uptime like
+            /// `UITouch.timestamp`.
+            var editMenuDismissalTime: TimeInterval = 0
             var editMenuTargetRect: CGRect = .zero
         #endif
 
@@ -410,6 +413,9 @@ import QuartzCore
             var isSecondaryClick: Bool = false
             /// The word a long press selected, which a drag that follows extends.
             var longPressWordRange: NSRange?
+            /// Whether the selection menu showed when the touch began. A tap on the
+            /// selection hides a menu that showed and shows one that did not.
+            var wasSelectionMenuVisible: Bool = false
         }
 
         struct Flags {

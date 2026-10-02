@@ -70,6 +70,9 @@
 
             let location = firstTouch.location(in: self)
             setInteractionStateToBegin(initialLocation: location)
+            #if !targetEnvironment(macCatalyst) && !os(tvOS)
+                interactionState.wasSelectionMenuVisible = selectionMenuShowed(atTouchTime: firstTouch.timestamp)
+            #endif
 
             #if !os(tvOS)
                 if isSelectable, event?.buttonMask == .secondary {
@@ -184,8 +187,14 @@
                interactionState.clickCountAtBegin <= 1
             {
                 if selectionContains(location) {
+                    // As in the system text views, a tap on the selection hides the menu
+                    // and keeps the selection, and the next tap shows the menu again.
                     #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                        showSelectionMenuController()
+                        if interactionState.wasSelectionMenuVisible {
+                            hideSelectionMenu()
+                        } else {
+                            showSelectionMenuController()
+                        }
                     #endif
                 } else {
                     clearSelection()
@@ -321,6 +330,41 @@
                 #endif
             }
 
+            /// Whether the menu for the selection showed when a touch began at `time`:
+            /// this label's, or in a group the one on the member where the selection ends.
+            ///
+            /// From iOS 16 a touch outside the edit menu dismisses it before the label
+            /// sees the touch, so a menu that began to dismiss after `time` counts as
+            /// showing.
+            func selectionMenuShowed(atTouchTime time: TimeInterval) -> Bool {
+                if let menuLabel = selectionGroup?.menuLabel, menuLabel !== self {
+                    return menuLabel.selectionMenuShowed(atTouchTime: time)
+                }
+                guard Self.menuOwnerIdentifier == id else { return false }
+                #if targetEnvironment(macCatalyst)
+                    // Mac Catalyst shows the menu only for a right click.
+                    return false
+                #else
+                    if #available(iOS 16.0, visionOS 1.0, *) {
+                        return isEditMenuVisible || editMenuDismissalTime >= time
+                    }
+                    #if os(visionOS)
+                        return false
+                    #else
+                        return UIMenuController.shared.isMenuVisible
+                    #endif
+                #endif
+            }
+
+            /// Hides the menu for the selection, wherever in a group it shows.
+            func hideSelectionMenu() {
+                if let selectionGroup {
+                    selectionGroup.hideMenu()
+                } else {
+                    hideSelectionMenuController()
+                }
+            }
+
             func hideSelectionMenuController() {
                 guard Self.menuOwnerIdentifier == id else { return }
                 #if !targetEnvironment(macCatalyst)
@@ -447,6 +491,7 @@
                 animator _: UIEditMenuInteractionAnimating,
             ) {
                 isEditMenuVisible = false
+                editMenuDismissalTime = ProcessInfo.processInfo.systemUptime
             }
         }
     #endif
