@@ -201,7 +201,7 @@
             // Rejected touches leave a window recognizer possible. Making a
             // scroller wait for it would block ordinary pans while handles show.
             // Prefer this recognizer only once a touch actually grabs a handle.
-            guard recognizer.numberOfTouches > 0 || label?.interactionState.isDraggingSelectionHandle == true else { return false }
+            guard label?.interactionState.isDraggingSelectionHandle == true else { return false }
             return !(other.delegate is SelectionHandleGrabGesture)
         }
     }
