@@ -141,7 +141,9 @@ func measurementHistoryCount(_ layout: TextLabel.Layout) throws -> Int {
 
 @MainActor
 func layoutFramesetter(_ layout: TextLabel.Layout) throws -> CTFramesetter {
-    let value = try #require(layoutStoredValue(layout, "framesetter"))
+    // Built the first time the layout typesets the whole string.
+    let optional = try #require(layoutStoredValue(layout, "cachedFramesetter"))
+    let value = try #require(Mirror(reflecting: optional).children.first?.value)
     return value as! CTFramesetter
 }
 
