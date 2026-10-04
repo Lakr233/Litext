@@ -177,14 +177,14 @@
 
             override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
                 super.touchesEnded(touches, with: event)
-                grab?.endDrag()
                 state = .ended
+                grab?.endDrag()
             }
 
             override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
                 super.touchesCancelled(touches, with: event)
-                grab?.endDrag()
                 state = .cancelled
+                grab?.endDrag()
             }
 
             override func canPrevent(_ other: UIGestureRecognizer) -> Bool {
