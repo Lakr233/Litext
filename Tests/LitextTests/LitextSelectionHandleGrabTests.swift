@@ -205,11 +205,24 @@
             #expect(upperGesture.gestureRecognizer(
                 upperGesture.recognizer,
                 shouldBeRequiredToFailBy: UIPanGestureRecognizer(),
-            ))
+            ) == false)
 
             lower.clearSelection()
             #expect(grabRecognizers(on: window).count == 1)
             #expect(upperGesture.window === window)
+        }
+
+        @Test func `scrolling waits only while a handle is actually being dragged`() throws {
+            let window = makeWindow()
+            let label = makeLabel(in: window)
+            select(label)
+            let gesture = try #require(label.selectionHandleGrabGesture)
+            let pan = UIPanGestureRecognizer()
+            #expect(!gesture.gestureRecognizer(gesture.recognizer, shouldBeRequiredToFailBy: pan))
+            label.selectionHandleDidBeginDrag(.end)
+            #expect(gesture.gestureRecognizer(gesture.recognizer, shouldBeRequiredToFailBy: pan))
+            label.selectionHandleDidEndDrag(.end)
+            #expect(!gesture.gestureRecognizer(gesture.recognizer, shouldBeRequiredToFailBy: pan))
         }
 
         @Test func `leaves touches on views outside the labels screen`() throws {
