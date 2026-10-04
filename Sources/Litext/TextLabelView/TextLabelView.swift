@@ -203,7 +203,24 @@ import QuartzCore
         /// `containerSize` or drawing it elsewhere puts it out of step with the
         /// view until the next layout pass.
         public internal(set) var textLayout: TextLabel.Layout = .init(attributedString: .init()) {
-            didSet { invalidateTextLayout() }
+            didSet {
+                textLayout.lineRenderer = lineRenderer
+                invalidateTextLayout()
+            }
+        }
+
+        /// Draws each line of the text: what goes behind its glyphs, then the glyphs.
+        /// `nil`, the default, draws them with `CTLineDraw` alone.
+        ///
+        /// The label hands it to every layout it shows, including the ones a subclass
+        /// returns from `makeTextLayout(_:)`. Setting it redraws the text without laying
+        /// it out again. See `TextLabel.LineRenderer`.
+        open var lineRenderer: TextLabel.LineRenderer? {
+            didSet {
+                guard lineRenderer !== oldValue else { return }
+                textLayout.lineRenderer = lineRenderer
+                setNeedsTextDisplay()
+            }
         }
 
         // MARK: - Internal Properties

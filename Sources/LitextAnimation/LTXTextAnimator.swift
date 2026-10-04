@@ -9,6 +9,7 @@ import CoreFoundation
 import CoreGraphics
 import CoreText
 import Foundation
+import Litext
 
 #if !os(watchOS)
 
@@ -100,8 +101,9 @@ import Foundation
         ///
         /// The context is flipped to CoreText coordinates of the label's current layout, its
         /// text matrix is the identity and its text position is the line's
-        /// `baselineOrigin`, so `CTLineDraw(line.line, context)` draws the line where the label
-        /// would. The context is clipped to the area being redrawn, and its graphics state is
+        /// `baselineOrigin`, so `line.draw(in: context)` draws the line where and as the
+        /// label would, background included; `CTLineDraw(line.line, context)` draws its
+        /// glyphs alone. The context is clipped to the area being redrawn, and its graphics state is
         /// restored after the call.
         ///
         /// - Important: Performance-sensitive. Runs during drawing for every line in flight.
@@ -112,7 +114,7 @@ import Foundation
         ///   - context: The context to draw into.
         ///   - time: The time of the frame being drawn.
         /// - Returns: Whether the animator drew the line. Return `false` to have the label draw
-        ///   it with `CTLineDraw`.
+        ///   it as at rest, as ``LTXAnimatedLine/draw(in:)`` does.
         func draw(_ line: LTXAnimatedLine, in context: CGContext, at time: CFTimeInterval) -> Bool
 
         /// Draws content that is not part of the label's text, such as glyphs of the previous
@@ -186,12 +188,66 @@ import Foundation
         /// ascent, like `TextLabel.LayoutLine.rect`.
         public let rect: CGRect
 
-        public init(line: CTLine, index: Int, stringRange: NSRange, baselineOrigin: CGPoint, rect: CGRect) {
+        /// The layout the line belongs to, whose `lineRenderer` draws it at rest.
+        let layout: TextLabel.Layout?
+
+        /// The renderer the label draws the line with at rest, or `nil` when it draws the
+        /// glyphs alone. An effect that draws glyph runs one by one can check it, and
+        /// draw a line that has one through ``draw(in:)`` instead, so the background
+        /// takes part in the effect.
+        @MainActor
+        public var lineRenderer: TextLabel.LineRenderer? {
+            layout?.lineRenderer
+        }
+
+        /// - Parameter layout: The layout the line belongs to. Without one,
+        ///   ``draw(in:)`` draws the glyphs alone.
+        public init(
+            line: CTLine,
+            index: Int,
+            stringRange: NSRange,
+            baselineOrigin: CGPoint,
+            rect: CGRect,
+            layout: TextLabel.Layout? = nil,
+        ) {
             self.line = line
             self.index = index
             self.stringRange = stringRange
             self.baselineOrigin = baselineOrigin
             self.rect = rect
+            self.layout = layout
+        }
+
+        /// Draws the line as the label draws it at rest: its `lineRenderer`'s background,
+        /// then its glyphs, at the context's text position. Without a renderer it is
+        /// `CTLineDraw`.
+        ///
+        /// An effect that fades or moves whole lines calls this instead of `CTLineDraw`,
+        /// so backgrounds a renderer draws, such as the pill behind inline code, take
+        /// part in the effect rather than vanishing from the line while it animates.
+        /// The text position is put back afterwards.
+        @MainActor
+        public func draw(in context: CGContext) {
+            guard let layout, let renderer = layout.lineRenderer else {
+                CTLineDraw(line, context)
+                return
+            }
+            let textPosition = context.textPosition
+            renderer.drawBackground(of: line, at: index, in: context, layout: layout)
+            context.textPosition = textPosition
+            renderer.drawGlyphs(of: line, at: index, in: context, layout: layout)
+            context.textPosition = textPosition
+        }
+
+        /// Draws only what the label's `lineRenderer` puts behind the glyphs, at the
+        /// context's text position, for an effect that draws the glyphs itself. Draws
+        /// nothing without a renderer. The text position is put back afterwards.
+        @MainActor
+        public func drawBackground(in context: CGContext) {
+            guard let layout, let renderer = layout.lineRenderer else { return }
+            let textPosition = context.textPosition
+            renderer.drawBackground(of: line, at: index, in: context, layout: layout)
+            context.textPosition = textPosition
         }
     }
 

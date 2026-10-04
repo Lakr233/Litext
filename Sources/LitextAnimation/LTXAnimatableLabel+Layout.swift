@@ -150,6 +150,7 @@ import Litext
                 stringRange: NSRange(location: lineStart, length: cfRange.length),
                 baselineOrigin: context.textPosition,
                 rect: rect,
+                layout: self,
             )
             let textPosition = context.textPosition
             context.saveGState()

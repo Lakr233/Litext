@@ -181,6 +181,14 @@ extension TextLabel {
             _highlightRegionsArray
         }
 
+        /// Draws each line: its background, then its glyphs. `nil`, the default, draws
+        /// each line with `CTLineDraw` alone.
+        ///
+        /// A `TextLabelView` sets it to its own `lineRenderer` on every layout it shows.
+        /// Changing it changes only how the lines are drawn, never where; redraw the view
+        /// that shows the layout afterwards.
+        public final var lineRenderer: TextLabel.LineRenderer?
+
         /// The size the text is laid out in; zero or `.greatestFiniteMagnitude`
         /// leaves a dimension unconstrained. Text is anchored to the top.
         ///
@@ -440,13 +448,22 @@ extension TextLabel {
         /// Draws one laid-out line at the text position already set on `context`.
         ///
         /// Called by `draw(in:visibleRect:)` for every visible line, with the context
-        /// flipped into CoreText's coordinate space. Override to draw a line's glyph
-        /// runs yourself — with per-run alpha, say — instead of `CTLineDraw`.
+        /// flipped into CoreText's coordinate space. The default hands the line to
+        /// `lineRenderer`, background first, or calls `CTLineDraw` when there is none.
+        /// Override to draw a line's glyph runs yourself — with per-run alpha, say — or
+        /// set a `lineRenderer` to change how lines look without a layout subclass.
         ///
         /// - Important: Performance-sensitive: this runs for every visible line on
         ///   every display pass. Avoid allocating or measuring text here.
-        open func draw(line: CTLine, at _: Int, in context: CGContext) {
-            CTLineDraw(line, context)
+        open func draw(line: CTLine, at index: Int, in context: CGContext) {
+            guard let lineRenderer else {
+                CTLineDraw(line, context)
+                return
+            }
+            let textPosition = context.textPosition
+            lineRenderer.drawBackground(of: line, at: index, in: context, layout: self)
+            context.textPosition = textPosition
+            lineRenderer.drawGlyphs(of: line, at: index, in: context, layout: self)
         }
 
         /// The number of laid-out lines intersecting `rect`; `nil` counts every line.

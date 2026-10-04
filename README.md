@@ -249,6 +249,18 @@ attributedString.addAttribute(
 )
 ```
 
+Line drawing actions run after the text. To draw behind a line's glyphs, such as a pill behind inline code, or to draw the glyphs yourself, give the label a line renderer. The label hands it to every layout it builds, so it keeps working in a subclass that makes its own layout, `LTXAnimatableLabel` included:
+
+```swift
+final class PillRenderer: TextLabel.LineRenderer {
+    override func drawBackground(of line: CTLine, at index: Int, in context: CGContext, layout: TextLabel.Layout) {
+        // CoreText space; the text position is where the line's baseline starts.
+    }
+}
+
+label.lineRenderer = PillRenderer()
+```
+
 ## LitextAnimation
 
 `LitextAnimation` is a separate product that animates text as it changes, for example a model's reply fading in as it streams. Its `LTXAnimatableLabel` is a `TextLabelView` subclass. The library provides only the base layer: a display link that runs while something animates, a diff of each change aligned to grapheme clusters, redrawing of the lines in flight only, and a policy for cell reuse. Effects live in your app, behind the `LTXTextAnimator` protocol.
@@ -285,7 +297,7 @@ final class FadeInAnimator: LTXTextAnimator {
     // Lines touching `animatingRange` come here, in CoreText space with the text position set.
     func draw(_ line: LTXAnimatedLine, in context: CGContext, at time: CFTimeInterval) -> Bool {
         context.setAlpha(min(max((time - start) / duration, 0), 1))
-        CTLineDraw(line.line, context)
+        line.draw(in: context) // as the label draws it at rest, renderer background included
         return true // false lets the label draw the line as usual
     }
 
