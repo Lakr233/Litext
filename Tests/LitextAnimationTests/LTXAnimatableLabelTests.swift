@@ -421,6 +421,36 @@
         }
 
         @Test
+        func `the animation layer resolves dynamic colours with the label's appearance`() {
+            let animator = RecordingAnimator()
+            animator.drawsLines = false
+            let window = makeWindow()
+            let label = makeLabel("", animator: animator)
+            #if canImport(UIKit)
+                window.overrideUserInterfaceStyle = .light
+                label.overrideUserInterfaceStyle = .dark
+                let color = UIColor.label
+            #elseif canImport(AppKit)
+                window.appearance = NSAppearance(named: .aqua)
+                label.appearance = NSAppearance(named: .darkAqua)
+                let color = NSColor.labelColor
+            #endif
+            addToWindow(label, window)
+            label.attributedText = NSAttributedString(string: "Hello", attributes: [
+                .font: PlatformFont.boldSystemFont(ofSize: 24),
+                .foregroundColor: color,
+            ])
+            performLayoutPass(label)
+            let bytes = drawAnimationLayer(of: label)
+            // The brightest inked pixel: light text in a dark label, not the app's dark text.
+            var brightest: UInt8 = 0
+            for pixel in stride(from: 0, to: bytes.count, by: 4) where bytes[pixel + 3] > 200 {
+                brightest = max(brightest, bytes[pixel])
+            }
+            #expect(brightest > 200)
+        }
+
+        @Test
         func `additional content is drawn even without text`() {
             let animator = RecordingAnimator()
             animator.additionalBounds = CGRect(x: 0, y: 0, width: 40, height: 20)
