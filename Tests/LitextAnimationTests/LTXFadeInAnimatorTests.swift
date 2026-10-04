@@ -190,6 +190,51 @@
             #expect(animator.animatingRange == nil)
         }
 
+        @Test
+        func `rewritten text that was on screen does not fade in again`() {
+            let size = CGSize(width: 800, height: 100)
+            let old = layout(text("An [inline][ref] and"), size: size)
+            let new = layout(text("An inline and more text"), size: size)
+            let animator = LTXFadeInAnimator()
+            animator.animateChange(context(from: old, to: new), at: 0)
+
+            // Only " more text" is new; "inline and" was already shown.
+            #expect(animator.batches.map(\.range) == [NSRange(location: 13, length: 10)])
+        }
+
+        @Test
+        func `rewritten text in flight keeps fading where it was`() throws {
+            let size = CGSize(width: 800, height: 100)
+            let first = layout(text("Hello "), size: size)
+            let second = layout(text("Hello **wor"), size: size)
+            let third = layout(text("Hello world"), size: size)
+            let animator = LTXFadeInAnimator()
+            animator.animateChange(context(from: first, to: second), at: 0)
+            let original = try #require(animator.batches.first)
+            animator.animateChange(context(from: second, to: third), at: 0.05)
+
+            #expect(animator.batches.map(\.range) == [
+                NSRange(location: 6, length: 3),
+                NSRange(location: 9, length: 2),
+            ])
+            let carried = try #require(animator.batches.first)
+            #expect(carried.unitStarts == [6, 7, 8])
+            // "w" was the third unit, so it keeps the opacity it had.
+            for time in [0.06, 0.1, 0.2] {
+                #expect(animator.level(ofUnit: 0, in: carried, at: time) == animator.level(ofUnit: 2, in: original, at: time))
+            }
+        }
+
+        @Test
+        func `a rewrite that shares no text fades in whole`() {
+            let size = CGSize(width: 800, height: 100)
+            let old = layout(text("Total: 12"), size: size)
+            let new = layout(text("Total: 345"), size: size)
+            let animator = LTXFadeInAnimator()
+            animator.animateChange(context(from: old, to: new), at: 0)
+            #expect(animator.batches.map(\.range) == [NSRange(location: 7, length: 3)])
+        }
+
         @Test(arguments: [1.0, 0.1])
         func `a fast stream keeps its chunks in order with a bounded lag`(speed: Double) {
             let size = CGSize(width: 2000, height: 200)
