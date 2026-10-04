@@ -38,6 +38,13 @@
 
         /// The centre of a handle's knob, in the window's coordinates.
         private func knobCenter(_ kind: SelectionHandle.Kind, of label: TextLabelView) -> CGPoint {
+            #if !os(visionOS)
+                if let handle = label.displayedSelectionHandle(kind) {
+                    let rect = handle.convert(handle.bounds, to: nil)
+                    let y = kind == .start ? rect.minY - 10 : rect.maxY + 10
+                    return CGPoint(x: rect.midX, y: y)
+                }
+            #endif
             let frame = label.selectionHandle(kind).frame
             let y = switch kind {
             case .start: frame.minY + SelectionHandle.knobRadius

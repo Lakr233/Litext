@@ -38,10 +38,13 @@
             return CGPoint(x: converted.midX, y: converted.midY)
         }
 
-        @Test func `installs a long press for touches and no context menu interaction`() throws {
+        @Test func `installs a long press for touches without a label context menu`() throws {
             let window = makeWindow()
             let label = makeLabel(in: window)
-            #expect(!label.interactions.contains { $0 is UIContextMenuInteraction })
+            #expect(!label.interactions.contains {
+                guard let interaction = $0 as? UIContextMenuInteraction else { return false }
+                return interaction.delegate === label
+            })
             let recognizer = try #require(label.gestureRecognizers?.first {
                 $0 is TextLabelView.LongPressSelectionRecognizer
             })
