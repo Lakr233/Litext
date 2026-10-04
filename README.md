@@ -9,6 +9,7 @@ A lightweight, high-performance rich-text library for all Apple platforms — UI
 ## Features
 
 - ⚡️ High performance text layout and rendering via CoreText
+- 🌊 Streaming-friendly: new text that only changed near its end typesets just the paragraphs that changed
 - 📎 Native view embedding via attachments
 - 🔗 Clickable links support
 - ✏️ Text selection with copy/paste
