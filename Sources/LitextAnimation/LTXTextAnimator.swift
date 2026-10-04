@@ -15,8 +15,9 @@ import Litext
 
     /// An effect for text an animatable label receives.
     ///
-    /// LitextAnimation ships one effect, ``LTXFadeInAnimator`` (and ``LTXFadeUpAnimator``);
-    /// anything else conforms to this protocol. An animator decides what changed text looks
+    /// LitextAnimation ships two effects: ``LTXFadeInAnimator`` (and ``LTXFadeUpAnimator``)
+    /// for streamed text, and ``LTXNumericTransitionAnimator`` for a counter or title that
+    /// changes as a whole. Anything else conforms to this protocol. An animator decides what changed text looks
     /// like while it animates, and the label drives it:
     ///
     /// 1. ``animateChange(_:at:)`` reports each text change the animation policy lets
