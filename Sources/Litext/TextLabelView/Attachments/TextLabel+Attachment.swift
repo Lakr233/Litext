@@ -168,11 +168,14 @@ extension TextLabel {
             return delegate
         }
 
-        /// Copies `size` into the box the run delegate reads. Going through dynamic dispatch
-        /// honours a subclass that computes `size` without calling `super`.
-        func syncRunMetrics() {
+        /// Copies `size` into the box the run delegate reads, and returns what it copied.
+        /// Going through dynamic dispatch honours a subclass that computes `size` without
+        /// calling `super`.
+        @discardableResult
+        func syncRunMetrics() -> (size: CGSize, descent: CGFloat?) {
             runMetrics.size = size
             runMetrics.descent = descent
+            return (runMetrics.size, runMetrics.descent)
         }
     }
 }

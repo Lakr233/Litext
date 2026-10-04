@@ -103,6 +103,29 @@ private struct FrameFill {
     /// wide breaks none of these lines.
     var unbrokenWidth: CGFloat
     var isComplete: Bool
+    /// For each line, the typesetting pass that made it.
+    var linePasses: [Int] = []
+    /// The length of the string each pass in `linePasses` typeset. A line keeps that
+    /// whole string alive, so a fill whose lines come from many passes holds more
+    /// text than it shows.
+    var passLengths: [Int: Int] = [:]
+}
+
+/// What a layout typeset, kept by the next layout of an edited string so it can
+/// reuse the lines before the edit. See `TextLabel.Layout.reuseTypesetting(from:)`.
+private struct TypesettingSource {
+    let string: NSAttributedString
+    /// Complete fills of `string`, each for its own path size.
+    let fills: [FrameFill]
+    let attachmentMetrics: [AttachmentMetrics]
+    let usesFrameDerivedMeasurement: Bool
+}
+
+/// The metrics an attachment's run delegate reported when its text was typeset.
+private struct AttachmentMetrics: Equatable {
+    var location: Int
+    var size: CGSize
+    var descent: CGFloat?
 }
 
 public extension TextLabel {
@@ -202,7 +225,32 @@ extension TextLabel {
             }
         }
 
-        private var framesetter: CTFramesetter
+        /// Built the first time the whole string is typeset. A layout that reuses an
+        /// earlier layout's lines never builds one: creating it costs about as much as
+        /// typesetting the whole string.
+        private var cachedFramesetter: CTFramesetter?
+        private var framesetter: CTFramesetter {
+            if let cachedFramesetter {
+                return cachedFramesetter
+            }
+            let framesetter = CTFramesetterCreateWithAttributedString(attributedString)
+            cachedFramesetter = framesetter
+            return framesetter
+        }
+
+        /// What the layout of the previous string typeset; see `reuseTypesetting(from:)`.
+        private var typesettingSource: TypesettingSource?
+        private var attachmentMetrics: [AttachmentMetrics] = []
+        /// The fill the current lines came from, before its origins were moved into the
+        /// container.
+        private var adoptedFill: FrameFill?
+        /// How many lines the last fill took from the source, for tests.
+        private(set) var reusedLineCount = 0
+        /// How much text the current lines keep alive, for tests.
+        var retainedTextLength: Int {
+            adoptedFill?.passLengths.values.reduce(0, +) ?? 0
+        }
+
         private var lines: [CTLine]?
         private var lineOrigins: [CGPoint]?
         private var lineMetrics: [LineMetrics]?
@@ -275,8 +323,7 @@ extension TextLabel {
             let snapshot = attributedString.copy() as! NSAttributedString
             self.attributedString = snapshot
             containerSize = .zero
-            Self.syncAttachmentRunMetrics(in: snapshot)
-            framesetter = CTFramesetterCreateWithAttributedString(snapshot)
+            attachmentMetrics = Self.syncAttachmentRunMetrics(in: snapshot)
             _highlightRegions = [:]
             generation = Self.makeGeneration()
             super.init()
@@ -295,27 +342,73 @@ extension TextLabel {
             naturalSizeCache = nil
             naturalUnbrokenWidth = nil
             measurementFill = nil
+            adoptedFill = nil
+            // Lines typeset for an earlier string read their attachments' old metrics.
+            typesettingSource = nil
             // CoreText caches the typographic bounds it obtained from a run delegate inside
             // the framesetter, and never asks again for the lifetime of that framesetter.
             // Rebuilding lines from the existing one would pick up an attachment's new width
             // while keeping its old line height, so the framesetter is rebuilt too — this is
             // the only way a changed run delegate is observed.
-            Self.syncAttachmentRunMetrics(in: attributedString)
-            framesetter = CTFramesetterCreateWithAttributedString(attributedString)
+            attachmentMetrics = Self.syncAttachmentRunMetrics(in: attributedString)
+            cachedFramesetter = nil
             generateLayout()
+        }
+
+        /// Lets this layout reuse what `previous` typeset, so an edit typesets only the
+        /// paragraphs it changed.
+        ///
+        /// `TextLabelView` calls it for every new string, with the layout of the string it
+        /// replaces. Lines are reused up to the paragraph before the first changed one,
+        /// and only when the text up to that change, its attributes and the metrics of its
+        /// attachments are all unchanged; the result is the same as typesetting the whole
+        /// string. A streamed document, which only grows at its end, then costs about one
+        /// paragraph per update instead of the whole text.
+        ///
+        /// Call it before this layout is first measured or laid out. `invalidateLayout()`
+        /// forgets it.
+        ///
+        /// - Important: Performance-sensitive. Holding on costs nothing until this layout
+        ///   typesets: then the two strings are compared up to the change, character by
+        ///   character and attribute run by attribute run.
+        public final func reuseTypesetting(from previous: TextLabel.Layout) {
+            guard previous !== self else { return }
+            let fills = [previous.adoptedFill, previous.measurementFill]
+                .compactMap(\.self)
+                .filter(\.isComplete)
+            guard !fills.isEmpty else {
+                // The previous layout never typeset; what it could have reused still applies.
+                typesettingSource = previous.typesettingSource
+                return
+            }
+            typesettingSource = TypesettingSource(
+                string: previous.attributedString,
+                fills: fills,
+                attachmentMetrics: previous.attachmentMetrics,
+                usesFrameDerivedMeasurement: previous.usesFrameDerivedMeasurement,
+            )
         }
 
         /// Pushes each attachment's current `size` into the metrics its run delegate
         /// reports, so a subclass that computes `size` is measured with today's value.
-        private static func syncAttachmentRunMetrics(in string: NSAttributedString) {
-            guard string.length > 0 else { return }
+        /// Returns the metrics, in text order.
+        private static func syncAttachmentRunMetrics(in string: NSAttributedString) -> [AttachmentMetrics] {
+            guard string.length > 0 else { return [] }
+            var metrics: [AttachmentMetrics] = []
             string.enumerateAttribute(
                 .litextAttachment,
                 in: NSRange(location: 0, length: string.length),
                 options: [],
-            ) { value, _, _ in
-                (value as? TextLabel.Attachment)?.syncRunMetrics()
+            ) { value, range, _ in
+                guard let attachment = value as? TextLabel.Attachment else { return }
+                let synced = attachment.syncRunMetrics()
+                metrics.append(AttachmentMetrics(
+                    location: range.location,
+                    size: synced.size,
+                    descent: synced.descent,
+                ))
             }
+            return metrics
         }
 
         /// The size the text needs within `size`. Zero or `.greatestFiniteMagnitude`
@@ -976,6 +1069,11 @@ extension TextLabel {
         /// keeping the first line anchored to the top of `containerSize`.
         private func adopt(_ fill: FrameFill) {
             generation = Self.makeGeneration()
+            adoptedFill = fill
+            if fill.isComplete {
+                // The lines are typeset; the previous string is no longer needed.
+                typesettingSource = nil
+            }
             lines = fill.lines
             lineMetrics = fill.lineMetrics
 
@@ -1013,6 +1111,18 @@ extension TextLabel {
                 pathSize.width = min(pathSize.width, Self.maxLayoutDimension)
                 pathSize.height = min(pathSize.height, Self.maxLayoutDimension)
             }
+            // Proposals that differ only above `maxLayoutDimension` — a label's
+            // measurement and the layout pass that follows it — clamp to the same
+            // path, and that path breaks the lines exactly as before.
+            if let fill = adoptedFill, fill.pathSize == pathSize {
+                return fill
+            }
+            if let fill = measurementFill, fill.pathSize == pathSize {
+                return fill
+            }
+            if let fill = makeFillReusingSource(pathSize: pathSize) {
+                return fill
+            }
             let containerPath = CGPath(
                 rect: CGRect(origin: .zero, size: pathSize),
                 transform: nil,
@@ -1029,59 +1139,300 @@ extension TextLabel {
             if !frameLines.isEmpty {
                 CTFrameGetLineOrigins(ctFrame, CFRange(location: 0, length: 0), &origins)
             }
-
             var metrics = [LineMetrics]()
             metrics.reserveCapacity(frameLines.count)
+            for index in 0 ..< frameLines.count {
+                metrics.append(lineMetrics(of: frameLines[index], isLastLine: index == frameLines.count - 1))
+            }
+
+            let visibleRange = CTFrameGetVisibleStringRange(ctFrame)
+            let pass = Self.makeTypesettingPass()
+            return assembleFill(
+                lines: frameLines,
+                origins: origins,
+                metrics: metrics,
+                pathSize: pathSize,
+                isComplete: visibleRange.location + visibleRange.length >= attributedString.length,
+                linePasses: [Int](repeating: pass, count: frameLines.count),
+                passLengths: [pass: attributedString.length],
+            )
+        }
+
+        private func lineMetrics(of line: CTLine, isLastLine: Bool) -> LineMetrics {
+            var ascent: CGFloat = 0
+            var descent: CGFloat = 0
+            var leading: CGFloat = 0
+            let width = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, &leading))
+            let trailingWhitespace = CGFloat(CTLineGetTrailingWhitespaceWidth(line))
+            // A right-to-left line hangs its trailing whitespace to the left of
+            // the origin; the typographic bounds report where it went. Text that
+            // can contain such a line never uses frame-derived measurement.
+            let minX = trailingWhitespace > 0 && !usesFrameDerivedMeasurement
+                ? CTLineGetBoundsWithOptions(line, []).minX
+                : 0
+            return LineMetrics(
+                ascent: ascent,
+                descent: descent,
+                leading: isLastLine ? 0 : leading,
+                width: width,
+                trailingWhitespaceWidth: trailingWhitespace,
+                minX: minX,
+            )
+        }
+
+        private func assembleFill(
+            lines: [CTLine],
+            origins: [CGPoint],
+            metrics: [LineMetrics],
+            pathSize: CGSize,
+            isComplete: Bool,
+            linePasses: [Int],
+            passLengths: [Int: Int],
+        ) -> FrameFill {
             var maxLineTrailingX: CGFloat = 0
             var maxLineEndX: CGFloat = 0
             var minLineY = pathSize.height
-            for index in 0 ..< frameLines.count {
-                let line = frameLines[index]
-                var ascent: CGFloat = 0
-                var descent: CGFloat = 0
-                var leading: CGFloat = 0
-                let width = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, &leading))
-                let isLastLine = index == frameLines.count - 1
-                let trailingWhitespace = CGFloat(CTLineGetTrailingWhitespaceWidth(line))
-                // A right-to-left line hangs its trailing whitespace to the left of
-                // the origin; the typographic bounds report where it went. Text that
-                // can contain such a line never uses frame-derived measurement.
-                let minX = trailingWhitespace > 0 && !usesFrameDerivedMeasurement
-                    ? CTLineGetBoundsWithOptions(line, []).minX
-                    : 0
-                metrics.append(LineMetrics(
-                    ascent: ascent,
-                    descent: descent,
-                    leading: isLastLine ? 0 : leading,
-                    width: width,
-                    trailingWhitespaceWidth: trailingWhitespace,
-                    minX: minX,
-                ))
-
-                maxLineTrailingX = max(maxLineTrailingX, origins[index].x + width - trailingWhitespace)
-                maxLineEndX = max(maxLineEndX, origins[index].x + width)
-                minLineY = min(minLineY, origins[index].y - descent)
+            for index in 0 ..< lines.count {
+                let metric = metrics[index]
+                maxLineTrailingX = max(maxLineTrailingX, origins[index].x + metric.width - metric.trailingWhitespaceWidth)
+                maxLineEndX = max(maxLineEndX, origins[index].x + metric.width)
+                minLineY = min(minLineY, origins[index].y - metric.descent)
             }
 
             // CTFramesetterSuggestFrameSizeWithConstraints reports the exact used
             // width but rounds the height up to a whole point; mirror both so
             // callers observe identical sizes on either measurement path.
-            let measuredSize: CGSize = frameLines.isEmpty
+            let measuredSize: CGSize = lines.isEmpty
                 ? .zero
                 : CGSize(width: maxLineTrailingX, height: ceil(pathSize.height - minLineY))
 
-            let visibleRange = CTFrameGetVisibleStringRange(ctFrame)
-            let isComplete = visibleRange.location + visibleRange.length >= attributedString.length
-
             return FrameFill(
-                lines: frameLines,
+                lines: lines,
                 lineOrigins: origins,
                 lineMetrics: metrics,
                 pathSize: pathSize,
                 measuredSize: measuredSize,
                 unbrokenWidth: maxLineEndX,
                 isComplete: isComplete,
+                linePasses: linePasses,
+                passLengths: passLengths,
             )
+        }
+
+        private static var lastTypesettingPass = 0
+
+        private static func makeTypesettingPass() -> Int {
+            lastTypesettingPass += 1
+            return lastTypesettingPass
+        }
+
+        // MARK: - Reusing an earlier layout's lines
+
+        /// How much text the lines of a fill may keep alive, in multiples of the string's
+        /// length. Every typesetting pass a fill's lines come from keeps its whole string
+        /// alive; past this, the string is typeset again from scratch and lets go of them.
+        private static let retainedTextLimit = 4
+
+        /// Builds a fill from the lines the source laid out at `pathSize` before the first
+        /// changed paragraph, typesetting only the rest. `nil` when the source cannot be
+        /// reused, and the caller typesets the whole string.
+        ///
+        /// The lines are reused up to the paragraph before the changed one, the anchor. The
+        /// anchor is typeset again with everything after it, in a string whose text before
+        /// the anchor is spaces: the string keeps every offset, so the new lines index the
+        /// layout's own string, while CoreText does no work for the text it leaves out.
+        /// The anchor's first line matches the source's and places the new lines, and
+        /// CoreText spaces every line from the one before it, so the result is the fill
+        /// typesetting the whole string gives.
+        ///
+        /// - Important: Performance-sensitive. Runs for every measurement and layout of a
+        ///   new string that has a source. Compares the strings up to the change, then
+        ///   typesets from the anchor on.
+        private func makeFillReusingSource(pathSize: CGSize) -> FrameFill? {
+            guard let source = typesettingSource,
+                  let previous = source.fills.first(where: { $0.pathSize == pathSize }),
+                  source.usesFrameDerivedMeasurement == usesFrameDerivedMeasurement
+            else { return nil }
+            let text = attributedString.string as NSString
+            let previousText = source.string.string as NSString
+            let length = text.length
+            guard length > 0, previousText.length > 0 else { return nil }
+
+            // The first character whose text, attributes or attachment metrics changed.
+            var firstChange = Self.commonPrefixLength(previousText, text)
+            firstChange = Self.firstAttributeChange(source.string, attributedString, upTo: firstChange)
+            firstChange = Self.firstMetricsChange(source.attachmentMetrics, attachmentMetrics, upTo: firstChange)
+            guard let changedStart = Self.paragraphStart(in: text, containing: firstChange),
+                  changedStart > 0,
+                  let anchorStart = Self.paragraphStart(in: text, containing: changedStart - 1),
+                  anchorStart > 0
+            else { return nil }
+
+            let previousLines = previous.lines
+            let reusedCount = Self.firstLineIndex(endingAfter: anchorStart, in: previousLines)
+            guard reusedCount > 0,
+                  reusedCount < previousLines.count,
+                  CTLineGetStringRange(previousLines[reusedCount]).location == anchorStart
+            else { return nil }
+
+            let pass = Self.makeTypesettingPass()
+            var passLengths = [pass: length]
+            for index in 0 ..< reusedCount {
+                let reusedPass = previous.linePasses[index]
+                if passLengths[reusedPass] == nil {
+                    passLengths[reusedPass] = previous.passLengths[reusedPass] ?? 0
+                }
+            }
+            guard passLengths.values.reduce(0, +) <= Self.retainedTextLimit * length else { return nil }
+
+            // The anchor keeps the separator before it, so it starts a paragraph of its own.
+            let placeholder = String(repeating: " ", count: anchorStart - 1)
+                + text.substring(with: NSRange(location: anchorStart - 1, length: 1))
+            let tailString = NSMutableAttributedString(string: placeholder)
+            let tailRange = NSRange(location: anchorStart, length: length - anchorStart)
+            tailString.append(attributedString.attributedSubstring(from: tailRange))
+            let frame = CTFramesetterCreateFrame(
+                CTFramesetterCreateWithAttributedString(tailString),
+                CFRange(location: tailRange.location, length: tailRange.length),
+                CGPath(rect: CGRect(origin: .zero, size: pathSize), transform: nil),
+                nil,
+            )
+            let tailLines = (CTFrameGetLines(frame) as? [CTLine]) ?? []
+            guard let firstTailLine = tailLines.first else { return nil }
+            var tailOrigins = [CGPoint](repeating: .zero, count: tailLines.count)
+            CTFrameGetLineOrigins(frame, CFRange(location: 0, length: 0), &tailOrigins)
+            let anchorOrigin = previous.lineOrigins[reusedCount]
+            guard NSEqualRanges(
+                NSRange(CTLineGetStringRange(firstTailLine)),
+                NSRange(CTLineGetStringRange(previousLines[reusedCount])),
+            ),
+                tailOrigins[0].x == anchorOrigin.x
+            else { return nil }
+
+            var lines = Array(previousLines[0 ..< reusedCount])
+            var origins = Array(previous.lineOrigins[0 ..< reusedCount])
+            var metrics = Array(previous.lineMetrics[0 ..< reusedCount])
+            lines.reserveCapacity(reusedCount + tailLines.count)
+            origins.reserveCapacity(reusedCount + tailLines.count)
+            metrics.reserveCapacity(reusedCount + tailLines.count)
+            let shift = anchorOrigin.y - tailOrigins[0].y
+            for index in 0 ..< tailLines.count {
+                let metric = lineMetrics(of: tailLines[index], isLastLine: index == tailLines.count - 1)
+                let origin = CGPoint(x: tailOrigins[index].x, y: tailOrigins[index].y + shift)
+                // The whole string's frame would have dropped this line off the end of the
+                // path; let typesetting it decide where the text stops.
+                guard origin.y - metric.descent >= 0 else { return nil }
+                lines.append(tailLines[index])
+                origins.append(origin)
+                metrics.append(metric)
+            }
+
+            let visibleRange = CTFrameGetVisibleStringRange(frame)
+            reusedLineCount = reusedCount
+            var linePasses = Array(previous.linePasses[0 ..< reusedCount])
+            linePasses.append(contentsOf: repeatElement(pass, count: tailLines.count))
+            return assembleFill(
+                lines: lines,
+                origins: origins,
+                metrics: metrics,
+                pathSize: pathSize,
+                isComplete: visibleRange.location + visibleRange.length >= length,
+                linePasses: linePasses,
+                passLengths: passLengths,
+            )
+        }
+
+        /// The start of the paragraph that holds the character at `offset`, or of the
+        /// paragraph `offset` ends. `nil` when `offset` falls between a carriage return
+        /// and the line feed after it, which together end one paragraph.
+        private static func paragraphStart(in text: NSString, containing offset: Int) -> Int? {
+            let length = text.length
+            if offset > 0, offset < length, text.character(at: offset - 1) == 0x0D, text.character(at: offset) == 0x0A {
+                return nil
+            }
+            var index = min(offset, length) - 1
+            while index >= 0 {
+                switch text.character(at: index) {
+                case 0x0A, 0x0D, 0x85, 0x2029:
+                    if index + 1 < length, text.character(at: index) == 0x0D, text.character(at: index + 1) == 0x0A {
+                        return index + 2
+                    }
+                    return index + 1
+                default:
+                    index -= 1
+                }
+            }
+            return 0
+        }
+
+        /// The location of the first attachment, before `limit`, whose metrics differ
+        /// between the two lists, or `limit`.
+        private static func firstMetricsChange(
+            _ lhs: [AttachmentMetrics],
+            _ rhs: [AttachmentMetrics],
+            upTo limit: Int,
+        ) -> Int {
+            for (left, right) in zip(lhs, rhs) {
+                let location = min(left.location, right.location)
+                guard location < limit else { return limit }
+                if left != right {
+                    return location
+                }
+            }
+            // One list ends first: the next attachment of the other is new.
+            let next = lhs.count > rhs.count ? lhs[rhs.count] : rhs.count > lhs.count ? rhs[lhs.count] : nil
+            return min(next?.location ?? limit, limit)
+        }
+
+        /// The start of the first attribute run, before `limit`, whose attributes differ
+        /// between the two strings, or `limit`.
+        ///
+        /// - Important: Performance-sensitive. A host that builds each string from the
+        ///   pieces of the last one hands over the same attribute dictionaries, which
+        ///   compare by identity; others compare by value.
+        private static func firstAttributeChange(_ lhs: NSAttributedString, _ rhs: NSAttributedString, upTo limit: Int) -> Int {
+            let limit = min(limit, lhs.length, rhs.length)
+            var location = 0
+            while location < limit {
+                var lhsRange = NSRange()
+                var rhsRange = NSRange()
+                let lhsAttributes = lhs.attributes(at: location, effectiveRange: &lhsRange) as NSDictionary
+                let rhsAttributes = rhs.attributes(at: location, effectiveRange: &rhsRange) as NSDictionary
+                guard lhsAttributes === rhsAttributes || lhsAttributes.isEqual(rhsAttributes) else { return location }
+                // A run that ends sooner in one string leaves different attributes after it.
+                location = min(NSMaxRange(lhsRange), NSMaxRange(rhsRange))
+            }
+            return limit
+        }
+
+        /// The number of leading UTF-16 code units the two strings share.
+        private static func commonPrefixLength(_ lhs: NSString, _ rhs: NSString) -> Int {
+            let limit = min(lhs.length, rhs.length)
+            guard limit > 0 else { return 0 }
+            if let left = CFStringGetCharactersPtr(lhs as CFString),
+               let right = CFStringGetCharactersPtr(rhs as CFString)
+            {
+                var index = 0
+                while index < limit, left[index] == right[index] {
+                    index += 1
+                }
+                return index
+            }
+            let chunkLength = 512
+            var left = [unichar](repeating: 0, count: chunkLength)
+            var right = [unichar](repeating: 0, count: chunkLength)
+            var start = 0
+            while start < limit {
+                let count = min(chunkLength, limit - start)
+                let range = NSRange(location: start, length: count)
+                lhs.getCharacters(&left, range: range)
+                rhs.getCharacters(&right, range: range)
+                for offset in 0 ..< count where left[offset] != right[offset] {
+                    return start + offset
+                }
+                start += count
+            }
+            return limit
         }
 
         private func frameDerivedMeasurementIsSafe() -> Bool {

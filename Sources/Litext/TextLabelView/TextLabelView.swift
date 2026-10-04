@@ -41,7 +41,9 @@ import QuartzCore
         /// - Important: Performance-sensitive. The string is copied on every
         ///   assignment and compared with the previous one; an equal string stops
         ///   there, and a different one builds a new layout through
-        ///   `makeTextLayout(_:)` and is typeset on the next layout pass. Overrides
+        ///   `makeTextLayout(_:)` and is typeset on the next layout pass. The new
+        ///   layout reuses the previous one's lines before the first changed
+        ///   paragraph; see `TextLabel.Layout.reuseTypesetting(from:)`. Overrides
         ///   must call `super`.
         open var attributedText: NSAttributedString = .init() {
             didSet {
@@ -56,7 +58,11 @@ import QuartzCore
                 // unchanged but state a run delegate reads from is not.
                 guard !attributedText.isEqual(to: oldValue) else { return }
                 resetInteractionForNewText(replacing: oldValue)
-                textLayout = makeTextLayout(attributedText)
+                let layout = makeTextLayout(attributedText)
+                // Text that only changed near its end, as a streamed document does,
+                // typesets only the paragraphs that changed.
+                layout.reuseTypesetting(from: textLayout)
+                textLayout = layout
             }
         }
 
