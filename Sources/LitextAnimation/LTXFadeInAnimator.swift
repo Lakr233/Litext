@@ -137,9 +137,20 @@ import Litext
 
         open func animateChange(_ context: LTXAnimationContext, at time: CFTimeInterval) {
             let change = context.change
-            remapBatches(through: change)
-            if change.hasInsertion {
-                addBatch(for: change.insertedRange, in: context, at: time)
+            // Text the change rewrote, such as markup that became a link, was already on
+            // screen: it keeps the fade it had, and only what follows it is new.
+            let restyle = change.hasInsertion && change.hasRemoval
+                ? RestyleMatch(
+                    change,
+                    previous: context.previousLayout.attributedString.string as NSString,
+                    current: context.layout.attributedString.string as NSString,
+                )
+                : nil
+            remapBatches(through: change, restyle: restyle)
+            let inserted = change.insertedRange
+            let freshStart = restyle?.freshStart ?? inserted.location
+            if NSMaxRange(inserted) > freshStart {
+                addBatch(for: NSRange(location: freshStart, length: NSMaxRange(inserted) - freshStart), in: context, at: time)
             }
             updateAnimatingRange()
         }
@@ -246,30 +257,75 @@ import Litext
         }
 
         /// Moves the batches with the text: kept in the common prefix, shifted in the common
-        /// suffix, cut where the change replaced their characters.
-        private final func remapBatches(through change: LTXTextChange) {
+        /// suffix, and where the change replaced their characters, carried to the characters
+        /// `restyle` matched them to, or cut.
+        private final func remapBatches(through change: LTXTextChange, restyle: RestyleMatch?) {
             guard !batches.isEmpty, !change.isTextUnchanged else { return }
             let prefix = change.commonPrefixLength
             let suffixStart = change.previousLength - change.commonSuffixLength
             let delta = change.length - change.previousLength
-            batches = batches.compactMap { batch in
-                var batch = batch
+            var remapped: [Batch] = []
+            remapped.reserveCapacity(batches.count)
+            for batch in batches {
                 let end = NSMaxRange(batch.range)
                 if end <= prefix {
-                    return batch
+                    remapped.append(batch)
+                    continue
                 }
                 if batch.range.location >= suffixStart {
-                    batch.range.location += delta
-                    batch.unitStarts = batch.unitStarts.map { $0 + delta }
-                    return batch
+                    var moved = batch
+                    moved.range.location += delta
+                    moved.unitStarts = batch.unitStarts.map { $0 + delta }
+                    remapped.append(moved)
+                    continue
                 }
-                guard batch.range.location < prefix else { return nil }
-                // Keep the part before the change; the rest of the batch was replaced.
-                batch.range.length = prefix - batch.range.location
-                batch.unitStarts = batch.unitStarts.filter { $0 < prefix }
-                batch.levelSum = -1
-                return batch
+                if batch.range.location < prefix {
+                    // Keep the part before the change.
+                    var head = batch
+                    head.range.length = prefix - batch.range.location
+                    head.unitStarts = batch.unitStarts.filter { $0 < prefix }
+                    head.levelSum = -1
+                    remapped.append(head)
+                }
+                if let restyle, let tail = carry(batch, from: prefix, through: restyle) {
+                    remapped.append(tail)
+                }
             }
+            batches = remapped
+        }
+
+        /// The part of `batch` from `start` on, moved to the characters `restyle` matched
+        /// it to, with each unit keeping its place in the batch's timeline.
+        private final func carry(_ batch: Batch, from start: Int, through restyle: RestyleMatch) -> Batch? {
+            let end = NSMaxRange(batch.range)
+            let from = max(start, batch.range.location)
+            guard let location = restyle.newOffset(atOrAfter: from, before: end),
+                  let newEnd = restyle.newEnd(before: end), newEnd > location
+            else { return nil }
+            var firstUnit: Int?
+            var starts: [Int] = []
+            for (unit, unitStart) in batch.unitStarts.enumerated() {
+                let unitEnd = unit + 1 < batch.unitStarts.count ? batch.unitStarts[unit + 1] : end
+                guard unitEnd > from,
+                      let mapped = restyle.newOffset(atOrAfter: max(unitStart, from), before: unitEnd)
+                else { continue }
+                if firstUnit == nil {
+                    firstUnit = unit
+                }
+                guard (starts.last ?? -1) < mapped else { continue }
+                starts.append(mapped)
+            }
+            guard let firstUnit, !starts.isEmpty else { return nil }
+            starts[0] = location
+            // Unit `firstUnit` becomes unit 0, so the batch starts that much later.
+            return Batch(
+                range: NSRange(location: location, length: newEnd - location),
+                unitStarts: starts,
+                startTime: batch.startTime + Double(firstUnit) * batch.interval / max(speed, .ulpOfOne),
+                interval: batch.interval,
+                duration: batch.duration,
+                rise: batch.rise,
+            )
         }
 
         private final func updateAnimatingRange() {
