@@ -161,7 +161,8 @@ import QuartzCore
             else { return false }
             let runs = CTLineGetGlyphRuns(line.line)
             let runCount = CFArrayGetCount(runs)
-            if Self.hasDecoration(runs, count: runCount) {
+            // A renderer may draw behind the glyphs, which only whole-line drawing fades.
+            if line.lineRenderer != nil || Self.hasDecoration(runs, count: runCount) {
                 drawBanded(line, runs: runs, runCount: runCount, in: context, at: time)
                 return true
             }
@@ -374,7 +375,7 @@ import QuartzCore
             var appearance: Appearance
         }
 
-        /// Draws a line with an underline or strikethrough: the whole line once per band
+        /// Draws a line with an underline, a strikethrough or a renderer: the whole line once per band
         /// of glyphs that share an appearance, clipped to that band. Neighbouring bands
         /// with the same appearance merge, so finished text is drawn in one piece.
         private func drawBanded(
@@ -414,7 +415,7 @@ import QuartzCore
                 ))
                 context.setAlpha(quantizer.alpha(forLevel: band.appearance.level))
                 context.textPosition = CGPoint(x: line.baselineOrigin.x, y: line.baselineOrigin.y - band.appearance.drop)
-                CTLineDraw(line.line, context)
+                line.draw(in: context)
                 context.restoreGState()
             }
             context.textPosition = line.baselineOrigin

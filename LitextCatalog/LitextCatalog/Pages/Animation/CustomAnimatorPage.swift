@@ -99,7 +99,7 @@ struct CustomAnimatorPage: View {
                 visible.append(CGRect(x: showFrom, y: band.minY, width: 100_000, height: band.height))
             }
             context.clip(to: visible)
-            CTLineDraw(line.line, context)
+            line.draw(in: context)
             return true
         }
 
@@ -249,7 +249,7 @@ struct CustomAnimatorPage: View {
                 visible.append(CGRect(x: showFrom, y: band.minY, width: 100_000, height: band.height))
             }
             context.clip(to: visible)
-            CTLineDraw(line.line, context)
+            line.draw(in: context)
             return true
         }
 
