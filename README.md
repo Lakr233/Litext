@@ -140,6 +140,7 @@ label.linkHighlightCornerRadius = 6
 ```swift
 // Enable selection
 label.isSelectable = true
+// Optional: an explicit color uses Litext's custom selection drawing.
 label.selectionBackgroundColor = UIColor.systemBlue.withAlphaComponent(0.2)
 
 // Access selected text
@@ -157,6 +158,8 @@ label.clearSelection()
 TextLabel("Some selectable text")
     .selectable()
 ```
+
+On iOS 17 and later, selection uses UIKit's `UITextSelectionDisplayInteraction` and `UITextLoupeSession` for native highlights, handles and the magnifier while holding or dragging a selection. A selection group shares one pair of handles across its labels. Leave `selectionBackgroundColor` as `nil` to use the native display; an explicit color preserves Litext's custom drawing and its exact alpha for the whole group. Earlier iOS versions and other platforms retain their existing selection display.
 
 ### Selection Across Labels
 

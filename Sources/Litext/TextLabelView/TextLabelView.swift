@@ -181,7 +181,19 @@ import QuartzCore
         /// The color behind selected text; `nil` uses the system's selection color.
         /// On iOS the selection handles use it at full opacity.
         open var selectionBackgroundColor: PlatformColor? {
-            didSet { updateSelectionLayer() }
+            didSet {
+                #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS) && !os(visionOS)
+                    if #available(iOS 17.0, *), let selectionGroup {
+                        // A group shares one display; changing its rendering policy
+                        // must refresh every selected member, not just this label.
+                        for member in selectionGroup.labels {
+                            member.updateSelectionLayer(presentsMenu: false)
+                        }
+                        return
+                    }
+                #endif
+                updateSelectionLayer()
+            }
         }
 
         /// The color of the highlight shown while a link is pressed. `nil`, the
@@ -305,6 +317,10 @@ import QuartzCore
             var selectionHandleEnd: SelectionHandle = .init(kind: .end)
             /// Created the first time the handles show in a window.
             nonisolated(unsafe) var selectionHandleGrabGesture: SelectionHandleGrabGesture?
+            #if !os(visionOS)
+                var selectionLoupe: SelectionLoupe?
+                var systemSelectionDisplayStorage: AnyObject?
+            #endif
             var isEditMenuVisible = false
             /// When the edit menu last began to dismiss, in system uptime like
             /// `UITouch.timestamp`.
@@ -402,7 +418,19 @@ import QuartzCore
         #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
             /// Hiding the label also stops its selection handles taking touches.
             override open var isHidden: Bool {
-                didSet { updateSelectionHandleGrabGesture() }
+                didSet {
+                    #if !os(visionOS)
+                        if isHidden {
+                            endSelectionLoupe()
+                            if #available(iOS 17.0, *) {
+                                systemSelectionDisplay?.detach()
+                            }
+                        } else {
+                            updateSelectionLayer(presentsMenu: false)
+                        }
+                    #endif
+                    updateSelectionHandleGrabGesture()
+                }
             }
 
             /// Detaches the selection handle gesture from the old window. Overrides must
@@ -412,6 +440,9 @@ import QuartzCore
                 // Off the old window before the label leaves it; the selection clears once
                 // the label is in the new one.
                 if newWindow !== window {
+                    #if !os(visionOS)
+                        endSelectionLoupe()
+                    #endif
                     selectionHandleGrabGesture?.detach()
                 }
             }

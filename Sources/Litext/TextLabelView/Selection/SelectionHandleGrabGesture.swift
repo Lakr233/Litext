@@ -106,14 +106,23 @@
                   let label,
                   let kind = handleKind(atWindowPoint: touch.location(in: nil))
             else { return }
-            let handle = label.selectionHandle(kind)
-            let anchor = handle.lineAnchor
+            let anchor: CGPoint
+            #if !os(visionOS)
+                guard let point = label.selectionHandleAnchor(kind) else { return }
+                anchor = point
+            #else
+                let handle = label.selectionHandle(kind)
+                anchor = handle.convert(handle.lineAnchor, to: label)
+            #endif
             drag = Drag(
                 kind: kind,
-                anchor: CGPoint(x: handle.frame.minX + anchor.x, y: handle.frame.minY + anchor.y),
+                anchor: anchor,
                 touchLocation: touch.location(in: label),
             )
             label.selectionHandleDidBeginDrag(kind)
+            #if !os(visionOS)
+                label.beginSelectionLoupe(at: touch.location(in: label), kind: kind, fromHandle: true)
+            #endif
         }
 
         fileprivate func touchDidMove(_ touch: UITouch) {
@@ -124,6 +133,9 @@
                 y: drag.anchor.y + location.y - drag.touchLocation.y,
             )
             label.selectionHandleDidMove(drag.kind, toLocationInSuperView: point)
+            #if !os(visionOS)
+                label.moveSelectionLoupe(at: location, kind: drag.kind)
+            #endif
         }
 
         fileprivate func endDrag() {
@@ -131,6 +143,9 @@
             // Cleared first: ending the drag rebuilds the selection, which can detach
             // the recognizer and come back here.
             self.drag = nil
+            #if !os(visionOS)
+                label?.endSelectionLoupe()
+            #endif
             label?.selectionHandleDidEndDrag(drag.kind)
         }
     }
@@ -200,6 +215,21 @@
         /// The visible handle whose grab area contains `point`, in the label's
         /// coordinates. Where both grab areas contain it, the nearer knob wins.
         func selectionHandleKind(at point: CGPoint) -> SelectionHandle.Kind? {
+            #if !os(visionOS)
+                if #available(iOS 17.0, *), usesSystemSelectionDisplay {
+                    let candidates = [SelectionHandle.Kind.start, .end].compactMap { kind -> (SelectionHandle.Kind, CGRect)? in
+                        guard let handle = displayedSelectionHandle(kind) else { return nil }
+                        let rect = handle.convert(handle.bounds, to: self)
+                        guard rect.insetBy(dx: -22, dy: -22).contains(point) else { return nil }
+                        return (kind, rect)
+                    }
+                    return candidates.min { lhs, rhs in
+                        let lhsY = lhs.0 == .start ? lhs.1.minY : lhs.1.maxY
+                        let rhsY = rhs.0 == .start ? rhs.1.minY : rhs.1.maxY
+                        return hypot(point.x - lhs.1.midX, point.y - lhsY) < hypot(point.x - rhs.1.midX, point.y - rhsY)
+                    }?.0
+                }
+            #endif
             let candidates = [SelectionHandle.Kind.start, .end].filter { kind in
                 let handle = selectionHandle(kind)
                 return !handle.isHidden && handle.grabArea.contains(point)
@@ -227,8 +257,13 @@
         func updateSelectionHandleGrabGesture() {
             // A group's handle can move to another member during a drag; the recognizer
             // that began the drag stays until it ends.
-            let showsHandles = !selectionHandleStart.isHidden || !selectionHandleEnd.isHidden
-                || interactionState.isDraggingSelectionHandle
+            var showsHandles = !selectionHandleStart.isHidden || !selectionHandleEnd.isHidden
+            #if !os(visionOS)
+                if usesSystemSelectionDisplay {
+                    showsHandles = displayedSelectionHandle(.start) != nil || displayedSelectionHandle(.end) != nil
+                }
+            #endif
+            showsHandles = showsHandles || interactionState.isDraggingSelectionHandle
             guard showsHandles, !isHidden, let window else {
                 selectionHandleGrabGesture?.detach()
                 return
