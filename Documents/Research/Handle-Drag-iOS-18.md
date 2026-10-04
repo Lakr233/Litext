@@ -38,3 +38,11 @@ The label installs the context menu interaction only on Mac Catalyst, where ther
 With the fix, the touch on a handle carries only the label's long press, which fails at once, and the window's system gate. The grab begins on the first touch event. `UIPointerInteraction` adds no recognizer that sees direct touches.
 
 Hosts that call `installContextMenuInteraction()` themselves on iOS bring the problem back.
+
+## Context menus in the host
+
+The fix above removed only the label's own interaction. A host can put a `UIContextMenuInteraction` on a view that contains the label, such as a chat row that offers a menu for the whole message, and on iOS 18 its recognizers hold back the grab the same way. On an iPad simulator running iOS 18.6, in an app whose message rows carry such an interaction, a handle that the finger rested on for 0.3 seconds before moving did not move at all: the grab recognizer reached `.began` at once, but its action ran only when the finger lifted. The same drag on an iPhone simulator moved the handle, which is why the problem first showed on an iPad.
+
+Listing the touch's recognizers 0.2 seconds into the drag showed the row's `_UITouchDurationObservingGestureRecognizer` still changing and its two `_UIRelationshipGestureRecognizer`s still possible. Turning those recognizers off and on again from the grab recognizer's `gestureRecognizerShouldBegin(_:)` did not fail them, and the action still waited for the lift.
+
+A recognizer's `touchesBegan`, `touchesMoved` and `touchesEnded` arrive as the finger moves even while its action messages are held back. The grab recognizer is now a `UILongPressGestureRecognizer` subclass that drives the drag from those calls and has no action target. Whatever the host installs around the label, the handle follows the finger. Holding the knob for a second before dragging does not open the host's menu either, because the grab recognizer has already begun and the menu's recognizers wait for it.
