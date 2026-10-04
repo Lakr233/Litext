@@ -19,6 +19,9 @@ struct StreamingPage: View {
     let label = LTXAnimatableLabel()
     label.animator = LTXFadeUpAnimator()   // or an LTXTextAnimator of your own
 
+    // Stagger by word instead of by character.
+    let fade = LTXFadeInAnimator(configuration: .init(granularity: .word))
+
     // Keep assigning the text as it streams in: only the new text animates.
     for await token in reply {
         streamed.append(token)
@@ -66,6 +69,7 @@ struct StreamingPage: View {
         @State private var effect = Effect.launchEffect ?? .fadeUp
         @State private var tokensPerSecond = 30.0
         @State private var isSlowMotion = CatalogLaunchOptions.current.isSlowMotion
+        @State private var isByWord = false
         @State private var tokenCount = 0
         @State private var runID = 0
         // The animators live as long as the page, so switching back keeps no state.
@@ -110,6 +114,11 @@ struct StreamingPage: View {
                 fade.speed = speed
                 fadeUp.speed = speed
             }
+            .onChange(of: isByWord) { _, byWord in
+                let granularity: LTXTextUnitGranularity = byWord ? .word : .cluster
+                fade.configuration.granularity = granularity
+                fadeUp.configuration.granularity = granularity
+            }
         }
 
         private var controls: some View {
@@ -138,6 +147,9 @@ struct StreamingPage: View {
                 HStack {
                     Toggle("Slow Motion", isOn: $isSlowMotion)
                         .fixedSize()
+                    Toggle("By Word", isOn: $isByWord)
+                        .fixedSize()
+                        .accessibilityIdentifier("demo.streaming.byWord")
                     Spacer()
                     Text("\(tokenCount) / \(script.tokenEnds.count)")
                         .font(.caption.monospacedDigit())

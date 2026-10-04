@@ -252,9 +252,9 @@ nonisolated enum CatalogPageID: String, CaseIterable, Identifiable, Hashable, Se
         case .layoutTiming:
             "How long measuring, laying out and drawing take as the text grows."
         case .streaming:
-            "Simulated model output that fades in as it arrives."
+            "Simulated model output that fades in as it arrives, with LTXFadeInAnimator or LTXFadeUpAnimator."
         case .numericTransition:
-            "A title and a counter that roll from one value to the next."
+            "A title and a counter that roll from one value to the next, with LTXNumericTransitionAnimator."
         case .cellReuse:
             "Reused cells show their text at once while one row keeps streaming."
         case .animationPolicy:

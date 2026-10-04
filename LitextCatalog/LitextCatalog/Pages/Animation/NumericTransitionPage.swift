@@ -6,7 +6,7 @@
 //
 //  A title bar like FlowDown's, cycling through conversation titles, and a
 //  counter, both rolling from one value to the next with
-//  NumericTransitionAnimator.
+//  LTXNumericTransitionAnimator.
 //
 
 import Litext
@@ -16,11 +16,9 @@ import SwiftUI
 struct NumericTransitionPage: View {
     private static let code = """
     let label = LTXAnimatableLabel()
-    label.animator = NumericTransitionAnimator()
+    label.animator = LTXNumericTransitionAnimator()
     // Animate every change, including a whole new string.
-    label.animationPolicy = LTXClosureAnimationPolicy { context in
-        context.isInWindow && context.areAnimationsEnabled && !context.isIdentityChange
-    }
+    label.animationPolicy = LTXNumericTransitionAnimator.policy
     label.attributedText = counterText(count)   // rolls to the new value
     """
 
@@ -52,8 +50,8 @@ struct NumericTransitionPage: View {
         @State private var count = 1024
         @State private var isAutoPlaying = true
         @State private var isSlowMotion = CatalogLaunchOptions.current.isSlowMotion
-        @State private var titleAnimator = NumericTransitionAnimator()
-        @State private var counterAnimator = NumericTransitionAnimator()
+        @State private var titleAnimator = LTXNumericTransitionAnimator()
+        @State private var counterAnimator = LTXNumericTransitionAnimator()
 
         var body: some View {
             VStack(spacing: 20) {
@@ -84,7 +82,7 @@ struct NumericTransitionPage: View {
                 AnimatableText(
                     text: Self.titleText(Self.titles[titleIndex]),
                     animator: titleAnimator,
-                    policy: NumericTransitionAnimator.policy,
+                    policy: LTXNumericTransitionAnimator.policy,
                 )
                 .accessibilityIdentifier("demo.numeric.title")
                 Image(systemName: "square.and.pencil")
@@ -100,7 +98,7 @@ struct NumericTransitionPage: View {
                 AnimatableText(
                     text: Self.counterText(count),
                     animator: counterAnimator,
-                    policy: NumericTransitionAnimator.policy,
+                    policy: LTXNumericTransitionAnimator.policy,
                 )
                 .accessibilityIdentifier("demo.numeric.counter")
                 Text("tokens used")
