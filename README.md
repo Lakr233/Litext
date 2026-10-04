@@ -263,7 +263,7 @@ label.lineRenderer = PillRenderer()
 
 ## LitextAnimation
 
-`LitextAnimation` is a separate product that animates text as it changes, for example a model's reply fading in as it streams. Its `LTXAnimatableLabel` is a `TextLabelView` subclass. The library provides only the base layer: a display link that runs while something animates, a diff of each change aligned to grapheme clusters, redrawing of the lines in flight only, and a policy for cell reuse. Effects live in your app, behind the `LTXTextAnimator` protocol.
+`LitextAnimation` is a separate product that animates text as it changes, for example a model's reply fading in as it streams. Its `LTXAnimatableLabel` is a `TextLabelView` subclass. The library provides the base layer: a display link that runs while something animates, a diff of each change aligned to grapheme clusters, redrawing of the lines in flight only, and a policy for cell reuse. It ships one effect, a staggered fade-in; other effects live in your app, behind the `LTXTextAnimator` protocol.
 
 ```swift
 dependencies: [
@@ -271,12 +271,28 @@ dependencies: [
 ]
 ```
 
-An animator needs five members. This one fades in each line that new text lands on:
+`LTXFadeInAnimator` fades in each new character, or each word, one after another, and `LTXFadeUpAnimator` adds a small rise. Both honour reduced motion with a short, plain fade:
 
 ```swift
 import LitextAnimation
 
-final class FadeInAnimator: LTXTextAnimator {
+let label = LTXAnimatableLabel()
+label.animator = LTXFadeInAnimator()
+label.attributedText = reply // each later assignment fades in only what was added
+
+// Tune it through its configuration.
+let fade = LTXFadeInAnimator(configuration: .init(duration: 0.4, granularity: .word, curve: .easeInOut))
+fade.configuration.stagger = LTXStaggerSchedule(interval: 0.03, maxTotalDelay: 0.3)
+```
+
+The fade stays cheap while a reply streams: opacity moves in steps (32 by default), so a frame redraws only the units that changed step, and a line in flight is drawn in stretches of glyphs that share an opacity. `LTXFadeInAnimator` is `open`, so a subclass can override its `LTXTextAnimator` members and call `super`.
+
+For an effect of your own, conform to `LTXTextAnimator`. An animator needs five members. This one fades in each line that new text lands on:
+
+```swift
+import LitextAnimation
+
+final class LineFadeAnimator: LTXTextAnimator {
     private(set) var animatingRange: NSRange?
     private var start: CFTimeInterval = 0
     private let duration: CFTimeInterval = 0.3
@@ -306,9 +322,7 @@ final class FadeInAnimator: LTXTextAnimator {
     }
 }
 
-let label = LTXAnimatableLabel()
-label.animator = FadeInAnimator()
-label.attributedText = reply // each later assignment animates only what was added
+label.animator = LineFadeAnimator()
 ```
 
 Lines outside `animatingRange` are drawn exactly as `TextLabelView` draws them, and an idle label has no display link and no extra subviews. For effects that draw past the line boxes, or draw glyphs on their way out, implement `overdrawInsets`, `additionalContentBounds` and `drawAdditionalContent(in:at:)`.
