@@ -17,13 +17,18 @@
     /// such a touch lands, so the views under the touch never receive it and the other
     /// recognizers, scroll views' included, wait for it to fail.
     ///
+    /// The drag follows the recognizer's touches rather than its action messages. On
+    /// iOS 18, and most often on iPad, a context menu interaction on a view under the
+    /// touch, such as a host's chat row, holds back the action messages until the
+    /// finger lifts, while the touches still arrive as the finger moves.
+    ///
     /// The label owns this object and keeps the recognizer on its current window only
     /// while its handles show. The object holds the label weakly, so a window that
     /// retains the recognizer and its target never keeps the label alive.
     @MainActor
     final class SelectionHandleGrabGesture: NSObject {
         private weak var label: TextLabelView?
-        let recognizer = UILongPressGestureRecognizer()
+        let recognizer = Recognizer()
         private var drag: Drag?
 
         private struct Drag {
@@ -44,7 +49,7 @@
             // over a link or a cell neither taps nor highlights it.
             recognizer.delaysTouchesBegan = true
             recognizer.delegate = self
-            recognizer.addTarget(self, action: #selector(handleRecognizer(_:)))
+            recognizer.grab = self
         }
 
         /// The window the recognizer is on, if any.
@@ -96,41 +101,76 @@
             return kind
         }
 
-        @objc private func handleRecognizer(_ recognizer: UILongPressGestureRecognizer) {
-            guard let label else { return }
-            switch recognizer.state {
-            case .began:
-                let location = recognizer.location(in: label)
-                guard let kind = handleKind(atWindowPoint: recognizer.location(in: nil)) else { return }
-                let handle = label.selectionHandle(kind)
-                let anchor = handle.lineAnchor
-                drag = Drag(
-                    kind: kind,
-                    anchor: CGPoint(x: handle.frame.minX + anchor.x, y: handle.frame.minY + anchor.y),
-                    touchLocation: location,
-                )
-                label.selectionHandleDidBeginDrag(kind)
-            case .changed:
-                guard let drag else { return }
-                let location = recognizer.location(in: label)
-                let point = CGPoint(
-                    x: drag.anchor.x + location.x - drag.touchLocation.x,
-                    y: drag.anchor.y + location.y - drag.touchLocation.y,
-                )
-                label.selectionHandleDidMove(drag.kind, toLocationInSuperView: point)
-            case .ended, .cancelled, .failed:
-                endDrag()
-            default:
-                break
-            }
+        fileprivate func touchDidBegin(_ touch: UITouch) {
+            guard drag == nil,
+                  let label,
+                  let kind = handleKind(atWindowPoint: touch.location(in: nil))
+            else { return }
+            let handle = label.selectionHandle(kind)
+            let anchor = handle.lineAnchor
+            drag = Drag(
+                kind: kind,
+                anchor: CGPoint(x: handle.frame.minX + anchor.x, y: handle.frame.minY + anchor.y),
+                touchLocation: touch.location(in: label),
+            )
+            label.selectionHandleDidBeginDrag(kind)
         }
 
-        private func endDrag() {
+        fileprivate func touchDidMove(_ touch: UITouch) {
+            guard let drag, let label else { return }
+            let location = touch.location(in: label)
+            let point = CGPoint(
+                x: drag.anchor.x + location.x - drag.touchLocation.x,
+                y: drag.anchor.y + location.y - drag.touchLocation.y,
+            )
+            label.selectionHandleDidMove(drag.kind, toLocationInSuperView: point)
+        }
+
+        fileprivate func endDrag() {
             guard let drag else { return }
             // Cleared first: ending the drag rebuilds the selection, which can detach
             // the recognizer and come back here.
             self.drag = nil
             label?.selectionHandleDidEndDrag(drag.kind)
+        }
+    }
+
+    extension SelectionHandleGrabGesture {
+        /// Reports its touches to the drag as they arrive. It takes one touch at a time:
+        /// the delegate admits only touches on a handle, and the label is exclusive touch.
+        final class Recognizer: UILongPressGestureRecognizer {
+            fileprivate weak var grab: SelectionHandleGrabGesture?
+
+            override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+                super.touchesBegan(touches, with: event)
+                if let touch = touches.first {
+                    grab?.touchDidBegin(touch)
+                }
+            }
+
+            override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+                super.touchesMoved(touches, with: event)
+                if let touch = touches.first {
+                    grab?.touchDidMove(touch)
+                }
+            }
+
+            override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+                super.touchesEnded(touches, with: event)
+                grab?.endDrag()
+            }
+
+            override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+                super.touchesCancelled(touches, with: event)
+                grab?.endDrag()
+            }
+
+            /// Also ends the drag when UIKit cancels the recognizer without sending it
+            /// the touches' end.
+            override func reset() {
+                super.reset()
+                grab?.endDrag()
+            }
         }
     }
 
