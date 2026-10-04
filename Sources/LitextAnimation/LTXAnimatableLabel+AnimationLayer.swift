@@ -235,12 +235,22 @@ import QuartzCore
             }
             context.translateBy(x: -region.minX, y: -region.minY)
             let visibleRect = context.boundingBoxOfClipPath.intersection(region)
+            // A layer of its own draws outside the view's drawing pass, which is what makes
+            // the view's appearance current, so dynamic colours would resolve against the
+            // app's appearance instead: dark text in a dark-mode label.
             #if canImport(UIKit)
-                UIGraphicsPushContext(context)
-                textLayout.drawAnimation(in: context, visibleRect: visibleRect)
-                UIGraphicsPopContext()
+                traitCollection.performAsCurrent {
+                    UIGraphicsPushContext(context)
+                    textLayout.drawAnimation(in: context, visibleRect: visibleRect)
+                    UIGraphicsPopContext()
+                }
             #else
-                textLayout.drawAnimation(in: context, visibleRect: visibleRect)
+                effectiveAppearance.performAsCurrentDrawingAppearance {
+                    NSGraphicsContext.saveGraphicsState()
+                    NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
+                    textLayout.drawAnimation(in: context, visibleRect: visibleRect)
+                    NSGraphicsContext.restoreGraphicsState()
+                }
             #endif
         }
     }
