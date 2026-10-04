@@ -17,7 +17,7 @@ import SwiftUI
 struct StreamingPage: View {
     private static let code = """
     let label = LTXAnimatableLabel()
-    label.animator = FadeUpAnimator()   // an LTXTextAnimator of your own
+    label.animator = LTXFadeUpAnimator()   // or an LTXTextAnimator of your own
 
     // Keep assigning the text as it streams in: only the new text animates.
     for await token in reply {
@@ -69,8 +69,8 @@ struct StreamingPage: View {
         @State private var tokenCount = 0
         @State private var runID = 0
         // The animators live as long as the page, so switching back keeps no state.
-        @State private var fade = FadeInAnimator()
-        @State private var fadeUp = FadeUpAnimator()
+        @State private var fade = LTXFadeInAnimator()
+        @State private var fadeUp = LTXFadeUpAnimator()
 
         private var animator: (any LTXTextAnimator)? {
             switch effect {

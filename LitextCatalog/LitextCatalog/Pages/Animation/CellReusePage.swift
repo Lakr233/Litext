@@ -145,7 +145,7 @@ struct CellReusePage: View {
                 wantsLayer = true
             #endif
             // Each label needs its own animator: an animator keeps one label's timeline.
-            label.animator = FadeInAnimator()
+            label.animator = LTXFadeInAnimator()
             addSubview(label)
             dot.cornerRadius = 4
             dot.backgroundColor = PlatformColor.systemGreen.cgColor

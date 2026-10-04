@@ -22,7 +22,7 @@ import SwiftUI
     /// different instance replaces the label's animator and finishes its animations.
     ///
     /// ```swift
-    /// @State private var animator = FadeInAnimator()
+    /// @State private var animator = LTXFadeInAnimator()
     ///
     /// AnimatableText(text: streamed, animator: animator)
     /// ```

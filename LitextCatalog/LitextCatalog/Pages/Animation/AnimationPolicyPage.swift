@@ -120,7 +120,7 @@ struct AnimationPolicyPage: View {
         ]
 
         let driver = AnimatableLabelDriver()
-        let animator = FadeInAnimator()
+        let animator = LTXFadeInAnimator()
         var choice = PolicyChoice.standard {
             didSet { installPolicy() }
         }
@@ -133,7 +133,7 @@ struct AnimationPolicyPage: View {
 
         init() {
             animator.configuration.duration = 0.9
-            animator.configuration.stagger = StaggerSchedule(interval: 0.06, maxTotalDelay: 0.6)
+            animator.configuration.stagger = LTXStaggerSchedule(interval: 0.06, maxTotalDelay: 0.6)
             words = Array(Self.items[0].prefix(2))
         }
 

@@ -25,7 +25,7 @@ import SwiftUI
 struct AnimationControlPage: View {
     private static let code = """
     let label = LTXAnimatableLabel()
-    label.animator = FadeUpAnimator()
+    label.animator = LTXFadeUpAnimator()
 
     // Animate, if the policy agrees, or show the text at once.
     label.setAttributedText(text, animated: animateToggle.isOn)
@@ -93,7 +93,7 @@ struct AnimationControlPage: View {
 
     /// A fade that counts the frames it is advanced, to show the rate the display link
     /// delivers.
-    final class FrameCountingAnimator: FadeInAnimator {
+    final class FrameCountingAnimator: LTXFadeInAnimator {
         /// Called when the animation ends, with the frames it got and how long it ran.
         var onFinish: ((_ frames: Int, _ duration: CFTimeInterval) -> Void)?
 
@@ -105,7 +105,7 @@ struct AnimationControlPage: View {
             var configuration = Configuration()
             configuration.rise = 6
             configuration.duration = 0.6
-            configuration.stagger = StaggerSchedule(interval: 0.02, maxTotalDelay: 0.5)
+            configuration.stagger = LTXStaggerSchedule(interval: 0.02, maxTotalDelay: 0.5)
             super.init(configuration: configuration)
         }
 
