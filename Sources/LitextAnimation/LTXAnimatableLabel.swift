@@ -31,7 +31,7 @@ import QuartzCore
     /// has the same subviews and layers, and runs no timer.
     ///
     /// ```swift
-    /// label.animator = FadeInAnimator()
+    /// label.animator = LTXFadeInAnimator()
     /// label.attributedText = streamedSoFar   // only the new text fades in
     /// ```
     ///
