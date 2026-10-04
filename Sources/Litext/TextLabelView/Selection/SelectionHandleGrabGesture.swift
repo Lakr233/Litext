@@ -198,9 +198,11 @@
             _: UIGestureRecognizer,
             shouldBeRequiredToFailBy other: UIGestureRecognizer,
         ) -> Bool {
-            // Another label's recognizer must not wait on this one, or two labels whose
-            // handles both cover a touch would each wait for the other.
-            !(other.delegate is SelectionHandleGrabGesture)
+            // Rejected touches leave a window recognizer possible. Making a
+            // scroller wait for it would block ordinary pans while handles show.
+            // Prefer this recognizer only once a touch actually grabs a handle.
+            guard recognizer.numberOfTouches > 0 || label?.interactionState.isDraggingSelectionHandle == true else { return false }
+            return !(other.delegate is SelectionHandleGrabGesture)
         }
     }
 
