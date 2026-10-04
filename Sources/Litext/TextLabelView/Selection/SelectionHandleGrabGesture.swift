@@ -15,7 +15,7 @@
     /// handle view cannot be grabbed there. A recognizer on the window sees every touch.
     /// This one takes only touches in a visible handle's grab area and begins as soon as
     /// such a touch lands, so the views under the touch never receive it and the other
-    /// recognizers, scroll views' included, wait for it to fail.
+    /// recognizers yield while the handle is being dragged.
     ///
     /// The drag follows the recognizer's touches rather than its action messages. On
     /// iOS 18, and most often on iPad, a context menu interaction on a view under the
@@ -43,8 +43,6 @@
         init(label: TextLabelView) {
             self.label = label
             super.init()
-            recognizer.minimumPressDuration = 0
-            recognizer.allowableMovement = .greatestFiniteMagnitude
             // Keep the touch from the views under it, so grabbing a knob that lies
             // over a link or a cell neither taps nor highlights it.
             recognizer.delaysTouchesBegan = true
@@ -153,31 +151,50 @@
     extension SelectionHandleGrabGesture {
         /// Reports its touches to the drag as they arrive. It takes one touch at a time:
         /// the delegate admits only touches on a handle, and the label is exclusive touch.
-        final class Recognizer: UILongPressGestureRecognizer {
+        final class Recognizer: UIGestureRecognizer {
             fileprivate weak var grab: SelectionHandleGrabGesture?
 
             override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
                 super.touchesBegan(touches, with: event)
-                if let touch = touches.first {
-                    grab?.touchDidBegin(touch)
+                guard let touch = touches.first,
+                      let grab,
+                      grab.handleKind(atWindowPoint: touch.location(in: nil)) != nil
+                else {
+                    state = .failed
+                    return
                 }
+                grab.touchDidBegin(touch)
+                state = .began
             }
 
             override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
                 super.touchesMoved(touches, with: event)
                 if let touch = touches.first {
                     grab?.touchDidMove(touch)
+                    state = .changed
                 }
             }
 
             override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
                 super.touchesEnded(touches, with: event)
                 grab?.endDrag()
+                state = .ended
             }
 
             override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
                 super.touchesCancelled(touches, with: event)
                 grab?.endDrag()
+                state = .cancelled
+            }
+
+            override func canPrevent(_ other: UIGestureRecognizer) -> Bool {
+                grab?.label?.interactionState.isDraggingSelectionHandle == true &&
+                    !(other.delegate is SelectionHandleGrabGesture)
+            }
+
+            override func canBePrevented(by other: UIGestureRecognizer) -> Bool {
+                guard grab?.label?.interactionState.isDraggingSelectionHandle != true else { return false }
+                return super.canBePrevented(by: other)
             }
 
             /// Also ends the drag when UIKit cancels the recognizer without sending it
@@ -192,17 +209,6 @@
     extension SelectionHandleGrabGesture: UIGestureRecognizerDelegate {
         func gestureRecognizer(_: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
             handleKind(atWindowPoint: touch.location(in: nil)) != nil
-        }
-
-        func gestureRecognizer(
-            _: UIGestureRecognizer,
-            shouldBeRequiredToFailBy other: UIGestureRecognizer,
-        ) -> Bool {
-            // Rejected touches leave a window recognizer possible. Making a
-            // scroller wait for it would block ordinary pans while handles show.
-            // Prefer this recognizer only once a touch actually grabs a handle.
-            guard label?.interactionState.isDraggingSelectionHandle == true else { return false }
-            return !(other.delegate is SelectionHandleGrabGesture)
         }
     }
 
