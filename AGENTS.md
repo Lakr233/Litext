@@ -1,6 +1,6 @@
 # Litext
 
-Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, including watchOS. The package is in `Sources/Litext`, the tests are in `Tests/LitextTests`. The optional `LitextAnimation` product (`Sources/LitextAnimation`, tests in `Tests/LitextAnimationTests`) adds `LTXAnimatableLabel`, a `TextLabelView` subclass that animates text changes, and one effect, the staggered fade `LTXFadeInAnimator` (with `LTXFadeUpAnimator`); other effects stay behind the `LTXTextAnimator` protocol in the host app. It is empty on watchOS. The catalog app `LitextCatalog`, which demonstrates every part of the API, and its watch companion are in `LitextCatalog`, opened through `Litext.xcworkspace`.
+Litext is a CoreText-only rich-text label for UIKit, AppKit and SwiftUI, including watchOS. The package is in `Sources/Litext`, the tests are in `Tests/LitextTests`. The optional `LitextAnimation` product (`Sources/LitextAnimation`, tests in `Tests/LitextAnimationTests`) adds `LTXAnimatableLabel`, a `TextLabelView` subclass that animates text changes, and two effects: the staggered fade `LTXFadeInAnimator` (with `LTXFadeUpAnimator`) and the rolling `LTXNumericTransitionAnimator`. Other effects stay behind the `LTXTextAnimator` protocol in the host app. It is empty on watchOS. The catalog app `LitextCatalog`, which demonstrates every part of the API, and its watch companion are in `LitextCatalog`, opened through `Litext.xcworkspace`.
 
 ## Ground rules
 

@@ -263,7 +263,7 @@ label.lineRenderer = PillRenderer()
 
 ## LitextAnimation
 
-`LitextAnimation` is a separate product that animates text as it changes, for example a model's reply fading in as it streams. Its `LTXAnimatableLabel` is a `TextLabelView` subclass. The library provides the base layer: a display link that runs while something animates, a diff of each change aligned to grapheme clusters, redrawing of the lines in flight only, and a policy for cell reuse. It ships one effect, a staggered fade-in; other effects live in your app, behind the `LTXTextAnimator` protocol.
+`LitextAnimation` is a separate product that animates text as it changes, for example a model's reply fading in as it streams. Its `LTXAnimatableLabel` is a `TextLabelView` subclass. The library provides the base layer: a display link that runs while something animates, a diff of each change aligned to grapheme clusters, redrawing of the lines in flight only, and a policy for cell reuse. It ships two effects, a staggered fade-in for streamed text and a rolling transition for counters and titles; other effects live in your app, behind the `LTXTextAnimator` protocol.
 
 ```swift
 dependencies: [
@@ -285,7 +285,17 @@ let fade = LTXFadeInAnimator(configuration: .init(duration: 0.4, granularity: .w
 fade.configuration.stagger = LTXStaggerSchedule(interval: 0.03, maxTotalDelay: 0.3)
 ```
 
-The fade stays cheap while a reply streams: opacity moves in steps (32 by default), so a frame redraws only the units that changed step, and a line in flight is drawn in stretches of glyphs that share an opacity. `LTXFadeInAnimator` is `open`, so a subclass can override its `LTXTextAnimator` members and call `super`.
+The fade stays cheap while a reply streams: opacity moves in steps (32 by default), so a frame redraws only the units that changed step, and a line in flight is drawn in stretches of glyphs that share an opacity. A subclass can override its `LTXTextAnimator` members and call `super`.
+
+`LTXNumericTransitionAnimator` rolls short text from one value to the next: glyphs the two texts share slide into place, new ones spring in and old ones roll away, and a number that went down rolls the other way. Most changes of a counter replace the whole text, which the default policy does not animate, so give the label the animator's policy too:
+
+```swift
+counter.animator = LTXNumericTransitionAnimator()
+counter.animationPolicy = LTXNumericTransitionAnimator.policy
+counter.attributedText = NSAttributedString(string: "1,024") // rolls to each new value
+```
+
+Its springs, stagger and direction are in its `configuration`, built from `LTXDampedSpring`. Both animators are `open`.
 
 For an effect of your own, conform to `LTXTextAnimator`. An animator needs five members. This one fades in each line that new text lands on:
 
