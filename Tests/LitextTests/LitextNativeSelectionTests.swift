@@ -63,6 +63,36 @@
             #expect(labels[1].displayedSelectionHandle(.end) == nil)
         }
 
+        @Test func `a group whose first member is not selectable shows native UI over the rest`() throws {
+            guard #available(iOS 17.0, *) else { return }
+            let (window, labels, group) = host(["Header", "First", "Second"])
+            defer { window.isHidden = true }
+            labels[0].isSelectable = false
+            group.selectAll()
+            #expect(labels[1].displayedSelectionHandle(.start) != nil)
+            #expect(labels[2].displayedSelectionHandle(.end) != nil)
+            let proxy = try #require(labels[1].inputProxy)
+            let all = try #require(proxy.textRange(from: proxy.beginningOfDocument, to: proxy.endOfDocument))
+            #expect(proxy.text(in: all) == "First\nSecond")
+            let selected = try #require(proxy.selectedTextRange)
+            #expect(proxy.text(in: selected) == group.selectedPlainText())
+            #expect(proxy.selectionRects(for: selected).count == 2)
+        }
+
+        @Test func `the selection keeps native UI when a member outside it leaves the window`() {
+            guard #available(iOS 17.0, *) else { return }
+            let (window, labels, group) = host(["Zero", "First", "Second"])
+            defer { window.isHidden = true }
+            group.setSelection(group.normalizedSelection(
+                from: .init(member: 1, offset: 0),
+                to: .init(member: 2, offset: 6),
+            ), presentsMenu: false)
+            labels[0].removeFromSuperview()
+            #expect(group.selectedPlainText() == "First\nSecond")
+            #expect(labels[1].displayedSelectionHandle(.start) != nil)
+            #expect(labels[2].displayedSelectionHandle(.end) != nil)
+        }
+
         @Test func `custom colors retain exact legacy fills and switching back restores native UI`() {
             guard #available(iOS 17.0, *) else { return }
             let (window, labels, group) = host(["First", "Second"])
