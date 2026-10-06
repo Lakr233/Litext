@@ -9,6 +9,11 @@
         private let interaction: UITextSelectionDisplayInteraction
         private weak var proxy: TextLabelInputProxy?
 
+        /// The label whose proxy the display reads.
+        var owner: TextLabelView? {
+            proxy?.label
+        }
+
         init(proxy: TextLabelInputProxy) {
             self.proxy = proxy
             // UIKit holds its delegate weakly; the label/group retains this owner.
@@ -97,16 +102,15 @@
             selectionHandleStart.isHidden = true
             selectionHandleEnd.isHidden = true
             let hasSelection = selectionGroup?.hasSelection ?? ((selectionRange?.length ?? 0) > 0)
-            if hasSelection, systemSelectionDisplay == nil {
-                let owner = selectionGroup?.labels.first ?? self
+            let owner = selectionDisplayOwner
+            if hasSelection, systemSelectionDisplay?.owner !== owner {
+                systemSelectionDisplay?.detach()
                 owner.updateInputProxy()
-                if let proxy = owner.inputProxy {
-                    let display = SystemSelectionDisplay(proxy: proxy)
-                    if let group = selectionGroup {
-                        group.systemSelectionDisplayStorage = display
-                    } else {
-                        systemSelectionDisplayStorage = display
-                    }
+                let display = owner.inputProxy.map { SystemSelectionDisplay(proxy: $0) }
+                if let group = selectionGroup {
+                    group.systemSelectionDisplayStorage = display
+                } else {
+                    systemSelectionDisplayStorage = display
                 }
             }
             systemSelectionDisplay?.update()
@@ -123,6 +127,16 @@
                 }
             }
             return true
+        }
+
+        /// The member whose proxy a group's display reads. Only a selectable member
+        /// has a proxy, and only one in a window shares an ancestor with the others,
+        /// so the first member is not enough: a header may not be selectable, and a
+        /// cell may have scrolled away.
+        private var selectionDisplayOwner: TextLabelView {
+            guard let group = selectionGroup else { return self }
+            let selectable = group.labels.filter(\.isSelectable)
+            return selectable.first { $0.window != nil && !$0.isHidden } ?? selectable.first ?? self
         }
 
         func displayedSelectionHandle(_ kind: SelectionHandle.Kind) -> UIView? {

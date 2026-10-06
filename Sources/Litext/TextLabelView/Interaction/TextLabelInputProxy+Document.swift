@@ -11,11 +11,14 @@
             let length: Int
         }
 
+        /// The labels the document spans. A group's selection passes over members
+        /// that are not selectable, and so does the document, so its offsets match
+        /// the group's.
         var documentLabels: [TextLabelView] {
             guard let label else { return [] }
             #if !targetEnvironment(macCatalyst) && !os(visionOS)
                 if #available(iOS 17.0, *), let group = label.selectionGroup {
-                    return group.labels
+                    return group.labels.filter(\.isSelectable)
                 }
             #endif
             return [label]
@@ -23,10 +26,11 @@
 
         var documentEntries: [DocumentEntry] {
             let labels = documentLabels
+            let group = label?.selectionGroup
             var offset = 0
             return labels.enumerated().map { index, member in
-                if index > 0 {
-                    offset += (label?.selectionGroup?.separator(labels[index - 1], member) as NSString?)?.length ?? 0
+                if index > 0, let group {
+                    offset += (group.separator(labels[index - 1], member) as NSString).length
                 }
                 let length = member.attributedText.length
                 let entry = DocumentEntry(label: member, offset: offset, length: length)
@@ -40,16 +44,21 @@
             return last.offset + last.length
         }
 
+        /// The text the offsets index: each member's `attributedText`, the string the
+        /// group measures its selection in, joined by the group's separator.
         var documentString: NSString {
             let labels = documentLabels
-            var result = ""
+            guard labels.count > 1, let group = label?.selectionGroup else {
+                return (labels.first?.attributedText.string ?? "") as NSString
+            }
+            let result = NSMutableString()
             for (index, member) in labels.enumerated() {
                 if index > 0 {
-                    result += label?.selectionGroup?.separator(labels[index - 1], member) ?? ""
+                    result.append(group.separator(labels[index - 1], member))
                 }
-                result += member.textLayout.attributedString.string
+                result.append(member.attributedText.string)
             }
-            return result as NSString
+            return result
         }
 
         func documentOffset(in label: TextLabelView) -> Int {
@@ -57,14 +66,14 @@
         }
 
         var documentSelectionRange: NSRange? {
-            if documentLabels.count > 1, let group = label?.selectionGroup, let selection = group.selection,
-               let first = group.memberLabel(at: selection.start.member), let last = group.memberLabel(at: selection.end.member)
-            {
-                let start = documentOffset(in: first) + selection.start.offset
-                let end = documentOffset(in: last) + selection.end.offset
-                return NSRange(location: start, length: end - start)
-            }
-            return label?.selectionRange
+            let entries = documentEntries
+            guard entries.count > 1, let group = label?.selectionGroup, let selection = group.selection,
+                  let first = entries.first(where: { $0.label === group.memberLabel(at: selection.start.member) }),
+                  let last = entries.first(where: { $0.label === group.memberLabel(at: selection.end.member) })
+            else { return label?.selectionRange }
+            let start = first.offset + selection.start.offset
+            let end = last.offset + selection.end.offset
+            return NSRange(location: start, length: end - start)
         }
 
         func selectDocumentRange(_ range: NSRange) {
@@ -97,13 +106,15 @@
             return nil
         }
 
+        /// The members' closest common ancestor, the space the document's geometry
+        /// is in. Members off the label's window, such as cells scrolled away and
+        /// removed, share no ancestor with the rest and are left out.
         var textInputView: UIView {
             #if !targetEnvironment(macCatalyst) && !os(visionOS)
-                guard #available(iOS 17.0, *) else { return self }
-                let labels = documentLabels
-                guard let first = labels.first else { return self }
-                var candidate: UIView = first
-                for member in labels.dropFirst() {
+                guard #available(iOS 17.0, *), let label else { return self }
+                guard let window = label.window else { return label }
+                var candidate: UIView = label
+                for member in documentLabels where member.window === window {
                     while !member.isDescendant(of: candidate), let parent = candidate.superview {
                         candidate = parent
                     }
@@ -126,12 +137,14 @@
         }
 
         func documentRects(for range: NSRange) -> [CGRect] {
-            documentEntries.flatMap { entry -> [CGRect] in
+            let view = textInputView
+            let window = view.window
+            return documentEntries.flatMap { entry -> [CGRect] in
                 let lower = max(range.location, entry.offset)
                 let upper = min(NSMaxRange(range), entry.offset + entry.length)
-                guard lower < upper, entry.label.window === textInputView.window else { return [] }
+                guard lower < upper, entry.label.window === window else { return [] }
                 return entry.label.textLayout.rects(for: NSRange(location: lower - entry.offset, length: upper - lower)).map {
-                    entry.label.convert(entry.label.viewRect(fromLayoutRect: $0), to: textInputView)
+                    entry.label.convert(entry.label.viewRect(fromLayoutRect: $0), to: view)
                 }
             }
         }
