@@ -545,7 +545,7 @@ import Testing
                         label.selectionHandleDidBeginDrag(.end)
                         label.selectionHandleDidEndDrag(.end)
                         weakHandle = label.selectionHandleStart
-                        #expect(weakHandle?.isHidden == false)
+                        #expect(label.selectedPlainText()?.isEmpty == false)
                     }
                     #expect(await waitUntil { ref.value == nil })
                     #expect(weakHandle == nil)

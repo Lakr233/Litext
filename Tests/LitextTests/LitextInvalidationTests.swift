@@ -422,6 +422,9 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
         )
         let label = TextLabelView(attributedText: text)
         label.isSelectable = true
+        // Exercise the custom-color drawing contract; the native display's reflow
+        // is covered separately through its UITextInput geometry.
+        label.selectionBackgroundColor = PlatformColor.systemBlue
         label.frame = CGRect(x: 0, y: 0, width: 300, height: 200)
         runLayoutPass(label)
         label.selectionRange = NSRange(location: 0, length: 40)

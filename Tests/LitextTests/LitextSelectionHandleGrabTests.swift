@@ -38,6 +38,13 @@
 
         /// The centre of a handle's knob, in the window's coordinates.
         private func knobCenter(_ kind: SelectionHandle.Kind, of label: TextLabelView) -> CGPoint {
+            #if !os(visionOS)
+                if let handle = label.displayedSelectionHandle(kind) {
+                    let rect = handle.convert(handle.bounds, to: nil)
+                    let y = kind == .start ? rect.minY - 10 : rect.maxY + 10
+                    return CGPoint(x: rect.midX, y: y)
+                }
+            #endif
             let frame = label.selectionHandle(kind).frame
             let y = switch kind {
             case .start: frame.minY + SelectionHandle.knobRadius
@@ -190,19 +197,26 @@
                 #expect(upperGesture.handleKind(atWindowPoint: knobCenter(kind, of: lower)) == nil)
             }
 
-            // Neither recognizer waits on the other.
-            #expect(upperGesture.gestureRecognizer(
-                upperGesture.recognizer,
-                shouldBeRequiredToFailBy: lowerGesture.recognizer,
-            ) == false)
-            #expect(upperGesture.gestureRecognizer(
-                upperGesture.recognizer,
-                shouldBeRequiredToFailBy: UIPanGestureRecognizer(),
-            ))
+            // Idle handle recognizers do not block other gestures.
+            #expect(!upperGesture.recognizer.canPrevent(lowerGesture.recognizer))
+            #expect(!upperGesture.recognizer.canPrevent(UIPanGestureRecognizer()))
 
             lower.clearSelection()
             #expect(grabRecognizers(on: window).count == 1)
             #expect(upperGesture.window === window)
+        }
+
+        @Test func `scrolling yields only while a handle is actually being dragged`() throws {
+            let window = makeWindow()
+            let label = makeLabel(in: window)
+            select(label)
+            let gesture = try #require(label.selectionHandleGrabGesture)
+            let pan = UIPanGestureRecognizer()
+            #expect(!gesture.recognizer.canPrevent(pan))
+            label.selectionHandleDidBeginDrag(.end)
+            #expect(gesture.recognizer.canPrevent(pan))
+            label.selectionHandleDidEndDrag(.end)
+            #expect(!gesture.recognizer.canPrevent(pan))
         }
 
         @Test func `leaves touches on views outside the labels screen`() throws {

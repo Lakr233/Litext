@@ -11,7 +11,8 @@
     ///
     /// UIKit offers Look Up, Translate, Share and Speak only to a first responder
     /// that adopts `UITextInput` and carries a `UITextInteraction`. The label keeps
-    /// its own gestures, highlight and handles; this view sits under its content,
+    /// its own gestures; UITextSelectionDisplayInteraction draws selection UI on
+    /// iOS 17 and later. This view sits under its content,
     /// takes first responder while the label has a selection, and answers the
     /// system's questions about the text from the label's layout.
     ///
@@ -187,7 +188,7 @@
     @available(iOS 16.0, macCatalyst 16.0, visionOS 1.0, *)
     extension TextLabelInputProxy: UITextInput {
         private var string: NSString {
-            (label?.textLayout.attributedString.string ?? "") as NSString
+            documentString
         }
 
         private func index(of position: UITextPosition) -> Int? {
@@ -195,7 +196,7 @@
         }
 
         private func clamped(_ index: Int) -> Int {
-            min(max(index, 0), string.length)
+            min(max(index, 0), documentLength)
         }
 
         func text(in range: UITextRange) -> String? {
@@ -203,7 +204,7 @@
             // Look Up, Translate and Share read the selection; give them the text Copy
             // would give, with attachments in their text form, and in a group the text of
             // the whole selection.
-            if range == label.selectionRange {
+            if range == documentSelectionRange {
                 return label.commandSelectedText()?.string
             }
             guard let safeRange = NSRange.sanitized(range, within: string.length) else { return nil }
@@ -220,14 +221,14 @@
 
         var selectedTextRange: UITextRange? {
             get {
-                guard let range = label?.selectionRange else { return nil }
+                guard let range = documentSelectionRange else { return nil }
                 return TextLabelTextRange(range)
             }
             set {
                 // The label's own gestures own the selection. Accept a real range the
                 // system picks, such as for Look Up, and ignore the caret it may park.
                 guard let range = (newValue as? TextLabelTextRange)?.range, range.length > 0 else { return }
-                label?.setSelectionRange(range, presentsMenu: false)
+                selectDocumentRange(range)
             }
         }
 
@@ -244,7 +245,7 @@
         }
 
         var endOfDocument: UITextPosition {
-            TextLabelTextPosition(string.length)
+            TextLabelTextPosition(documentLength)
         }
 
         func textRange(from fromPosition: UITextPosition, to toPosition: UITextPosition) -> UITextRange? {
@@ -257,7 +258,7 @@
         func position(from position: UITextPosition, offset: Int) -> UITextPosition? {
             guard let index = index(of: position) else { return nil }
             let target = index + offset
-            guard target >= 0, target <= string.length else { return nil }
+            guard target >= 0, target <= documentLength else { return nil }
             return TextLabelTextPosition(target)
         }
 
@@ -273,12 +274,11 @@
             case .right:
                 return self.position(from: position, offset: offset)
             case .up, .down:
-                guard let label else { return nil }
                 let caret = caretRect(for: position)
                 guard !caret.isNull else { return nil }
                 let step = caret.height * CGFloat(offset)
                 let y = direction == .up ? caret.midY - step : caret.midY + step
-                return label.nearestTextIndexAtPoint(CGPoint(x: caret.midX, y: y))
+                return documentPosition(at: CGPoint(x: caret.midX, y: y))
                     .map { TextLabelTextPosition($0) } ?? TextLabelTextPosition(index)
             @unknown default:
                 return nil
@@ -324,7 +324,7 @@
                 return TextLabelTextRange(NSRange(location: 0, length: clamped(index)))
             default:
                 let start = clamped(index)
-                return TextLabelTextRange(NSRange(location: start, length: string.length - start))
+                return TextLabelTextRange(NSRange(location: start, length: documentLength - start))
             }
         }
 
@@ -338,24 +338,28 @@
         func setBaseWritingDirection(_: NSWritingDirection, for _: UITextRange) {}
 
         func firstRect(for range: UITextRange) -> CGRect {
-            guard let label, let range = (range as? TextLabelTextRange)?.range else { return .null }
-            if let rect = label.textLayout.rects(for: range).first {
-                return label.viewRect(fromLayoutRect: rect)
+            guard let range = (range as? TextLabelTextRange)?.range else { return .null }
+            if let rect = documentRects(for: range).first {
+                return rect
             }
             return caretRect(for: TextLabelTextPosition(range.location))
         }
 
         func caretRect(for position: UITextPosition) -> CGRect {
-            guard let label, let position = index(of: position) else { return .null }
-            let caretIndex = clamped(position)
-            let lineCharacter = caretIndex < string.length ? caretIndex : max(caretIndex - 1, 0)
-            guard let rect = label.textLayout.caretRect(at: caretIndex, onLineOf: lineCharacter) else { return .null }
-            return label.viewRect(fromLayoutRect: rect)
+            guard let index = index(of: position) else { return .null }
+            let isEnd = documentSelectionRange.map { $0.length > 0 && NSMaxRange($0) == index } ?? false
+            guard let position = documentPosition(at: clamped(index), preferPrevious: isEnd) else { return .null }
+            let length = position.label.attributedText.length
+            let lineCharacter = isEnd || position.index == length ? max(position.index - 1, 0) : position.index
+            guard let rect = position.label.textLayout.caretRect(at: position.index, onLineOf: lineCharacter) else { return .null }
+            var converted = position.label.viewRect(fromLayoutRect: rect)
+            converted.size.width = max(1, converted.width)
+            return position.label.convert(converted, to: textInputView)
         }
 
         func selectionRects(for range: UITextRange) -> [UITextSelectionRect] {
-            guard let label, let range = (range as? TextLabelTextRange)?.range else { return [] }
-            let rects = label.textLayout.rects(for: range).map { label.viewRect(fromLayoutRect: $0) }
+            guard let range = (range as? TextLabelTextRange)?.range else { return [] }
+            let rects = documentRects(for: range)
             return rects.enumerated().map { offset, rect in
                 TextLabelSelectionRect(
                     rect: rect,
@@ -366,7 +370,7 @@
         }
 
         func closestPosition(to point: CGPoint) -> UITextPosition? {
-            guard let index = label?.nearestTextIndexAtPoint(point) else { return nil }
+            guard let index = documentPosition(at: point) else { return nil }
             return TextLabelTextPosition(index)
         }
 
@@ -378,14 +382,14 @@
         }
 
         func characterRange(at point: CGPoint) -> UITextRange? {
-            guard let index = label?.characterIndexAtPoint(point), index < string.length else { return nil }
+            guard let index = documentPosition(at: point), index < documentLength else { return nil }
             return TextLabelTextRange(string.rangeOfComposedCharacterSequence(at: index))
         }
 
         // MARK: UIKeyInput
 
         var hasText: Bool {
-            string.length > 0
+            documentLength > 0
         }
 
         func insertText(_: String) {}

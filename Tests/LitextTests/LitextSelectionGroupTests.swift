@@ -305,6 +305,8 @@
             private let group = TextSelectionGroup()
 
             init() {
+                let controller = UIViewController()
+                window.rootViewController = controller
                 window.isHidden = false
                 cells = ["Alpha", "Beta", "Gamma"].enumerated().map { index, text in
                     let label = TextLabelView(attributedText: NSAttributedString(
@@ -316,21 +318,30 @@
                     return label
                 }
                 for label in cells {
-                    window.addSubview(label)
+                    controller.view.addSubview(label)
                     label.layoutIfNeeded()
                 }
                 group.labels = cells
             }
 
             #if !targetEnvironment(macCatalyst)
+                private func visibleSelectionHandle(_ kind: SelectionHandle.Kind, in label: TextLabelView) -> UIView? {
+                    #if !os(visionOS)
+                        return label.displayedSelectionHandle(kind)
+                    #else
+                        let handle = label.selectionHandle(kind)
+                        return handle.isHidden ? nil : handle
+                    #endif
+                }
+
                 @Test func `the first member shows the start handle and the last the end handle`() {
                     group.selectAll()
-                    #expect(!cells[0].selectionHandleStart.isHidden)
-                    #expect(cells[0].selectionHandleEnd.isHidden)
-                    #expect(cells[1].selectionHandleStart.isHidden)
-                    #expect(cells[1].selectionHandleEnd.isHidden)
-                    #expect(cells[2].selectionHandleStart.isHidden)
-                    #expect(!cells[2].selectionHandleEnd.isHidden)
+                    #expect(visibleSelectionHandle(.start, in: cells[0]) != nil)
+                    #expect(visibleSelectionHandle(.end, in: cells[0]) == nil)
+                    #expect(visibleSelectionHandle(.start, in: cells[1]) == nil)
+                    #expect(visibleSelectionHandle(.end, in: cells[1]) == nil)
+                    #expect(visibleSelectionHandle(.start, in: cells[2]) == nil)
+                    #expect(visibleSelectionHandle(.end, in: cells[2]) != nil)
                 }
 
                 @Test func `an end handle dragged into another member keeps its recognizer until it ends`() {
@@ -340,7 +351,7 @@
                     let target = cells[0].convert(CGPoint(x: cells[0].bounds.maxX - 2, y: 20), to: label)
                     label.selectionHandleDidMove(.end, toLocationInSuperView: target)
                     #expect(cells[2].selectionRange == nil)
-                    #expect(!cells[0].selectionHandleEnd.isHidden)
+                    #expect(visibleSelectionHandle(.end, in: cells[0]) != nil)
                     #expect(label.selectionHandleGrabGesture?.window === window)
 
                     label.selectionHandleDidEndDrag(.end)

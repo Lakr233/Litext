@@ -22,6 +22,11 @@ import QuartzCore
         /// shows UI, and the deduplication notification makes every other label clear its
         /// selection; neither may happen while the host is still laying this view out.
         func updateSelectionLayer(presentsMenu: Bool = true) {
+            #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS) && !os(visionOS)
+                if updateSystemSelectionDisplay(presentsMenu: presentsMenu) {
+                    return
+                }
+            #endif
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 selectionHandleStart.isHidden = true
                 selectionHandleEnd.isHidden = true
@@ -37,6 +42,11 @@ import QuartzCore
                         hideSelectionMenuController()
                     }
                 #endif
+                #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS) && !os(visionOS)
+                    if selectionGroup?.hasSelection != true {
+                        endSelectionLoupe()
+                    }
+                #endif
                 clearSelectionLayer()
                 return
             }
@@ -46,6 +56,11 @@ import QuartzCore
                 #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                     if presentsMenu {
                         hideSelectionMenuController()
+                    }
+                #endif
+                #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS) && !os(visionOS)
+                    if selectionGroup?.hasSelection != true {
+                        endSelectionLoupe()
                     }
                 #endif
                 clearSelectionLayer()

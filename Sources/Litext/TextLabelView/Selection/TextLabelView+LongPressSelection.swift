@@ -58,6 +58,11 @@
                 isInteractionInProgress = true
                 hideSelectionMenuController()
                 setSelectionRange(word, presentsMenu: false)
+                // Transfer selection ownership immediately, while the finger is held.
+                broadcastSelection()
+                #if !os(visionOS)
+                    beginSelectionLoupe(at: location, kind: .end)
+                #endif
             case .changed:
                 guard let word = interactionState.longPressWordRange,
                       let index = nearestTextIndexAtPoint(location)
@@ -66,7 +71,13 @@
                 let upper = max(NSMaxRange(word), index)
                 setSelectionRange(NSRange(location: lower, length: upper - lower), presentsMenu: false)
                 reportSelectionDrag(at: location)
+                #if !os(visionOS)
+                    moveSelectionLoupe(at: location, kind: index < word.location ? .start : .end)
+                #endif
             case .ended, .cancelled, .failed:
+                #if !os(visionOS)
+                    endSelectionLoupe()
+                #endif
                 guard interactionState.longPressWordRange != nil else { return }
                 interactionState.longPressWordRange = nil
                 isInteractionInProgress = false

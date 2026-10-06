@@ -74,6 +74,10 @@ import Foundation
         private var memberIndices: [ObjectIdentifier: Int] = [:]
         private(set) var selection: Selection?
 
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS) && !os(visionOS)
+            var systemSelectionDisplayStorage: AnyObject?
+        #endif
+
         /// The text put between the parts of two adjacent members in copied text, and
         /// in the text the menu commands read. The default is a line break; a table
         /// would use a tab between cells of a row and a line break between rows.
@@ -92,6 +96,12 @@ import Foundation
             get { members.compactMap(\.label) }
             set {
                 clearSelection()
+                #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS) && !os(visionOS)
+                    if #available(iOS 17.0, *) {
+                        (systemSelectionDisplayStorage as? SystemSelectionDisplay)?.detach()
+                    }
+                    systemSelectionDisplayStorage = nil
+                #endif
                 for old in labels where !newValue.contains(where: { $0 === old }) {
                     old.selectionGroup = nil
                 }
