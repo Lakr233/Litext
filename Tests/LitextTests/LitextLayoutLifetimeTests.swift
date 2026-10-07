@@ -226,6 +226,39 @@ struct LitextLayoutLifetimeTests {
         #expect(run.rect.width == 33)
         #expect(abs(run.rect.height - 17) < 0.001)
     }
+
+    /// Holds the only reference to a string, so another thread can drop it.
+    private final class StringHolder: @unchecked Sendable {
+        var string: NSAttributedString?
+
+        init(_ string: NSAttributedString) {
+            self.string = string
+        }
+    }
+
+    @Test
+    func `A string holding the last reference to an attachment can be measured and released off the main thread`() async {
+        // A cache of rendered strings may be cleared on a background queue, for instance
+        // under memory pressure. The run delegate's callbacks then run on that queue, and
+        // must not insist on the main actor the attachment belongs to.
+        let holder = autoreleasepool {
+            let attachment = TextLabel.Attachment(size: CGSize(width: 21, height: 13))
+            return StringHolder(attachment.attributedString())
+        }
+        let width = await Task.detached {
+            let width = autoreleasepool {
+                guard let string = holder.string else { return 0.0 }
+                let line = CTLineCreateWithAttributedString(string)
+                return CTLineGetTypographicBounds(line, nil, nil, nil)
+            }
+            autoreleasepool {
+                holder.string = nil
+            }
+            return width
+        }.value
+        #expect(width == 21)
+        #expect(holder.string == nil)
+    }
 }
 
 #if !os(watchOS)
