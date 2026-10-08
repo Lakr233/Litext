@@ -140,25 +140,7 @@ extension TextLabel {
                 return cachedRunDelegate
             }
 
-            var callbacks = CTRunDelegateCallbacks(
-                version: kCTRunDelegateVersion1,
-                dealloc: { refCon in
-                    Unmanaged<RunMetrics>.fromOpaque(refCon).release()
-                },
-                getAscent: { refCon in
-                    let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
-                    return metrics.size.height - metrics.resolvedDescent
-                },
-                getDescent: { refCon in
-                    let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
-                    return metrics.resolvedDescent
-                },
-                getWidth: { refCon in
-                    let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
-                    return metrics.size.width
-                },
-            )
-
+            var callbacks = RunMetrics.callbacks
             let unmanagedMetrics = Unmanaged.passRetained(runMetrics)
             guard let delegate = CTRunDelegateCreate(&callbacks, unmanagedMetrics.toOpaque()) else {
                 unmanagedMetrics.release()
@@ -190,6 +172,32 @@ extension TextLabel.Attachment {
 
         var size: CGSize = .zero
         var descent: CGFloat?
+
+        /// The callbacks every run delegate shares.
+        ///
+        /// They live here, outside the main-actor attachment, so they carry no
+        /// main-actor check. CoreText calls `dealloc` on whatever thread releases
+        /// the last reference to the delegate, which can be a cache cleared on a
+        /// background queue; a closure written inside the attachment inherits its
+        /// main-actor isolation and stops the process when that happens.
+        static let callbacks = CTRunDelegateCallbacks(
+            version: kCTRunDelegateVersion1,
+            dealloc: { refCon in
+                Unmanaged<RunMetrics>.fromOpaque(refCon).release()
+            },
+            getAscent: { refCon in
+                let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
+                return metrics.size.height - metrics.resolvedDescent
+            },
+            getDescent: { refCon in
+                let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
+                return metrics.resolvedDescent
+            },
+            getWidth: { refCon in
+                let metrics = Unmanaged<RunMetrics>.fromOpaque(refCon).takeUnretainedValue()
+                return metrics.size.width
+            },
+        )
 
         /// `descent` clamped into the height, or the default fraction of it.
         var resolvedDescent: CGFloat {
