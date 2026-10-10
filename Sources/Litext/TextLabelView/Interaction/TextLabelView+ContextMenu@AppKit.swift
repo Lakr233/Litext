@@ -25,6 +25,12 @@
             }
             guard isSelectable else { return super.menu(for: event) }
 
+            // With nothing selected, a right click on blank space is not on text: the
+            // label shows no menu, and AppKit passes the click up the responder chain.
+            if secondaryClickPassesThrough(at: point) {
+                return super.menu(for: event)
+            }
+
             // Like NSTextView, a right click away from the selection selects the word under it.
             if !selectionContains(point), let index = characterIndexAtPoint(point) {
                 selectWordAtIndex(index)

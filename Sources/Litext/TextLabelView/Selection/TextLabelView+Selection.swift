@@ -142,6 +142,31 @@ import QuartzCore
             return (selectionRange?.length ?? 0) > 0
         }
 
+        /// Whether a right click at `point` should leave its context menu to the views
+        /// behind the label: there is no selection, and the click is not on a visible
+        /// character but past the end of a line, on a blank line, a space or a line
+        /// break. Otherwise the label would select the nearest word and show its own menu.
+        func secondaryClickPassesThrough(at point: CGPoint) -> Bool {
+            !hasCommandSelection && visibleCharacterIndexAtPoint(point) == nil
+        }
+
+        /// The character whose box holds `point`, in the label's coordinates, unless
+        /// it is whitespace or a line break. Unlike `characterIndexAtPoint(_:)`, a
+        /// point past the end of a line or between lines resolves to nothing.
+        func visibleCharacterIndexAtPoint(_ point: CGPoint) -> Int? {
+            guard let index = characterIndexAtPoint(point) else { return nil }
+            let string = textLayout.attributedString.string as NSString
+            guard index < string.length else { return nil }
+            let range = string.rangeOfComposedCharacterSequence(at: index)
+            let isBlank = string.substring(with: range).unicodeScalars
+                .allSatisfy(CharacterSet.whitespacesAndNewlines.contains)
+            guard !isBlank else { return nil }
+            let isOnCharacter = textLayout.rects(for: range).contains {
+                convertRectFromTextLayout($0, insetForInteraction: false).contains(point)
+            }
+            return isOnCharacter ? index : nil
+        }
+
         /// Whether the whole text is selected already, so Select All has nothing to do.
         var isEntireTextSelected: Bool {
             if let selectionGroup {

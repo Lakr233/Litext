@@ -48,7 +48,8 @@
         /// that view.
         ///
         /// - Important: Performance-sensitive: UIKit asks on every touch. The test
-        ///   walks the attachment views and the link rects, never typesetting.
+        ///   walks the attachment views and the link rects, never typesetting. Only
+        ///   a right click also looks up the character under it.
         override open func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             switch hitTarget(at: point) {
             case .outside, .passThrough:
@@ -56,8 +57,18 @@
             case .attachment:
                 super.point(inside: point, with: event)
             case .interactiveText:
-                true
+                !isPassThroughSecondaryClick(at: point, with: event)
             }
+        }
+
+        /// Whether `event` is a right click that the label leaves to the views behind
+        /// it, so their context menu opens instead of the label's.
+        private func isPassThroughSecondaryClick(at point: CGPoint, with event: UIEvent?) -> Bool {
+            #if os(tvOS)
+                false
+            #else
+                isSelectable && event?.buttonMask == .secondary && secondaryClickPassesThrough(at: point)
+            #endif
         }
 
         /// Starts a tap, link press or selection. Overrides must call `super` for
@@ -66,6 +77,14 @@
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {
+                super.touchesBegan(touches, with: event)
+                return
+            }
+
+            if isPassThroughSecondaryClick(at: firstTouch.location(in: self), with: event) {
+                // Hit-testing routes these clicks past the label. When one arrives anyway,
+                // hand the whole sequence to the next responder, and leave focus alone.
+                interactionState.isForwardingToSuper = true
                 super.touchesBegan(touches, with: event)
                 return
             }
