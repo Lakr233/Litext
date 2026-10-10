@@ -113,6 +113,81 @@
             #expect(label.selectionRange == nil)
         }
 
+        /// A right click at `point`, in the label's coordinates.
+        private func rightClick(at point: CGPoint) -> NSEvent {
+            NSEvent.mouseEvent(
+                with: .rightMouseDown,
+                location: label.convert(point, to: nil),
+                modifierFlags: [],
+                timestamp: 0,
+                windowNumber: window.windowNumber,
+                context: nil,
+                eventNumber: 0,
+                clickCount: 1,
+                pressure: 1,
+            )!
+        }
+
+        /// The middle of the character at `index`, in the label's coordinates.
+        private func pointOnCharacter(_ index: Int) -> CGPoint {
+            let rect = label.viewRect(fromLayoutRect: label.textLayout.rects(
+                for: NSRange(location: index, length: 1),
+            )[0])
+            return CGPoint(x: rect.midX, y: rect.midY)
+        }
+
+        @Test func `a right click without a selection selects the word under it`() throws {
+            _ = try #require(label.menu(for: rightClick(atCharacter: 7)))
+            #expect(label.selectionRange == NSRange(location: 6, length: 5))
+        }
+
+        @Test func `a right click past the end of a line without a selection shows no menu`() {
+            let lastCharacter = pointOnCharacter(20)
+            #expect(label.menu(for: rightClick(at: CGPoint(x: 380, y: lastCharacter.y))) == nil)
+            #expect(label.selectionRange == nil)
+        }
+
+        @Test func `a right click on a space without a selection shows no menu`() {
+            #expect(label.menu(for: rightClick(atCharacter: 5)) == nil)
+            #expect(label.selectionRange == nil)
+        }
+
+        @Test func `a right click on a blank line without a selection shows no menu`() {
+            label.attributedText = NSAttributedString(
+                string: "Hello\n\nworld",
+                attributes: [.font: NSFont.systemFont(ofSize: 16)],
+            )
+            label.layout()
+            let top = pointOnCharacter(0)
+            let bottom = pointOnCharacter(7)
+            #expect(label.menu(for: rightClick(at: CGPoint(x: top.x, y: (top.y + bottom.y) / 2))) == nil)
+            #expect(label.selectionRange == nil)
+        }
+
+        @Test func `a right click past the end of a line keeps working with a selection`() throws {
+            label.selectionRange = NSRange(location: 0, length: 5)
+            let lastCharacter = pointOnCharacter(20)
+            _ = try #require(label.menu(for: rightClick(at: CGPoint(x: 380, y: lastCharacter.y))))
+        }
+
+        @Test func `a right click on blank space reaches the view behind the label`() {
+            final class Container: NSView {
+                var rightClicks = 0
+                override func rightMouseDown(with _: NSEvent) {
+                    rightClicks += 1
+                }
+            }
+            let container = Container(frame: label.frame)
+            window.contentView?.addSubview(container)
+            label.removeFromSuperview()
+            container.addSubview(label)
+            let lastCharacter = pointOnCharacter(20)
+
+            label.rightMouseDown(with: rightClick(at: CGPoint(x: 380, y: lastCharacter.y)))
+            #expect(container.rightClicks == 1)
+            #expect(label.selectionRange == nil)
+        }
+
         @Test func `a label that is not selectable shows no selection menu`() {
             label.isSelectable = false
             #expect(label.menu(for: rightClick(atCharacter: 1)) == nil)
