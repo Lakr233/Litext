@@ -225,6 +225,10 @@ extension TextLabel {
             }
         }
 
+        /// `attributedString` as CoreText typesets it, with bare object replacement
+        /// characters made to take no width; see `typesettingString(for:)`.
+        private let typesetString: NSAttributedString
+
         /// Built the first time the whole string is typeset. A layout that reuses an
         /// earlier layout's lines never builds one: creating it costs about as much as
         /// typesetting the whole string.
@@ -233,7 +237,7 @@ extension TextLabel {
             if let cachedFramesetter {
                 return cachedFramesetter
             }
-            let framesetter = CTFramesetterCreateWithAttributedString(attributedString)
+            let framesetter = CTFramesetterCreateWithAttributedString(typesetString)
             cachedFramesetter = framesetter
             return framesetter
         }
@@ -322,6 +326,7 @@ extension TextLabel {
             // string only retains it.
             let snapshot = attributedString.copy() as! NSAttributedString
             self.attributedString = snapshot
+            typesetString = Self.typesettingString(for: snapshot)
             containerSize = .zero
             attachmentMetrics = Self.syncAttachmentRunMetrics(in: snapshot)
             _highlightRegions = [:]
@@ -1290,7 +1295,7 @@ extension TextLabel {
                 + text.substring(with: NSRange(location: anchorStart - 1, length: 1))
             let tailString = NSMutableAttributedString(string: placeholder)
             let tailRange = NSRange(location: anchorStart, length: length - anchorStart)
-            tailString.append(attributedString.attributedSubstring(from: tailRange))
+            tailString.append(typesetString.attributedSubstring(from: tailRange))
             let frame = CTFramesetterCreateFrame(
                 CTFramesetterCreateWithAttributedString(tailString),
                 CFRange(location: tailRange.location, length: tailRange.length),
