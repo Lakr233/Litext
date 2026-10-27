@@ -22,7 +22,9 @@
     /// input bar, is on it, and a presented sheet or a view laid over the window is
     /// not. While the selection's menu shows, a tap only dismisses the menu, as a
     /// tap on the selection does, so a tap on one of the menu's commands never clears
-    /// the selection it acts on.
+    /// the selection it acts on. A tap on a text field still takes the keyboard
+    /// then, so text editing that begins anywhere in the window clears the
+    /// selection too.
     ///
     /// The label owns this object and keeps the recognizer on its current window only
     /// while it holds part of a selection. The object holds the label weakly, so a
@@ -40,6 +42,9 @@
             recognizer.delaysTouchesEnded = false
             recognizer.delegate = self
             recognizer.addTarget(self, action: #selector(handleTap))
+            for name in [UITextField.textDidBeginEditingNotification, UITextView.textDidBeginEditingNotification] {
+                NotificationCenter.default.addObserver(self, selector: #selector(editingDidBegin), name: name, object: nil)
+            }
         }
 
         /// The window the recognizer is on, if any.
@@ -95,6 +100,13 @@
 
         @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {
             guard recognizer.state == .ended else { return }
+            dismiss()
+        }
+
+        /// Clears the selection when a text field or text view in the label's window
+        /// begins editing, such as an input bar the user tapped while the menu showed.
+        @objc private func editingDidBegin(_ notification: Notification) {
+            guard let window, let editor = notification.object as? UIView, editor.window === window else { return }
             dismiss()
         }
     }
