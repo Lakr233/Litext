@@ -120,6 +120,11 @@ private final class OpenAttachmentOverride: TextLabel.Attachment {
         label.clearSelection()
         #expect(label.attributedText.length == attachmentText.length)
     #endif
+    #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS) && !os(visionOS)
+        let group = TextSelectionGroup(labels: [label])
+        #expect(!label.isSelectionHandle(atWindowPoint: .zero))
+        #expect(!group.isSelectionHandle(atWindowPoint: .zero))
+    #endif
 }
 
 @MainActor
