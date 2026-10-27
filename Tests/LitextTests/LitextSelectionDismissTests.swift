@@ -200,6 +200,39 @@
             label.hideSelectionMenuController()
         }
 
+        @Test func `editing text in the window dismisses, even while the menu shows`() throws {
+            guard #available(iOS 16.0, visionOS 1.0, *) else { return }
+            let (window, screen) = makeScreen()
+            defer { window.isHidden = true }
+            let label = makeLabel(in: screen)
+            let field = UITextField(frame: CGRect(x: 20, y: 500, width: 360, height: 40))
+            screen.addSubview(field)
+            select(label)
+            label.showSelectionMenuController()
+            // The tap on the field only dismisses the menu, and the field takes the keyboard.
+            #expect(try !tapDismisses(at: CGPoint(x: 200, y: 520), in: window, for: label))
+
+            NotificationCenter.default.post(name: UITextField.textDidBeginEditingNotification, object: field)
+            #expect(label.selectionRange == nil)
+            #expect(dismissRecognizers(on: window).isEmpty)
+        }
+
+        @Test func `editing text elsewhere leaves the selection alone`() {
+            let (window, screen) = makeScreen()
+            defer { window.isHidden = true }
+            let label = makeLabel(in: screen)
+            select(label)
+            let otherWindow = UIWindow(frame: window.bounds)
+            otherWindow.isHidden = false
+            defer { otherWindow.isHidden = true }
+            let textView = UITextView(frame: CGRect(x: 0, y: 0, width: 200, height: 100))
+            otherWindow.addSubview(textView)
+
+            NotificationCenter.default.post(name: UITextView.textDidBeginEditingNotification, object: textView)
+            NotificationCenter.default.post(name: UITextView.textDidBeginEditingNotification, object: nil)
+            #expect(label.selectionRange != nil)
+        }
+
         @Test func `a tap on another member of the group does not dismiss`() throws {
             let (window, screen) = makeScreen()
             defer { window.isHidden = true }
