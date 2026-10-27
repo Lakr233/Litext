@@ -241,6 +241,120 @@
             window.addSubview(overlay)
             #expect(gesture.handleKind(atWindowPoint: start) == nil)
         }
+
+        #if !os(visionOS)
+            /// A window with a root view controller, made key as an app's would be.
+            private func makeScreen() -> (UIWindow, UIView) {
+                let window = makeWindow()
+                let controller = UIViewController()
+                controller.view.frame = window.bounds
+                window.rootViewController = controller
+                window.makeKeyAndVisible()
+                return (window, controller.view)
+            }
+
+            /// With a selection color, the label draws its own handles instead of
+            /// UIKit's, as it does on every system before iOS 17.
+            @Test(arguments: [false, true])
+            func `the public handle test agrees with the recognizer`(drawsOwnHandles: Bool) throws {
+                let (window, screen) = makeScreen()
+                defer { window.isHidden = true }
+                let label = makeLabel(in: screen)
+                if drawsOwnHandles {
+                    label.selectionBackgroundColor = .systemBlue.withAlphaComponent(0.3)
+                }
+                let start = knobCenter(.start, of: label)
+                #expect(!label.isSelectionHandle(atWindowPoint: start))
+
+                select(label)
+                let gesture = try #require(label.selectionHandleGrabGesture)
+                let points = [
+                    knobCenter(.start, of: label),
+                    knobCenter(.end, of: label),
+                    CGPoint(x: 5, y: 5),
+                    CGPoint(x: 200, y: 500),
+                    label.convert(CGPoint(x: label.bounds.maxX - 5, y: 5), to: nil),
+                ]
+                for point in points {
+                    #expect(label.isSelectionHandle(atWindowPoint: point) == (gesture.handleKind(atWindowPoint: point) != nil))
+                }
+                #expect(label.isSelectionHandle(atWindowPoint: knobCenter(.start, of: label)))
+                #expect(label.isSelectionHandle(atWindowPoint: knobCenter(.end, of: label)))
+
+                let overlay = UIView(frame: window.bounds)
+                window.addSubview(overlay)
+                #expect(!label.isSelectionHandle(atWindowPoint: knobCenter(.end, of: label)))
+                overlay.removeFromSuperview()
+
+                let end = knobCenter(.end, of: label)
+                label.clearSelection()
+                #expect(!label.isSelectionHandle(atWindowPoint: end))
+                select(label)
+                label.removeFromSuperview()
+                #expect(!label.isSelectionHandle(atWindowPoint: end))
+            }
+
+            @Test(arguments: [false, true])
+            func `a group finds the handles on whichever member shows them`(drawsOwnHandles: Bool) {
+                let (window, screen) = makeScreen()
+                defer { window.isHidden = true }
+                let upper = makeLabel(y: 100, in: screen)
+                let lower = makeLabel(y: 300, in: screen)
+                if drawsOwnHandles {
+                    for label in [upper, lower] {
+                        label.selectionBackgroundColor = .systemBlue.withAlphaComponent(0.3)
+                    }
+                }
+                let group = TextSelectionGroup(labels: [upper, lower])
+                #expect(!group.isSelectionHandle(atWindowPoint: knobCenter(.start, of: upper)))
+
+                group.selectAll()
+                let start = knobCenter(.start, of: upper)
+                let end = knobCenter(.end, of: lower)
+                #expect(group.isSelectionHandle(atWindowPoint: start))
+                #expect(group.isSelectionHandle(atWindowPoint: end))
+                // The start shows in the first member and the end in the last.
+                #expect(upper.isSelectionHandle(atWindowPoint: start))
+                #expect(!lower.isSelectionHandle(atWindowPoint: start))
+                #expect(lower.isSelectionHandle(atWindowPoint: end))
+                #expect(!upper.isSelectionHandle(atWindowPoint: end))
+                #expect(!group.isSelectionHandle(atWindowPoint: CGPoint(x: 200, y: 560)))
+
+                group.clearSelection()
+                #expect(!group.isSelectionHandle(atWindowPoint: start))
+                #expect(!group.isSelectionHandle(atWindowPoint: end))
+            }
+
+            @Test func `a host may ask from its own hit test`() {
+                let window = makeWindow()
+                let host = HandleAwareHostView(frame: window.bounds)
+                window.addSubview(host)
+                let label = makeLabel(in: host)
+                host.label = label
+                select(label)
+
+                let start = knobCenter(.start, of: label)
+                #expect(label.isSelectionHandle(atWindowPoint: start))
+                #expect(window.hitTest(start, with: nil) != nil)
+                #expect(host.handleHits > 0)
+            }
+        #endif
     }
+
+    #if !os(visionOS)
+        /// A host that asks about the handles while UIKit hit-tests it, as a chat
+        /// transcript does to keep a selection when a touch lands on a handle.
+        private final class HandleAwareHostView: UIView {
+            weak var label: TextLabelView?
+            var handleHits = 0
+
+            override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+                if let label, label.isSelectionHandle(atWindowPoint: convert(point, to: nil)) {
+                    handleHits += 1
+                }
+                return super.hitTest(point, with: event)
+            }
+        }
+    #endif
 
 #endif
