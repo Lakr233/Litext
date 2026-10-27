@@ -161,6 +161,8 @@ TextLabel("Some selectable text")
 
 On iOS 17 and later, selection uses UIKit's `UITextSelectionDisplayInteraction` and `UITextLoupeSession` for native highlights, handles and the magnifier while holding or dragging a selection. A selection group shares one pair of handles across its labels. Leave `selectionBackgroundColor` as `nil` to use the native display; an explicit color preserves Litext's custom drawing and its exact alpha for the whole group. Earlier iOS versions and other platforms retain their existing selection display.
 
+On iOS a tap elsewhere on the label's screen clears its selection, as in the system text views, while the tap still reaches the view under it. A drag such as a scroll keeps the selection, and while the menu shows, a tap only dismisses the menu.
+
 ### Selection Across Labels
 
 Labels that share a `TextSelectionGroup` share one selection, so a selection can run from one label into the next, for example across the cells of a table. Copy, Look Up, Translate and Share act on all of it.

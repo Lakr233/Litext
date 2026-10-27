@@ -269,6 +269,13 @@
             return view != nil
         }
 
+        /// Puts the recognizers the selection needs on the label's window, and takes
+        /// the others off it.
+        func updateSelectionWindowGestures() {
+            updateSelectionHandleGrabGesture()
+            updateSelectionDismissGesture()
+        }
+
         /// Keeps the grab recognizer on the label's window while its handles show, and
         /// off every window otherwise.
         func updateSelectionHandleGrabGesture() {

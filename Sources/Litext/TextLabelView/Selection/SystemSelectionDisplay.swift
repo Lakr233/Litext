@@ -114,7 +114,7 @@
                 }
             }
             systemSelectionDisplay?.update()
-            updateSelectionHandleGrabGesture()
+            updateSelectionWindowGestures()
             if !hasSelection {
                 endSelectionLoupe()
             }
