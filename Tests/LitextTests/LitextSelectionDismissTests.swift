@@ -17,6 +17,7 @@
         /// A key window with a root view controller, as an app's would be.
         private func makeScreen() -> (UIWindow, UIView) {
             let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 400, height: 600))
+            TestWindows.keepAlive(window)
             let controller = UIViewController()
             controller.view.frame = window.bounds
             window.rootViewController = controller
@@ -223,6 +224,7 @@
             let label = makeLabel(in: screen)
             select(label)
             let otherWindow = UIWindow(frame: window.bounds)
+            TestWindows.keepAlive(otherWindow)
             otherWindow.isHidden = false
             defer { otherWindow.isHidden = true }
             let textView = UITextView(frame: CGRect(x: 0, y: 0, width: 200, height: 100))

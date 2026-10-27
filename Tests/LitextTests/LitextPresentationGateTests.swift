@@ -19,6 +19,9 @@
 
         init() {
             window = UIWindow(frame: CGRect(x: 0, y: 0, width: 400, height: 600))
+            #if !targetEnvironment(macCatalyst)
+                TestWindows.keepAlive(window)
+            #endif
             controller = UIViewController()
             window.rootViewController = controller
             window.makeKeyAndVisible()

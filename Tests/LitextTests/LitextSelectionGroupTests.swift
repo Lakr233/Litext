@@ -44,6 +44,9 @@
             }
             #if canImport(UIKit)
                 window.isHidden = false
+                #if !targetEnvironment(macCatalyst)
+                    TestWindows.keepAlive(window)
+                #endif
                 let container: PlatformView = window
             #else
                 window.isReleasedWhenClosed = false
