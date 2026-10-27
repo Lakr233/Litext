@@ -8,6 +8,7 @@
     struct NativeSelectionTests {
         private func host(_ texts: [String]) -> (UIWindow, [TextLabelView], TextSelectionGroup) {
             let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 400, height: 600))
+            TestWindows.keepAlive(window)
             let controller = UIViewController()
             window.rootViewController = controller
             window.makeKeyAndVisible()

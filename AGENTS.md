@@ -44,7 +44,7 @@ xcodebuild test -scheme Litext -destination 'platform=iOS Simulator,id=<UDID>' \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 ```
 
-The shared `Litext` and `LitextAnimation` schemes in `Litext.xcworkspace` each test their own target; run the command again with `-scheme LitextAnimation`. On the simulator, a few `Presentation gate` and `Selection group` tests can crash the test process inside UIKit's `-[UIView _updateSafeAreaInsets]`. The crash predates LitextAnimation (3.3.2 has it too), its cause is unknown, and splitting the schemes does not prevent it; rerun the suite, and treat a crash anywhere else as a real failure.
+The shared `Litext` and `LitextAnimation` schemes in `Litext.xcworkspace` each test their own target; run the command again with `-scheme LitextAnimation`. A UIKit test that shows a window must keep it alive after it ends, with `TestWindows.keepAlive(_:)` in `TestWindows.swift`. Views can outlive a window released at the end of a test, such as UIKit's selection UI while it animates away, and a later test's layout pass then crashes inside `-[UIView _updateSafeAreaInsets]`.
 
 - **Test framework:** The tests use Swift Testing.
 - **Stress suites:**

@@ -246,6 +246,7 @@
             /// A window with a root view controller, made key as an app's would be.
             private func makeScreen() -> (UIWindow, UIView) {
                 let window = makeWindow()
+                TestWindows.keepAlive(window)
                 let controller = UIViewController()
                 controller.view.frame = window.bounds
                 window.rootViewController = controller
