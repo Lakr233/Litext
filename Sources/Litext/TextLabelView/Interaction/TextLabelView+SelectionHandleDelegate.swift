@@ -55,7 +55,7 @@
             if let selectionGroup {
                 // The handle may have moved to another member; drop the recognizer here
                 // if this label no longer shows one.
-                updateSelectionHandleGrabGesture()
+                updateSelectionWindowGestures()
                 selectionGroup.presentSelection()
                 return
             }

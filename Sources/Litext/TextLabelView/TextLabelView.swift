@@ -317,6 +317,8 @@ import QuartzCore
             var selectionHandleEnd: SelectionHandle = .init(kind: .end)
             /// Created the first time the handles show in a window.
             nonisolated(unsafe) var selectionHandleGrabGesture: SelectionHandleGrabGesture?
+            /// Created the first time the label holds part of a selection in a window.
+            nonisolated(unsafe) var selectionDismissGesture: SelectionDismissGesture?
             #if !os(visionOS)
                 var selectionLoupe: SelectionLoupe?
                 var systemSelectionDisplayStorage: AnyObject?
@@ -412,6 +414,7 @@ import QuartzCore
             NSObject.cancelPreviousPerformRequests(withTarget: self)
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 selectionHandleGrabGesture?.detachWhenLabelDeallocates()
+                selectionDismissGesture?.detachWhenLabelDeallocates()
             #endif
         }
 
@@ -429,12 +432,12 @@ import QuartzCore
                             updateSelectionLayer(presentsMenu: false)
                         }
                     #endif
-                    updateSelectionHandleGrabGesture()
+                    updateSelectionWindowGestures()
                 }
             }
 
-            /// Detaches the selection handle gesture from the old window. Overrides must
-            /// call `super`.
+            /// Detaches the selection gestures from the old window. Overrides must call
+            /// `super`.
             override open func willMove(toWindow newWindow: UIWindow?) {
                 super.willMove(toWindow: newWindow)
                 // Off the old window before the label leaves it; the selection clears once
@@ -444,6 +447,7 @@ import QuartzCore
                         endSelectionLoupe()
                     #endif
                     selectionHandleGrabGesture?.detach()
+                    selectionDismissGesture?.detach()
                 }
             }
         #endif
