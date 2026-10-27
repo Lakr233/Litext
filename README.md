@@ -189,6 +189,8 @@ func textSelectionGroup(
 
 The group holds its labels weakly; keep the labels alive as usual. `group.selectedSegments` lists the selected range in each label.
 
+On iOS a selection handle's knob, and the area that grabs it, reach outside the label. A host gesture that must leave handle drags alone, such as a swipe on a chat row, asks `label.isSelectionHandle(atWindowPoint:)` or `group.isSelectionHandle(atWindowPoint:)` instead of testing the label's bounds.
+
 ### Embedding Native Views (Attachments)
 
 Use `TextLabel.Attachment` to embed any view inline in the text:

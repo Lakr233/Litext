@@ -82,21 +82,8 @@
         /// The handle whose grab area contains `point`, in the window's coordinates, or
         /// nil when the touch there belongs to something else.
         func handleKind(atWindowPoint point: CGPoint) -> SelectionHandle.Kind? {
-            guard let label,
-                  let window,
-                  label.window === window,
-                  label.isVisibleForHandleGrab
-            else { return nil }
-
-            let labelPoint = window.convert(point, to: label)
-            guard let kind = label.selectionHandleKind(at: labelPoint) else { return nil }
-
-            // Leave the touch alone when something outside the label's own screen lies
-            // over the handle, such as a navigation bar, a presented sheet or the menu.
-            if window.hitTest(point, with: nil) != nil, !label.isOnOwnScreen(atWindowPoint: point) {
-                return nil
-            }
-            return kind
+            guard let label, let window else { return nil }
+            return label.selectionHandleKind(atWindowPoint: point, in: window)
         }
 
         fileprivate func touchDidBegin(_ touch: UITouch) {
@@ -247,6 +234,28 @@
             }
         }
 
+        /// The handle a touch at `point`, in `window`'s coordinates, grabs: a visible
+        /// handle of this label in `window` whose grab area contains the point, with
+        /// nothing outside the label's own screen over it, such as a navigation bar, a
+        /// presented sheet or the menu.
+        func selectionHandleKind(atWindowPoint point: CGPoint, in window: UIWindow) -> SelectionHandle.Kind? {
+            guard self.window === window, isVisibleForHandleGrab,
+                  let kind = selectionHandleKind(at: window.convert(point, to: self))
+            else { return nil }
+            // The occlusion test hit-tests the window, which reaches a host that asks
+            // `isSelectionHandle(atWindowPoint:)` from its own `hitTest(_:with:)`. The
+            // nested call skips the test rather than recursing.
+            guard !Self.isTestingHandleOcclusion else { return kind }
+            Self.isTestingHandleOcclusion = true
+            defer { Self.isTestingHandleOcclusion = false }
+            if window.hitTest(point, with: nil) != nil, !isOnOwnScreen(atWindowPoint: point) {
+                return nil
+            }
+            return kind
+        }
+
+        private static var isTestingHandleOcclusion = false
+
         /// Whether the label shows on screen and takes touches, along with every view
         /// up to its window.
         var isVisibleForHandleGrab: Bool {
@@ -281,5 +290,33 @@
             gesture.attach(to: window)
         }
     }
+
+    #if !os(visionOS)
+        public extension TextLabelView {
+            /// Whether a touch at `point`, in the coordinates of the label's window, lands
+            /// on one of the label's selection handles. The label takes such a touch to
+            /// drag the handle, so a host gesture, such as a swipe on a chat row, should
+            /// leave it alone.
+            ///
+            /// A handle's knob reaches outside the label's bounds, and its grab area
+            /// further. Ask here rather than testing the bounds. The answer is false
+            /// while something off the label's screen, such as a navigation bar or a
+            /// presented sheet, covers the handle. It is safe to call from
+            /// `hitTest(_:with:)`.
+            func isSelectionHandle(atWindowPoint point: CGPoint) -> Bool {
+                guard let window else { return false }
+                return selectionHandleKind(atWindowPoint: point, in: window) != nil
+            }
+        }
+
+        public extension TextSelectionGroup {
+            /// Whether a touch at `point`, in window coordinates, lands on a selection
+            /// handle of a member in that window. See
+            /// `TextLabelView.isSelectionHandle(atWindowPoint:)`.
+            func isSelectionHandle(atWindowPoint point: CGPoint) -> Bool {
+                labels.contains { $0.isSelectionHandle(atWindowPoint: point) }
+            }
+        }
+    #endif
 
 #endif
