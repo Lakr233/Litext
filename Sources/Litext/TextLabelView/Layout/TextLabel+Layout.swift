@@ -222,6 +222,13 @@ extension TextLabel {
         /// that shows the layout afterwards.
         public final var lineRenderer: TextLabel.LineRenderer?
 
+        /// How far outside the rect being drawn a line may lie and still be drawn, in
+        /// points. Zero except while a tiled label draws a tile: ink a line leaves
+        /// outside its own box belongs in the tile next to it as well, so a tile draws
+        /// its neighbours' lines too, clipped to itself. A subclass that narrows what
+        /// it draws to the context's clip widens the clip by this.
+        package var drawingReach: CGFloat = 0
+
         /// The size the text is laid out in; zero or `.greatestFiniteMagnitude`
         /// leaves a dimension unconstrained. Text is anchored to the top.
         ///

@@ -330,6 +330,69 @@ import QuartzCore
             var editMenuTargetRect: CGRect = .zero
         #endif
 
+        #if canImport(UIKit)
+            /// How a tall label draws in tiles; see `tiledDrawing`.
+            public struct TiledDrawing: Equatable, Sendable {
+                /// The height, in points, past which the label draws in tiles. Below it
+                /// one backing store is cheaper than the tiles around a screen.
+                public var threshold: CGFloat
+
+                /// How far above and below what is on screen the label keeps tiles
+                /// drawn, in points, so that a scroll finds them ready. `nil` is half
+                /// the height of the window, and at least one tile.
+                ///
+                /// A host that lays rows out ahead of a scroll gives the distance it
+                /// prepares them at, and a label that far outside has its near end
+                /// drawn before it is scrolled to.
+                public var reach: CGFloat?
+
+                public init(threshold: CGFloat = 4096, reach: CGFloat? = nil) {
+                    self.threshold = threshold
+                    self.reach = reach
+                }
+            }
+
+            /// Draws a label taller than `TiledDrawing.threshold` in tiles around what
+            /// is on screen, instead of into one backing store the size of its bounds.
+            /// `nil`, as a label starts, keeps the one backing store whatever the
+            /// height.
+            ///
+            /// A backing store costs four bytes for every pixel of the label, on screen
+            /// or not, and is drawn whole whenever the text changes: a label a hundred
+            /// screens tall holds hundreds of megabytes and repaints all of them for
+            /// every streamed update. In tiles its cost follows the screen instead of
+            /// the text, and it shows the same pixels.
+            ///
+            /// A tiled label has to find out where it is on screen, which nothing tells
+            /// a view; `TextLabelView+Tiles.swift` says how it does and what that
+            /// costs. A label moved further than `TiledDrawing.reach` in one step, by
+            /// code that then commits the change itself before the main run loop comes
+            /// around, can show one frame without text there.
+            open var tiledDrawing: TiledDrawing? {
+                didSet {
+                    guard tiledDrawing != oldValue else { return }
+                    updateTiledDrawing()
+                }
+            }
+
+            /// The tiles a tiled label has, by their place from the top; see
+            /// `TextLabelView+Tiles.swift`.
+            var tileLayers: [Int: TextLabelTileLayer] = [:]
+            /// The tiles last asked for, or `nil` when they have to be worked out again.
+            var tileIndices: IndexSet?
+            /// The scroll views above a tiled label in a window, nearest first.
+            var tileScrollObservations: [ScrollObservation] = []
+            /// The layer a tiled label in a window has Core Animation display when it
+            /// wants to look at where a commit puts it.
+            var tileLookLayer: TextLabelTileLookLayer?
+
+            /// A layer that can do without a backing store of its own. A subclass that
+            /// returns another class keeps one backing store whatever the label's height.
+            override open class var layerClass: AnyClass {
+                TextLabelBackingLayer.self
+            }
+        #endif
+
         #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
             /// The `TextLabelInputProxy` while the label is selectable, from iOS 16 and
             /// Mac Catalyst 16. Typed loosely because the class needs those systems.
@@ -468,6 +531,7 @@ import QuartzCore
             override open func didMoveToWindow() {
                 super.didMoveToWindow()
                 clearSelectionHeldHere()
+                updateTiledDrawing()
                 guard window != nil, flags.laidOutDisplayScale != displayScale else { return }
                 invalidateTextLayout()
             }

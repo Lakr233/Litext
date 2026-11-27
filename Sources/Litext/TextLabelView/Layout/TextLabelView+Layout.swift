@@ -119,6 +119,8 @@ import QuartzCore
             override open func layoutSubviews() {
                 super.layoutSubviews()
                 performLayout()
+                // Whatever asked for this pass may have moved the label.
+                trackTiles()
             }
 
             #if !os(visionOS)
@@ -198,6 +200,9 @@ import QuartzCore
             // both of which would mutate the view tree while the host is still laying
             // it out.
             updateSelectionLayer(presentsMenu: false)
+            #if canImport(UIKit)
+                updateTiledDrawing()
+            #endif
             setNeedsTextDisplay()
         }
 
