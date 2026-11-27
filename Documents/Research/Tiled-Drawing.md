@@ -85,7 +85,18 @@ With the host's call after its list lays out, on a quiet machine, in two builds 
 
 The pill is not the tiles. MarkdownView draws the first inline code a process builds four points wider than every other, the host's list now builds rows ahead of a scroll in an order that depends on timing, and so the wider pill lands in one list in one run and in the other, or in neither capture, in the next. The capture comparisons without tiles show it too: three captures in the first build, none in the second.
 
-In the same build, with tiles and without: opening the conversation 148 ms against 375 ms, label bitmaps after opening 92 MB against 281 MB, and no frame over 16.7 ms in a first scroll through it against 19 of 1,312. The host mounts rows ahead of a scroll, which is why one bitmap costs it more than the table further down says.
+In the second build, with tiles and without, the machine otherwise idle:
+
+| | One backing store | Tiles |
+|---|---|---|
+| Bitmaps of mounted labels after opening the conversation | 281 MB | 92 MB |
+| Process footprint after opening / after a stream | 303 / 434 MB | 210 / 306 MB |
+| A scroll frame, median | 0.15 ms | 0.18 ms |
+| Slowest frame in three scrolls through the conversation | 6 ms | 9 ms |
+| A streamed update at 111,000 characters, layout and commit | 25 ms | 9 ms |
+| A frame of a resize that rewraps the text, median / mean | 26 / 25 ms | 3 / 8 ms |
+
+The host mounts rows ahead of a scroll, which is why one bitmap costs it more than the table further down says. Tiles save memory, and the drawing of a whole reply on every streamed update and every step of a resize; a scroll frame costs about 0.03 ms more with them. An earlier run of this comparison, made while another build was using the machine, showed 19 frames over 16.7 ms in a first scroll with one backing store and none with tiles. Idle, the slowest frame of a first scroll is 6 ms with one backing store and 9 ms with tiles, or 12 ms and 17 ms when a frame is timed through the run loop's own commit and not a flushed transaction.
 
 Not run: the app on a 2x display. The unit tests compare tiles with one bitmap at 2x and 3x; how Core Animation shows abutting tiles at 2x was only seen at 1x, with the lists placed at fractions of a point.
 
