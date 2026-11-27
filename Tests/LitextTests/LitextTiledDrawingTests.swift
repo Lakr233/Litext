@@ -674,6 +674,30 @@
             _ = window
         }
 
+        /// A list shifts its rows when it measures the ones above them, by more than
+        /// the tiles reach. It asks the label for a layout pass in the pass that
+        /// moved it.
+        @Test
+        func `a host that moved the label has its tiles in the same layout pass`() {
+            let (label, scrollView, window) = Self.makeLabel(Self.text(paragraphs: 400), threshold: 1024)
+            let row = UIView(frame: label.frame)
+            scrollView.addSubview(row)
+            row.addSubview(label)
+            window.layoutIfNeeded()
+            label.trackTiles()
+            for tile in Self.tiles(of: label) {
+                tile.displayIfNeeded()
+            }
+
+            for offset in [7000, 300, 11000] as [CGFloat] {
+                row.frame.origin.y = -offset
+                label.setNeedsLayout()
+                // The pass a commit runs before it draws.
+                window.layoutIfNeeded()
+                Self.expectCoverage(of: label, offset: offset, viewportHeight: 600, reach: Self.tileHeight)
+            }
+        }
+
         @Test
         func `a label carried by an animation keeps tiles where it is still shown`() {
             let (label, scrollView, _) = Self.makeLabel(Self.text(paragraphs: 400), threshold: 1024)
