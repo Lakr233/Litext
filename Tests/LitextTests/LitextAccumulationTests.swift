@@ -84,6 +84,11 @@ import Testing
 
             let label = makeLaidOutTestLabel(uniqueText(), size: CGSize(width: 360, height: 200))
             label.isSelectable = true
+            #if canImport(UIKit) && !os(tvOS)
+                // The selections below make the label's input proxy, which stays;
+                // count it from the start.
+                label.installDeferredInteractions()
+            #endif
             let baselineSubviews = label.subviews.count
             let baselineSublayers = sublayerCount(label)
 
