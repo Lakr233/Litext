@@ -111,6 +111,16 @@ private struct FrameFill {
     var passLengths: [Int: Int] = [:]
 }
 
+/// The lines one typesetting pass laid out, placed after the lines before its anchor.
+/// See `TextLabel.Layout.typesetTail`.
+private struct TailPass {
+    var lines: [CTLine]
+    var origins: [CGPoint]
+    var metrics: [LineMetrics]
+    /// Whether the pass typeset everything up to its end.
+    var isComplete: Bool
+}
+
 /// What a layout typeset, kept by the next layout of an edited string so it can
 /// reuse the lines before the edit. See `TextLabel.Layout.reuseTypesetting(from:)`.
 private struct TypesettingSource {
@@ -1128,6 +1138,9 @@ extension TextLabel {
             if let fill = makeFillReusingSource(pathSize: pathSize) {
                 return fill
             }
+            if let fill = makeFillInPasses(pathSize: pathSize) {
+                return fill
+            }
             let containerPath = CGPath(
                 rect: CGRect(origin: .zero, size: pathSize),
                 transform: nil,
@@ -1236,6 +1249,7 @@ extension TextLabel {
         /// How much text the lines of a fill may keep alive, in multiples of the string's
         /// length. Every typesetting pass a fill's lines come from keeps its whole string
         /// alive; past this, the string is typeset again from scratch and lets go of them.
+        /// Text typeset in passes may keep more; see `retainedTextAllowance`.
         private static let retainedTextLimit = 4
 
         /// Builds a fill from the lines the source laid out at `pathSize` before the first
@@ -1243,12 +1257,9 @@ extension TextLabel {
         /// reused, and the caller typesets the whole string.
         ///
         /// The lines are reused up to the paragraph before the changed one, the anchor. The
-        /// anchor is typeset again with everything after it, in a string whose text before
-        /// the anchor is spaces: the string keeps every offset, so the new lines index the
-        /// layout's own string, while CoreText does no work for the text it leaves out.
-        /// The anchor's first line matches the source's and places the new lines, and
-        /// CoreText spaces every line from the one before it, so the result is the fill
-        /// typesetting the whole string gives.
+        /// anchor is typeset again with everything after it; see `typesetTail`. Text that
+        /// is typeset in passes may move the anchor further back; see
+        /// `anchorFoldingShortPasses`.
         ///
         /// - Important: Performance-sensitive. Runs for every measurement and layout of a
         ///   new string that has a source. Compares the strings up to the change, then
@@ -1262,23 +1273,37 @@ extension TextLabel {
             let previousText = source.string.string as NSString
             let length = text.length
             guard length > 0, previousText.length > 0 else { return nil }
+            // CoreText breaks the lines of a long string by another path, and not always
+            // where it breaks a short one's, so lines typeset on one side of that length
+            // are not the ones the whole string gets on the other.
+            guard (previousText.length > Self.longStringLength) == (length > Self.longStringLength) else {
+                return nil
+            }
 
             // The first character whose text, attributes or attachment metrics changed.
             var firstChange = Self.commonPrefixLength(previousText, text)
             firstChange = Self.firstAttributeChange(source.string, attributedString, upTo: firstChange)
             firstChange = Self.firstMetricsChange(source.attachmentMetrics, attachmentMetrics, upTo: firstChange)
             guard let changedStart = Self.paragraphStart(in: text, containing: firstChange),
-                  changedStart > 0,
-                  let anchorStart = Self.paragraphStart(in: text, containing: changedStart - 1),
-                  anchorStart > 0
+                  changedStart > 0
             else { return nil }
+            var anchorStart = Self.paragraphStart(in: text, endingAt: changedStart)
+            guard anchorStart > 0 else { return nil }
 
             let previousLines = previous.lines
-            let reusedCount = Self.firstLineIndex(endingAfter: anchorStart, in: previousLines)
+            var reusedCount = Self.firstLineIndex(endingAfter: anchorStart, in: previousLines)
             guard reusedCount > 0,
                   reusedCount < previousLines.count,
                   CTLineGetStringRange(previousLines[reusedCount]).location == anchorStart
             else { return nil }
+            if typesetsInPasses {
+                (reusedCount, anchorStart) = anchorFoldingShortPasses(
+                    in: previous,
+                    reusedCount: reusedCount,
+                    anchorStart: anchorStart,
+                    length: length,
+                )
+            }
 
             let pass = Self.makeTypesettingPass()
             var passLengths = [pass: length]
@@ -1288,14 +1313,58 @@ extension TextLabel {
                     passLengths[reusedPass] = previous.passLengths[reusedPass] ?? 0
                 }
             }
-            guard passLengths.values.reduce(0, +) <= Self.retainedTextLimit * length else { return nil }
+            guard passLengths.values.reduce(0, +) <= retainedTextAllowance else { return nil }
 
+            guard let tail = typesetTail(
+                from: anchorStart,
+                to: length,
+                anchorLine: previousLines[reusedCount],
+                anchorOrigin: previous.lineOrigins[reusedCount],
+                pathSize: pathSize,
+            ) else { return nil }
+
+            reusedLineCount = reusedCount
+            var linePasses = Array(previous.linePasses[0 ..< reusedCount])
+            linePasses.append(contentsOf: repeatElement(pass, count: tail.lines.count))
+            return assembleFill(
+                lines: previousLines[0 ..< reusedCount] + tail.lines,
+                origins: previous.lineOrigins[0 ..< reusedCount] + tail.origins,
+                metrics: previous.lineMetrics[0 ..< reusedCount] + tail.metrics,
+                pathSize: pathSize,
+                isComplete: tail.isComplete,
+                linePasses: linePasses,
+                passLengths: passLengths,
+            )
+        }
+
+        /// Typesets `anchorStart ..< end`, to follow the lines an earlier pass laid out
+        /// before the anchor. `anchorStart` begins a paragraph that pass also typeset, and
+        /// `anchorLine` and `anchorOrigin` are its first line there. `nil` when the anchor
+        /// does not come out as it did then, or when a line falls off the path.
+        ///
+        /// The pass typesets a string whose text before the anchor is spaces: the string
+        /// keeps every offset, so the new lines index the layout's own string, while
+        /// CoreText does no work for the text it leaves out. The anchor's first line
+        /// matches the earlier one and places the new lines, and CoreText spaces every
+        /// line from the one before it, so the lines are the ones typesetting the whole
+        /// string gives.
+        private func typesetTail(
+            from anchorStart: Int,
+            to end: Int,
+            anchorLine: CTLine,
+            anchorOrigin: CGPoint,
+            pathSize: CGSize,
+        ) -> TailPass? {
+            let text = attributedString.string as NSString
             // The anchor keeps the separator before it, so it starts a paragraph of its own.
             let placeholder = String(repeating: " ", count: anchorStart - 1)
                 + text.substring(with: NSRange(location: anchorStart - 1, length: 1))
             let tailString = NSMutableAttributedString(string: placeholder)
-            let tailRange = NSRange(location: anchorStart, length: length - anchorStart)
+            let tailRange = NSRange(location: anchorStart, length: end - anchorStart)
             tailString.append(typesetString.attributedSubstring(from: tailRange))
+            if text.length > Self.longStringLength {
+                Self.padToLongString(tailString)
+            }
             let frame = CTFramesetterCreateFrame(
                 CTFramesetterCreateWithAttributedString(tailString),
                 CFRange(location: tailRange.location, length: tailRange.length),
@@ -1306,20 +1375,17 @@ extension TextLabel {
             guard let firstTailLine = tailLines.first else { return nil }
             var tailOrigins = [CGPoint](repeating: .zero, count: tailLines.count)
             CTFrameGetLineOrigins(frame, CFRange(location: 0, length: 0), &tailOrigins)
-            let anchorOrigin = previous.lineOrigins[reusedCount]
             guard NSEqualRanges(
                 NSRange(CTLineGetStringRange(firstTailLine)),
-                NSRange(CTLineGetStringRange(previousLines[reusedCount])),
+                NSRange(CTLineGetStringRange(anchorLine)),
             ),
                 tailOrigins[0].x == anchorOrigin.x
             else { return nil }
 
-            var lines = Array(previousLines[0 ..< reusedCount])
-            var origins = Array(previous.lineOrigins[0 ..< reusedCount])
-            var metrics = Array(previous.lineMetrics[0 ..< reusedCount])
-            lines.reserveCapacity(reusedCount + tailLines.count)
-            origins.reserveCapacity(reusedCount + tailLines.count)
-            metrics.reserveCapacity(reusedCount + tailLines.count)
+            var origins = [CGPoint]()
+            var metrics = [LineMetrics]()
+            origins.reserveCapacity(tailLines.count)
+            metrics.reserveCapacity(tailLines.count)
             let shift = anchorOrigin.y - tailOrigins[0].y
             for index in 0 ..< tailLines.count {
                 let metric = lineMetrics(of: tailLines[index], isLastLine: index == tailLines.count - 1)
@@ -1327,24 +1393,295 @@ extension TextLabel {
                 // The whole string's frame would have dropped this line off the end of the
                 // path; let typesetting it decide where the text stops.
                 guard origin.y - metric.descent >= 0 else { return nil }
-                lines.append(tailLines[index])
                 origins.append(origin)
                 metrics.append(metric)
             }
-
             let visibleRange = CTFrameGetVisibleStringRange(frame)
-            reusedLineCount = reusedCount
-            var linePasses = Array(previous.linePasses[0 ..< reusedCount])
-            linePasses.append(contentsOf: repeatElement(pass, count: tailLines.count))
+            return TailPass(
+                lines: tailLines,
+                origins: origins,
+                metrics: metrics,
+                isComplete: visibleRange.location + visibleRange.length >= end,
+            )
+        }
+
+        // MARK: - Typesetting in passes
+
+        /// The policy this layout typesets by. Tests lower it to typeset short strings in
+        /// many passes; set it before the layout is first measured or laid out.
+        var passPolicy = PassPolicy()
+
+        /// How many typesetting passes the current lines come from, for tests.
+        var typesettingPassCount: Int {
+            Set(adoptedFill?.linePasses ?? []).count
+        }
+
+        /// Where the run delegates of `typesetString` start, in ascending order.
+        private lazy var runDelegateLocations: [Int] = {
+            var locations = [Int]()
+            let string = typesetString
+            guard string.length > 0 else { return locations }
+            string.enumerateAttribute(
+                Self.runDelegateKey,
+                in: NSRange(location: 0, length: string.length),
+                options: [.longestEffectiveRangeNotRequired],
+            ) { value, range, _ in
+                if value != nil {
+                    locations.append(range.location)
+                }
+            }
+            return locations
+        }()
+
+        private static let runDelegateKey = NSAttributedString.Key(kCTRunDelegateAttributeName as String)
+
+        /// Whether one typesetter over the whole string would spend well over a pass's
+        /// worth of work on its run delegates. Only a string CoreText typesets as a long
+        /// one is typeset in passes; see `longStringLength`.
+        private var typesetsInPasses: Bool {
+            let length = attributedString.length
+            let delegates = runDelegateLocations.count
+            return length > Self.longStringLength
+                && delegates > 1
+                && delegates * length >= 2 * passPolicy.workPerPass
+        }
+
+        /// The longest string, in UTF-16 units, CoreText typesets the way it does a
+        /// short one. Past it a typesetter breaks lines by another path, the one that
+        /// is slow with run delegates, and that path does not always break a line where
+        /// the short one does: the same paragraph can take another line once its string
+        /// grows past this length. A pass must break lines as one typesetter over the
+        /// whole string would, so each pass typesets a string at least this long.
+        private static let longStringLength = 10240
+
+        /// Appends a paragraph of spaces after `string` if CoreText would otherwise
+        /// typeset it as a short string. The paragraph lies outside the range any pass
+        /// lays out. Only for a pass over part of a long string: a short string's lines
+        /// must stay the ones its own typesetter breaks.
+        private static func padToLongString(_ string: NSMutableAttributedString) {
+            // Well clear of the threshold, in case it is not the same everywhere.
+            let padding = 2 * longStringLength - string.length
+            guard padding > 0 else { return }
+            string.append(NSAttributedString(string: "\n" + String(repeating: " ", count: padding)))
+        }
+
+        /// The work a pass over this string takes on: the policy's, or more once the
+        /// string would otherwise need more passes than the policy allows.
+        private var workPerPass: Int {
+            let policy = passPolicy
+            let passes = max(1, policy.maximumPasses)
+            // Equal passes each hold the delegates and the length of the whole over
+            // their number, so their work is the whole's over its square.
+            let whole = Double(runDelegateLocations.count) * Double(attributedString.length)
+            return max(policy.workPerPass, Int((whole / Double(passes * passes)).rounded(.up)))
+        }
+
+        /// The number of run delegates in `range`.
+        private func runDelegateCount(in range: Range<Int>) -> Int {
+            let locations = runDelegateLocations
+            let lower = Self.partitionPoint(locations.count) { locations[$0] >= range.lowerBound }
+            let upper = Self.partitionPoint(locations.count) { locations[$0] >= range.upperBound }
+            return upper - lower
+        }
+
+        /// Whether `range` holds as much work as a pass takes on, so the pass that
+        /// typeset it is left as it is.
+        private func isWholePass(_ range: Range<Int>) -> Bool {
+            runDelegateCount(in: range) * range.count >= workPerPass
+        }
+
+        /// Where the pass that starts at `start`, a paragraph start, ends: the paragraph
+        /// break after the run delegate that fills its work, or the end of the string.
+        private func passEnd(from start: Int, in text: NSString) -> Int {
+            let length = text.length
+            let work = workPerPass
+            let locations = runDelegateLocations
+            var index = Self.partitionPoint(locations.count) { locations[$0] >= start }
+            var count = 0
+            var target = length
+            while index < locations.count {
+                count += 1
+                if count * (locations[index] - start + 1) >= work {
+                    target = locations[index]
+                    break
+                }
+                index += 1
+            }
+            guard target < length else { return length }
+            let end = Self.paragraphEnd(in: text, after: target)
+            return length - end < passPolicy.minimumPassLength ? length : end
+        }
+
+        /// Typesets the whole string in passes; see `PassPolicy`. `nil` for text one pass
+        /// typesets as well, and when a pass does not line up with the one before it:
+        /// the caller then typesets the string in one frame.
+        ///
+        /// Every pass after the first starts at the last paragraph of the pass before it,
+        /// its anchor, and replaces that paragraph's lines: the last paragraph of a
+        /// string is the only one whose last line CoreText and `lineMetrics` treat
+        /// differently, so no line of a finished fill comes from the end of a pass
+        /// except the last line of all.
+        ///
+        /// - Important: Performance-sensitive. This is the full typeset of a long
+        ///   document with attachments: each pass costs its own text, plus a string of
+        ///   spaces as long as the text before it.
+        private func makeFillInPasses(pathSize: CGSize) -> FrameFill? {
+            guard typesetsInPasses else { return nil }
+            let text = attributedString.string as NSString
+            let length = text.length
+            var end = passEnd(from: 0, in: text)
+            // The first pass needs a paragraph before its last one for the next to anchor on.
+            if end < length, Self.paragraphStart(in: text, endingAt: end) == 0 {
+                end = Self.paragraphEnd(in: text, after: end)
+            }
+            guard end < length else { return nil }
+
+            let head = NSMutableAttributedString(
+                attributedString: typesetString.attributedSubstring(from: NSRange(location: 0, length: end)),
+            )
+            Self.padToLongString(head)
+            let frame = CTFramesetterCreateFrame(
+                CTFramesetterCreateWithAttributedString(head),
+                CFRange(location: 0, length: end),
+                CGPath(rect: CGRect(origin: .zero, size: pathSize), transform: nil),
+                nil,
+            )
+            var lines = (CTFrameGetLines(frame) as? [CTLine]) ?? []
+            let headRange = CTFrameGetVisibleStringRange(frame)
+            guard !lines.isEmpty, headRange.location + headRange.length >= end else { return nil }
+            var origins = [CGPoint](repeating: .zero, count: lines.count)
+            CTFrameGetLineOrigins(frame, CFRange(location: 0, length: 0), &origins)
+            var metrics = [LineMetrics]()
+            metrics.reserveCapacity(lines.count)
+            for index in 0 ..< lines.count {
+                metrics.append(lineMetrics(of: lines[index], isLastLine: index == lines.count - 1))
+            }
+            var pass = Self.makeTypesettingPass()
+            var linePasses = [Int](repeating: pass, count: lines.count)
+            var passLengths = [pass: end]
+            var isComplete = true
+
+            while end < length {
+                let anchorStart = Self.paragraphStart(in: text, endingAt: end)
+                guard anchorStart > 0 else { return nil }
+                let kept = Self.firstLineIndex(endingAfter: anchorStart, in: lines)
+                guard kept > 0,
+                      kept < lines.count,
+                      CTLineGetStringRange(lines[kept]).location == anchorStart
+                else { return nil }
+                let nextEnd = passEnd(from: end, in: text)
+                guard let tail = typesetTail(
+                    from: anchorStart,
+                    to: nextEnd,
+                    anchorLine: lines[kept],
+                    anchorOrigin: origins[kept],
+                    pathSize: pathSize,
+                ),
+                    tail.isComplete || nextEnd == length
+                else { return nil }
+                pass = Self.makeTypesettingPass()
+                lines.replaceSubrange(kept..., with: tail.lines)
+                origins.replaceSubrange(kept..., with: tail.origins)
+                metrics.replaceSubrange(kept..., with: tail.metrics)
+                linePasses.replaceSubrange(kept..., with: repeatElement(pass, count: tail.lines.count))
+                passLengths[pass] = nextEnd
+                isComplete = tail.isComplete
+                end = nextEnd
+            }
             return assembleFill(
                 lines: lines,
                 origins: origins,
                 metrics: metrics,
                 pathSize: pathSize,
-                isComplete: visibleRange.location + visibleRange.length >= length,
+                isComplete: isComplete,
                 linePasses: linePasses,
                 passLengths: passLengths,
             )
+        }
+
+        /// Moves a streamed edit's anchor back over the passes that typeset little, so
+        /// the lines of a growing string come from a few passes instead of one for every
+        /// edit. Returns the new count of reused lines and the anchor they end at.
+        ///
+        /// Every edit typesets from the paragraph before its change, and the lines it
+        /// leaves keep that pass's whole string alive. An answer streamed in a thousand
+        /// updates would hold a thousand strings, and the retained text limit would
+        /// answer by typesetting everything again every few updates, which for text
+        /// typeset in passes is the cost passes exist to avoid. So a pass is folded into
+        /// the new one while it typeset less than twice what the new one will, until it
+        /// holds a pass's work (`PassPolicy`). Passes then grow the way a binary counter
+        /// does: each character is typeset a handful of times, and the fill ends up with
+        /// about the passes typesetting the string whole would have given it.
+        private func anchorFoldingShortPasses(
+            in previous: FrameFill,
+            reusedCount: Int,
+            anchorStart: Int,
+            length: Int,
+        ) -> (reusedCount: Int, anchorStart: Int) {
+            let passes = previous.linePasses
+            guard passes.count == previous.lines.count else { return (reusedCount, anchorStart) }
+            var count = reusedCount
+            var start = anchorStart
+            while count > 0 {
+                // Passes are numbered in order and their lines stay together, so the
+                // last reused pass begins at the first line carrying its number.
+                let pass = passes[count - 1]
+                let first = Self.partitionPoint(count) { passes[$0] >= pass }
+                // The pass that begins the string has no line before it to anchor on.
+                guard first > 0 else { break }
+                let passStart = CTLineGetStringRange(previous.lines[first]).location
+                guard passStart > 0,
+                      start - passStart < 2 * (length - start),
+                      !isWholePass(passStart ..< start)
+                else { break }
+                count = first
+                start = passStart
+            }
+            return (count, start)
+        }
+
+        /// How much text the lines of a fill may keep alive, in UTF-16 units; see
+        /// `retainedTextLimit`. Text typeset in passes keeps a string for every pass, each
+        /// no longer than the whole: the allowance covers the passes a whole typeset
+        /// may take, and as many again for the ones a stream left behind while the
+        /// string was shorter and its passes smaller.
+        private var retainedTextAllowance: Int {
+            let length = attributedString.length
+            guard typesetsInPasses else { return Self.retainedTextLimit * length }
+            return (Self.retainedTextLimit + 2 * max(1, passPolicy.maximumPasses)) * length
+        }
+
+        /// The start of the paragraph that ends at `end`, the offset after a paragraph
+        /// separator.
+        private static func paragraphStart(in text: NSString, endingAt end: Int) -> Int {
+            // The separator may be a carriage return and a line feed together.
+            var separator = end - 1
+            if end >= 2, text.character(at: end - 1) == 0x0A, text.character(at: end - 2) == 0x0D {
+                separator = end - 2
+            }
+            guard separator > 0 else { return 0 }
+            return paragraphStart(in: text, containing: separator) ?? 0
+        }
+
+        /// The end of the paragraph that holds the character at `offset`: the offset
+        /// after its separator, or the length of the text.
+        private static func paragraphEnd(in text: NSString, after offset: Int) -> Int {
+            let length = text.length
+            var index = max(0, offset)
+            while index < length {
+                switch text.character(at: index) {
+                case 0x0D:
+                    if index + 1 < length, text.character(at: index + 1) == 0x0A {
+                        return index + 2
+                    }
+                    return index + 1
+                case 0x0A, 0x85, 0x2029:
+                    return index + 1
+                default:
+                    index += 1
+                }
+            }
+            return length
         }
 
         /// The start of the paragraph that holds the character at `offset`, or of the
@@ -2013,5 +2350,35 @@ extension TextLabel {
             let index = CTLineGetStringIndexForPosition(hit.line, linePoint)
             return index == kCFNotFound ? lineRange.location + lineRange.length : index
         }
+    }
+}
+
+extension TextLabel.Layout {
+    /// How text that carries run delegates is typeset in passes.
+    ///
+    /// A run delegate is how an attachment reserves its space. CoreText breaks a line
+    /// that holds one by copying the rest of its typesetter's text, so a typesetter
+    /// over a long string spends, on each such line, time in proportion to everything
+    /// after it: a Markdown document of 60,000 characters with 640 attachments takes
+    /// 216 ms to typeset, and 13 ms without their delegates. A typesetter whose
+    /// string ends soon after the line pays little, so such text is typeset a stretch
+    /// of paragraphs at a time, each by a typesetter of its own, chained the way a
+    /// streamed edit is (`typesetTail`). The result is the same lines.
+    struct PassPolicy {
+        /// The work one pass may take on before it ends at the next paragraph break:
+        /// its run delegates times its length in UTF-16 units. Each delegate's line
+        /// costs about 10 ns for every unit after it in the pass, so this keeps a
+        /// pass's share of that near half a millisecond, about what starting a pass
+        /// costs.
+        var workPerPass = 100_000
+        /// A remainder shorter than this joins the pass before it.
+        var minimumPassLength = 1024
+        /// The most passes a whole typeset is split into. The lines of a pass keep
+        /// its whole string alive, spaces included, at about 23 bytes a unit, so
+        /// every pass adds memory in proportion to the text before it: twelve passes
+        /// about double what the lines of one frame hold, and typeset a document of
+        /// 180,000 units in a tenth of the time. Past this, passes take on more
+        /// work instead.
+        var maximumPasses = 12
     }
 }
