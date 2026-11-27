@@ -119,6 +119,8 @@ import QuartzCore
             override open func layoutSubviews() {
                 super.layoutSubviews()
                 performLayout()
+                // Whatever asked for this pass may have moved the label.
+                trackTiles()
             }
 
             #if !os(visionOS)
@@ -191,12 +193,16 @@ import QuartzCore
             }
             updateAttachmentViews()
             flags.layoutIsDirty = false
+            flags.laidOutDisplayScale = displayScale
 
             // Presenting or dismissing the selection menu belongs to a selection
             // change, not to a layout pass: it presents UI and notifies sibling labels,
             // both of which would mutate the view tree while the host is still laying
             // it out.
             updateSelectionLayer(presentsMenu: false)
+            #if canImport(UIKit)
+                updateTiledDrawing()
+            #endif
             setNeedsTextDisplay()
         }
 

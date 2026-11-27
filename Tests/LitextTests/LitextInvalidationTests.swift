@@ -489,4 +489,111 @@ private final class ComputedSizeAttachment: TextLabel.Attachment {
         #expect(label.invalidationCount > 0)
     }
 
+    // MARK: - Window moves
+
+    #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS)
+
+        private final class DisplayCountingLabel: TextLabelView {
+            var displayRequestCount = 0
+
+            override func setNeedsDisplay() {
+                displayRequestCount += 1
+                super.setNeedsDisplay()
+            }
+        }
+
+        @MainActor
+        private func makeLabelInWindow() throws -> (label: DisplayCountingLabel, window: UIWindow) {
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 400, height: 200))
+            TestWindows.keepAlive(window)
+            let label = try DisplayCountingLabel(attributedText: makeLinkedText())
+            label.frame = CGRect(x: 0, y: 0, width: 200, height: 60)
+            window.addSubview(label)
+            window.layoutIfNeeded()
+            label.layoutIfNeeded()
+            return (label, window)
+        }
+
+        @MainActor
+        @Test func `entering a window for the first time lays the text out`() throws {
+            let (label, _) = try makeLabelInWindow()
+            #expect(label.textLayout.containerSize == CGSize(width: 200, height: 60))
+            #expect(label.displayRequestCount > 0)
+            #expect(label.flags.laidOutDisplayScale == label.displayScale)
+        }
+
+        @MainActor
+        @Test func `returning to a window keeps the layout and asks for no redraw`() throws {
+            let (label, window) = try makeLabelInWindow()
+            let layoutBefore = label.textLayout
+            let identitiesBefore = regionIdentities(label)
+            label.displayRequestCount = 0
+
+            // What a list does to a row it keeps while the row is off screen.
+            label.removeFromSuperview()
+            #expect(!label.flags.layoutIsDirty)
+            window.addSubview(label)
+            #expect(!label.flags.layoutIsDirty)
+            window.layoutIfNeeded()
+            label.layoutIfNeeded()
+
+            #expect(label.textLayout === layoutBefore)
+            #expect(regionIdentities(label) == identitiesBefore)
+            #expect(label.displayRequestCount == 0)
+        }
+
+        @MainActor
+        @Test func `a label resized outside its window is redrawn when it returns`() throws {
+            let (label, window) = try makeLabelInWindow()
+            label.removeFromSuperview()
+            label.displayRequestCount = 0
+
+            label.frame = CGRect(x: 0, y: 0, width: 120, height: 90)
+            window.addSubview(label)
+            window.layoutIfNeeded()
+            label.layoutIfNeeded()
+
+            #expect(label.textLayout.containerSize == CGSize(width: 120, height: 90))
+            #expect(label.displayRequestCount > 0)
+        }
+
+        @MainActor
+        @Test func `a label that returns after the appearance changed is redrawn`() throws {
+            let (label, window) = try makeLabelInWindow()
+            window.overrideUserInterfaceStyle = .light
+            window.layoutIfNeeded()
+            label.layoutIfNeeded()
+            label.removeFromSuperview()
+            label.displayRequestCount = 0
+
+            // Dynamic colors are resolved when the text is drawn, so the pixels the
+            // label kept are the wrong ones now.
+            window.overrideUserInterfaceStyle = .dark
+            window.addSubview(label)
+            window.layoutIfNeeded()
+            label.layoutIfNeeded()
+
+            #expect(label.traitCollection.userInterfaceStyle == .dark)
+            #expect(label.displayRequestCount > 0)
+        }
+
+        @MainActor
+        @Test func `a window at another display scale lays the text out again`() throws {
+            let (label, window) = try makeLabelInWindow()
+            label.removeFromSuperview()
+            label.displayRequestCount = 0
+            // As if the last pass had run for a display of another density.
+            label.flags.laidOutDisplayScale = label.displayScale + 1
+
+            window.addSubview(label)
+            #expect(label.flags.layoutIsDirty)
+            window.layoutIfNeeded()
+            label.layoutIfNeeded()
+
+            #expect(label.flags.laidOutDisplayScale == label.displayScale)
+            #expect(label.displayRequestCount > 0)
+        }
+
+    #endif
+
 #endif // !os(watchOS)

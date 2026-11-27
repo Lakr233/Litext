@@ -61,6 +61,34 @@
             }
         }
 
+        #if !os(tvOS)
+            /// Makes what a touch or the pointer over the label acts through, then
+            /// finds the view under the point as usual.
+            ///
+            /// The input proxy and, on Mac Catalyst, the context menu interaction are
+            /// only reached through an event, and UIKit hit-tests before it delivers
+            /// one, so making them here leaves the label as it would be had it made
+            /// them at once: the gesture recognizers they add are in place when the
+            /// touch begins. See `inputProxy` for what waiting saves.
+            override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+                if isUserInteractionEnabled, !isHidden, alpha > 0.01, bounds.contains(point) {
+                    installDeferredInteractions()
+                }
+                return super.hitTest(point, with: event)
+            }
+
+            /// Installs what `hitTest(_:with:)` would, for a host that delivers events to
+            /// the label without hit-testing it.
+            func installDeferredInteractions() {
+                if flags.awaitsContextMenuInteraction {
+                    installContextMenuInteraction()
+                }
+                if #available(iOS 16.0, macCatalyst 16.0, visionOS 1.0, *) {
+                    _ = inputProxy
+                }
+            }
+        #endif
+
         /// Whether `event` is a right click that the label leaves to the views behind
         /// it, so their context menu opens instead of the label's.
         private func isPassThroughSecondaryClick(at point: CGPoint, with event: UIEvent?) -> Bool {
@@ -278,12 +306,14 @@
 
         #if !os(tvOS) && !os(watchOS)
             /// Adds a context menu interaction that shows the selection menu on a right
-            /// click. The label installs one itself only on Mac Catalyst.
+            /// click. The label installs one itself only on Mac Catalyst, at its first
+            /// hit test.
             ///
             /// On iOS the label shows the menu for a right click without it. The
             /// interaction also watches every touch for a long press, and on iOS 18 that
             /// holds back a selection handle drag over the label until the finger lifts.
             public func installContextMenuInteraction() {
+                flags.awaitsContextMenuInteraction = false
                 let interaction = UIContextMenuInteraction(delegate: self)
                 addInteraction(interaction)
             }
@@ -408,7 +438,7 @@
                 guard Self.menuOwnerIdentifier == id else { return }
                 #if !targetEnvironment(macCatalyst)
                     if #available(iOS 16.0, visionOS 1.0, *) {
-                        inputProxy?.editMenuInteraction.dismissMenu()
+                        existingInputProxy?.editMenuInteraction.dismissMenu()
                         return
                     }
                 #endif

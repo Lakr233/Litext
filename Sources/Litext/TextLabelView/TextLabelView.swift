@@ -173,7 +173,7 @@ import QuartzCore
                     clearSelectionHeldHere()
                 }
                 #if canImport(UIKit) && !os(tvOS)
-                    updateInputProxy()
+                    removeInputProxyIfNotSelectable()
                 #endif
             }
         }
@@ -330,6 +330,73 @@ import QuartzCore
             var editMenuTargetRect: CGRect = .zero
         #endif
 
+        #if canImport(UIKit)
+            /// How a tall label draws in tiles; see `tiledDrawing`.
+            public struct TiledDrawing: Equatable, Sendable {
+                /// The height, in points, past which the label draws in tiles. Below it
+                /// one backing store is cheaper than the tiles around a screen.
+                public var threshold: CGFloat
+
+                /// How far above and below what is on screen the label keeps tiles
+                /// drawn, in points, so that a scroll finds them ready. `nil` is half
+                /// the height of the window, and at least one tile.
+                ///
+                /// A host that lays rows out ahead of a scroll gives the distance it
+                /// prepares them at, and a label that far outside has its near end
+                /// drawn before it is scrolled to.
+                public var reach: CGFloat?
+
+                public init(threshold: CGFloat = 4096, reach: CGFloat? = nil) {
+                    self.threshold = threshold
+                    self.reach = reach
+                }
+            }
+
+            /// Draws a label taller than `TiledDrawing.threshold` in tiles around what
+            /// is on screen, instead of into one backing store the size of its bounds.
+            /// `nil`, as a label starts, keeps the one backing store whatever the
+            /// height.
+            ///
+            /// A backing store costs four bytes for every pixel of the label, on screen
+            /// or not, and is drawn whole whenever the text changes: a label a hundred
+            /// screens tall holds hundreds of megabytes and repaints all of them for
+            /// every streamed update. In tiles its cost follows the screen instead of
+            /// the text, and it shows the same pixels.
+            ///
+            /// A tiled label has to find out where it is on screen, which nothing tells
+            /// a view; `TextLabelView+Tiles.swift` says how it does and what that
+            /// costs. It follows every scroll view above it by itself. A host that
+            /// moves it some other way, as a list does when it shifts its rows, calls
+            /// `setNeedsLayout()` on it in the layout pass that moved it: the label
+            /// looks in its own layout pass, and its tiles are in the same frame.
+            /// Left alone, it finds such a move as the turn of the run loop ends, one
+            /// commit late, and a move further than `TiledDrawing.reach` shows a frame
+            /// without text there.
+            open var tiledDrawing: TiledDrawing? {
+                didSet {
+                    guard tiledDrawing != oldValue else { return }
+                    updateTiledDrawing()
+                }
+            }
+
+            /// The tiles a tiled label has, by their place from the top; see
+            /// `TextLabelView+Tiles.swift`.
+            var tileLayers: [Int: TextLabelTileLayer] = [:]
+            /// The tiles last asked for, or `nil` when they have to be worked out again.
+            var tileIndices: IndexSet?
+            /// The scroll views above a tiled label in a window, nearest first.
+            var tileScrollObservations: [ScrollObservation] = []
+            /// The layer a tiled label in a window has Core Animation display when it
+            /// wants to look at where a commit puts it.
+            var tileLookLayer: TextLabelTileLookLayer?
+
+            /// A layer that can do without a backing store of its own. A subclass that
+            /// returns another class keeps one backing store whatever the label's height.
+            override open class var layerClass: AnyClass {
+                TextLabelBackingLayer.self
+            }
+        #endif
+
         #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
             /// The `TextLabelInputProxy` while the label is selectable, from iOS 16 and
             /// Mac Catalyst 16. Typed loosely because the class needs those systems.
@@ -353,7 +420,8 @@ import QuartzCore
                     // press, and on iOS 18 it holds back a selection handle drag that
                     // starts over the label until the finger lifts.
                     #if targetEnvironment(macCatalyst)
-                        installContextMenuInteraction()
+                        // Installed at the first hit test; see `hitTest(_:with:)`.
+                        flags.awaitsContextMenuInteraction = true
                     #else
                         installLongPressSelection()
                     #endif
@@ -453,11 +521,22 @@ import QuartzCore
         #endif
 
         #if canImport(UIKit)
-            /// Clears the selection the label holds and lays the text out again for the
-            /// new window. Overrides must call `super`.
+            /// Clears the selection the label holds, and lays the text out again when the
+            /// new window shows it at another display scale. Overrides must call `super`.
+            ///
+            /// A label that leaves its window, or comes back to one at the scale it was
+            /// laid out for, keeps its layout and the pixels already drawn. Appearance
+            /// changes reach the label as trait changes, which invalidate on their own.
+            ///
+            /// - Important: Performance-sensitive. A list that takes rows out of the
+            ///   hierarchy while they are off screen and puts the same views back moves
+            ///   every label in them through here; laying out again would repaint each
+            ///   label's whole backing store whenever a row scrolled back into view.
             override open func didMoveToWindow() {
                 super.didMoveToWindow()
                 clearSelectionHeldHere()
+                updateTiledDrawing()
+                guard window != nil, flags.laidOutDisplayScale != displayScale else { return }
                 invalidateTextLayout()
             }
 
@@ -530,6 +609,12 @@ import QuartzCore
 
         struct Flags {
             var layoutIsDirty: Bool = false
+            /// Whether the label still owes itself the context menu interaction it
+            /// installs on Mac Catalyst.
+            var awaitsContextMenuInteraction: Bool = false
+            /// The display scale of the last layout pass, zero before the first one.
+            /// The intrinsic size and attachment frames are rounded to its pixels.
+            var laidOutDisplayScale: CGFloat = 0
         }
     }
 

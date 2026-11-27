@@ -50,9 +50,10 @@ extension TextLabel.Layout {
         var lastFont: CTFont?
         var lastFontShowsEmpty = false
         while found.location != NSNotFound {
-            let attributes = string.attributes(at: found.location, effectiveRange: nil)
-            if attributes[runDelegateKey] == nil {
-                let font = Self.font(in: attributes)
+            // One attribute at a time: asking for them all bridges the whole dictionary,
+            // which for a document with a thousand list markers was a sixth of an update.
+            if string.attribute(runDelegateKey, at: found.location, effectiveRange: nil) == nil {
+                let font = Self.font(string.attribute(fontKey, at: found.location, effectiveRange: nil))
                 if lastFont.map({ CFEqual($0, font) }) != true {
                     lastFont = font
                     lastFontShowsEmpty = Self.showsReplacementAsEmpty(font)
@@ -74,10 +75,10 @@ extension TextLabel.Layout {
         return result?.copy() as? NSAttributedString ?? string
     }
 
-    /// The font CoreText typesets `attributes` with: their font, or Helvetica at
-    /// 12 points, CoreText's default.
-    private static func font(in attributes: [NSAttributedString.Key: Any]) -> CTFont {
-        if let value = attributes[fontKey], CFGetTypeID(value as CFTypeRef) == CTFontGetTypeID() {
+    /// The font CoreText typesets a run with: `value`, its font attribute, when that
+    /// is a font, or Helvetica at 12 points, CoreText's default.
+    private static func font(_ value: Any?) -> CTFont {
+        if let value, CFGetTypeID(value as CFTypeRef) == CTFontGetTypeID() {
             return value as! CTFont
         }
         return CTFontCreateWithName("Helvetica" as CFString, 12, nil)

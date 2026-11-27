@@ -76,7 +76,9 @@ import Litext
             // UIKit hands `draw(_:)` the whole bounds for any dirty rect; the clip box is
             // what reaches the screen, and it is smaller on AppKit.
             let clipBox = context.boundingBoxOfClipPath
-            let visible = rect.intersection(clipBox)
+            // A tile also draws the lines a little outside it, clipped to it; see
+            // `TextLabel.Layout.drawingReach`.
+            let visible = rect.intersection(clipBox.insetBy(dx: 0, dy: -drawingReach))
             guard !visible.isNull, !visible.isEmpty else { return }
 
             let region = label?.animationRegion ?? .null

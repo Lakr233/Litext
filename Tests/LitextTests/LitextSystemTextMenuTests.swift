@@ -51,6 +51,55 @@
             #expect(label.inputProxy != nil)
         }
 
+        @Test func `a selectable label makes its proxy only when something needs it`() throws {
+            guard #available(iOS 16.0, macCatalyst 16.0, *) else { return }
+            #expect(label.existingInputProxy == nil)
+            #expect(!label.subviews.contains { $0 is TextLabelInputProxy })
+
+            // A point outside the label is someone else's.
+            #expect(label.hitTest(CGPoint(x: 400, y: 10), with: nil) == nil)
+            #expect(label.existingInputProxy == nil)
+
+            // UIKit hit-tests before it delivers a touch or moves the pointer.
+            let hit = label.hitTest(CGPoint(x: 10, y: 10), with: nil)
+            let proxy = try #require(label.existingInputProxy)
+            #expect(label.subviews.first === proxy)
+            #if targetEnvironment(macCatalyst)
+                #expect(hit === proxy)
+            #else
+                #expect(hit === label)
+            #endif
+        }
+
+        @Test func `a label that is not selectable makes no proxy when it is hit`() {
+            guard #available(iOS 16.0, macCatalyst 16.0, *) else { return }
+            label.isSelectable = false
+            _ = label.hitTest(CGPoint(x: 10, y: 10), with: nil)
+            #expect(label.existingInputProxy == nil)
+        }
+
+        @Test func `taking first responder for a selection makes the proxy`() {
+            guard #available(iOS 16.0, macCatalyst 16.0, *) else { return }
+            #expect(label.existingInputProxy == nil)
+            label.becomeSelectionFirstResponder()
+            #expect(label.existingInputProxy != nil)
+        }
+
+        #if targetEnvironment(macCatalyst)
+            @Test func `the context menu interaction is installed at the first hit test`() {
+                func interactions() -> Int {
+                    label.interactions.count(where: { $0 is UIContextMenuInteraction })
+                }
+                #expect(interactions() == 0)
+                _ = label.hitTest(CGPoint(x: 400, y: 10), with: nil)
+                #expect(interactions() == 0)
+                _ = label.hitTest(CGPoint(x: 10, y: 10), with: nil)
+                #expect(interactions() == 1)
+                _ = label.hitTest(CGPoint(x: 12, y: 10), with: nil)
+                #expect(interactions() == 1)
+            }
+        #endif
+
         @Test func `editing commands are off and copy follows the selection`() throws {
             guard #available(iOS 16.0, macCatalyst 16.0, *) else { return }
             let proxy = try proxy
