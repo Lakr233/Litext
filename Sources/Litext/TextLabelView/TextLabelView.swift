@@ -365,9 +365,13 @@ import QuartzCore
             ///
             /// A tiled label has to find out where it is on screen, which nothing tells
             /// a view; `TextLabelView+Tiles.swift` says how it does and what that
-            /// costs. A label moved further than `TiledDrawing.reach` in one step, by
-            /// code that then commits the change itself before the main run loop comes
-            /// around, can show one frame without text there.
+            /// costs. It follows every scroll view above it by itself. A host that
+            /// moves it some other way, as a list does when it shifts its rows, calls
+            /// `setNeedsLayout()` on it in the layout pass that moved it: the label
+            /// looks in its own layout pass, and its tiles are in the same frame.
+            /// Left alone, it finds such a move as the turn of the run loop ends, one
+            /// commit late, and a move further than `TiledDrawing.reach` shows a frame
+            /// without text there.
             open var tiledDrawing: TiledDrawing? {
                 didSet {
                     guard tiledDrawing != oldValue else { return }

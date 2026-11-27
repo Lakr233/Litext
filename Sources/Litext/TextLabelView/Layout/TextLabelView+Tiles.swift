@@ -31,7 +31,8 @@
     //   It also asks Core Animation to display a layer it keeps for that, which
     //   Core Animation does in the commit once layout is over, and looks again
     //   there, at where the layout of that frame left it.
-    // - In its own layout pass.
+    // - In its own layout pass. A host that moved the label without scrolling asks
+    //   for one with `setNeedsLayout()`, and the look is in the frame that moved it.
     // - As every turn of the main run loop ends, for whatever else moved it: an
     //   ancestor's frame, a view hidden or shown. Those tiles are made after the
     //   turn's changes may have been committed, so they can come a commit late,

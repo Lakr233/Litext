@@ -25,7 +25,7 @@ What stayed:
 
 - The label observes `bounds` of every scroll view above it. Every scroll changes them whoever asked, and the label looks in that call, so the tiles are made before the frame is committed however far the scroll went.
 - A scroll also asks Core Animation to display a one-point layer the label keeps for that. Core Animation draws it in the commit once layout is over, and its drawing is a second look, at where the layout of that frame left the label. Only a scroll asks, so nothing is scheduled while nothing moves.
-- The label's own layout pass looks.
+- The label's own layout pass looks. A host that moves the label without scrolling, as a list does when it measures the rows above a row and shifts every row below, asks for that pass with `setNeedsLayout()` in the layout pass that moved it, and the tiles are in the same frame. The chat app does this from its list's layout: before it did, random sequences of resizes found frames in which a reply had been moved several thousand points and its tiles had not yet followed.
 - As every turn of the main run loop ends the label looks once more, for the moves nothing reports: an ancestor's frame, a view hidden or shown. Those tiles can come a commit late, which the reach covers unless the label moved further than that in one step.
 
 With these, an idle window wakes as often with tiled labels as without: 125 times a second either way in the test app, whose other windows account for all of them.
