@@ -173,7 +173,7 @@ import QuartzCore
                     clearSelectionHeldHere()
                 }
                 #if canImport(UIKit) && !os(tvOS)
-                    updateInputProxy()
+                    removeInputProxyIfNotSelectable()
                 #endif
             }
         }
@@ -353,7 +353,8 @@ import QuartzCore
                     // press, and on iOS 18 it holds back a selection handle drag that
                     // starts over the label until the finger lifts.
                     #if targetEnvironment(macCatalyst)
-                        installContextMenuInteraction()
+                        // Installed at the first hit test; see `hitTest(_:with:)`.
+                        flags.awaitsContextMenuInteraction = true
                     #else
                         installLongPressSelection()
                     #endif
@@ -540,6 +541,9 @@ import QuartzCore
 
         struct Flags {
             var layoutIsDirty: Bool = false
+            /// Whether the label still owes itself the context menu interaction it
+            /// installs on Mac Catalyst.
+            var awaitsContextMenuInteraction: Bool = false
             /// The display scale of the last layout pass, zero before the first one.
             /// The intrinsic size and attachment frames are rounded to its pixels.
             var laidOutDisplayScale: CGFloat = 0

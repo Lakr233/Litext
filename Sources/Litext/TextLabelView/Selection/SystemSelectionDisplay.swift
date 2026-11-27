@@ -105,7 +105,6 @@
             let owner = selectionDisplayOwner
             if hasSelection, systemSelectionDisplay?.owner !== owner {
                 systemSelectionDisplay?.detach()
-                owner.updateInputProxy()
                 let display = owner.inputProxy.map { SystemSelectionDisplay(proxy: $0) }
                 if let group = selectionGroup {
                     group.systemSelectionDisplayStorage = display
@@ -149,7 +148,7 @@
 
         func selectionHandleAnchor(_ kind: SelectionHandle.Kind) -> CGPoint? {
             guard displayedSelectionHandle(kind) != nil else { return nil }
-            if #available(iOS 17.0, *), usesSystemSelectionDisplay, let proxy = inputProxy, let range = selectionRange {
+            if #available(iOS 17.0, *), usesSystemSelectionDisplay, let proxy = existingInputProxy, let range = selectionRange {
                 let local = kind == .start ? range.location : NSMaxRange(range)
                 let position = TextLabelTextPosition(proxy.documentOffset(in: self) + local)
                 let rect = proxy.caretRect(for: position)
