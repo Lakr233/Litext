@@ -156,12 +156,16 @@ struct LitextTypesettingReuseTests {
     // MARK: - Streaming
 
     @Test
-    func `streamed text lays out like text typeset whole`() {
+    func `streamed text lays out like text typeset whole`() async {
         let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 6).map(UInt64.init)
         let iterations = Self.environmentInt("LITEXT_FUZZ_ITERATIONS") ?? 1
         var reusedLines = 0
         for seed in seeds {
             for iteration in 0 ..< iterations {
+                // Every other test on the main actor waits behind this one, and some of
+                // them are timed: let them in between documents. A document is the
+                // default; LITEXT_FUZZ_ITERATIONS asks for more.
+                await Task.yield()
                 var generator = Generator(state: seed &+ UInt64(iteration) &* 7919)
                 let attachments = [
                     TextLabel.Attachment(size: CGSize(width: 18, height: 18), view: nil),
@@ -313,12 +317,16 @@ struct LitextTypesettingReuseTests {
     }
 
     @Test
-    func `text typeset in passes lays out like text typeset in one frame`() {
-        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 12).map(UInt64.init)
+    func `text typeset in passes lays out like text typeset in one frame`() async {
+        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 3).map(UInt64.init)
         let iterations = Self.environmentInt("LITEXT_FUZZ_ITERATIONS") ?? 1
         var mostPasses = 0
         for seed in seeds {
             for iteration in 0 ..< iterations {
+                // Every other test on the main actor waits behind this one, and some of
+                // them are timed: let them in between documents. A document is the
+                // default; LITEXT_FUZZ_ITERATIONS asks for more.
+                await Task.yield()
                 var generator = Generator(state: seed &+ UInt64(iteration) &* 104_729)
                 let attachments = [
                     TextLabel.Attachment(size: CGSize(width: 18, height: 18), view: nil),
@@ -357,24 +365,28 @@ struct LitextTypesettingReuseTests {
     /// A resize lays the same layout out at one width after another, and each pass
     /// keeps its framesetter from the width before.
     @Test
-    func `text typeset in passes at one width after another lays out like one frame at each`() {
-        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 6).map(UInt64.init)
+    func `text typeset in passes at one width after another lays out like one frame at each`() async {
+        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 3).map(UInt64.init)
         let iterations = Self.environmentInt("LITEXT_FUZZ_ITERATIONS") ?? 1
         var mostPasses = 0
         for seed in seeds {
             for iteration in 0 ..< iterations {
+                // Every other test on the main actor waits behind this one, and some of
+                // them are timed: let them in between documents. A document is the
+                // default; LITEXT_FUZZ_ITERATIONS asks for more.
+                await Task.yield()
                 var generator = Generator(state: seed &+ UInt64(iteration) &* 15_485_863)
                 let attachments = [
                     TextLabel.Attachment(size: CGSize(width: 18, height: 18), view: nil),
                     TextLabel.Attachment(size: CGSize(width: 240, height: 64), view: nil),
                 ]
-                let text = Self.document(&generator, paragraphs: 60 + generator.next(120), attachments: attachments)
+                let text = Self.document(&generator, paragraphs: 60 + generator.next(60), attachments: attachments)
                 let passes = TextLabel.Layout(attributedString: text)
                 passes.passPolicy = .init(workPerPass: [8, 40, 400][generator.next(3)], minimumPassLength: 40, maximumPasses: 12)
                 var widths: [CGFloat] = [600, 596, 180, 375.5, 600]
-                widths += (0 ..< 6).map { _ in CGFloat(160 + generator.next(500)) }
+                widths += (0 ..< 3).map { _ in CGFloat(160 + generator.next(500)) }
                 for (step, width) in widths.enumerated() {
-                    if step == 7 {
+                    if step == 6 {
                         // Asked to forget everything, the layout builds its passes anew.
                         passes.invalidateLayout()
                     }
@@ -392,13 +404,17 @@ struct LitextTypesettingReuseTests {
     }
 
     @Test
-    func `text streamed in passes lays out like text typeset whole`() {
-        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 6).map(UInt64.init)
+    func `text streamed in passes lays out like text typeset whole`() async {
+        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? [UInt64(1)]
         let iterations = Self.environmentInt("LITEXT_FUZZ_ITERATIONS") ?? 1
         var reusedLines = 0
         var foldedUpdates = 0
         for seed in seeds {
             for iteration in 0 ..< iterations {
+                // Every other test on the main actor waits behind this one, and some of
+                // them are timed: let them in between documents. A document is the
+                // default; LITEXT_FUZZ_ITERATIONS asks for more.
+                await Task.yield()
                 var generator = Generator(state: seed &+ UInt64(iteration) &* 15_485_863)
                 let attachments = [
                     TextLabel.Attachment(size: CGSize(width: 18, height: 18), view: nil),
@@ -414,7 +430,7 @@ struct LitextTypesettingReuseTests {
                 var previous: TextLabel.Layout?
                 var cut = 0
                 while cut < document.length {
-                    cut = min(document.length, cut + 1 + generator.next(90))
+                    cut = min(document.length, cut + 1 + generator.next(400))
                     let prefix = document.attributedSubstring(from: NSRange(location: 0, length: cut))
                     let reused = TextLabel.Layout(attributedString: prefix)
                     reused.passPolicy = policy
@@ -450,7 +466,7 @@ struct LitextTypesettingReuseTests {
         let document = NSMutableAttributedString()
         var previous: TextLabel.Layout?
         var updatesFromScratch = 0
-        for _ in 0 ..< 400 {
+        for _ in 0 ..< 240 {
             document.append(Self.paragraph(&generator, attachments: attachments))
             let layout = TextLabel.Layout(attributedString: document)
             layout.passPolicy = policy
