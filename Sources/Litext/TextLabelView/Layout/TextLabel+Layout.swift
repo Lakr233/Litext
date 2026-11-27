@@ -252,6 +252,15 @@ extension TextLabel {
             return framesetter
         }
 
+        /// The framesetters of the passes a long string is typeset in, by the range
+        /// each lays out; see `makeFillInPasses(pathSize:)`. A pass covers the same
+        /// range at every width, and building its string and its framesetter costs
+        /// more than breaking its lines, so a layout typeset again at another width,
+        /// as on every step of a resize, builds neither. The lines of the current
+        /// fill keep the same framesetters alive, so holding them here holds nothing
+        /// more.
+        private var passFramesetters: [NSRange: CTFramesetter] = [:]
+
         /// What the layout of the previous string typeset; see `reuseTypesetting(from:)`.
         private var typesettingSource: TypesettingSource?
         private var attachmentMetrics: [AttachmentMetrics] = []
@@ -367,6 +376,7 @@ extension TextLabel {
             // the only way a changed run delegate is observed.
             attachmentMetrics = Self.syncAttachmentRunMetrics(in: attributedString)
             cachedFramesetter = nil
+            passFramesetters.removeAll()
             generateLayout()
         }
 
@@ -1354,19 +1364,11 @@ extension TextLabel {
             anchorLine: CTLine,
             anchorOrigin: CGPoint,
             pathSize: CGSize,
+            keepsFramesetter: Bool = false,
         ) -> TailPass? {
-            let text = attributedString.string as NSString
-            // The anchor keeps the separator before it, so it starts a paragraph of its own.
-            let placeholder = String(repeating: " ", count: anchorStart - 1)
-                + text.substring(with: NSRange(location: anchorStart - 1, length: 1))
-            let tailString = NSMutableAttributedString(string: placeholder)
             let tailRange = NSRange(location: anchorStart, length: end - anchorStart)
-            tailString.append(typesetString.attributedSubstring(from: tailRange))
-            if text.length > Self.longStringLength {
-                Self.padToLongString(tailString)
-            }
             let frame = CTFramesetterCreateFrame(
-                CTFramesetterCreateWithAttributedString(tailString),
+                tailFramesetter(for: tailRange, keepsFramesetter: keepsFramesetter),
                 CFRange(location: tailRange.location, length: tailRange.length),
                 CGPath(rect: CGRect(origin: .zero, size: pathSize), transform: nil),
                 nil,
@@ -1403,6 +1405,29 @@ extension TextLabel {
                 metrics: metrics,
                 isComplete: visibleRange.location + visibleRange.length >= end,
             )
+        }
+
+        /// The framesetter of the pass that lays out `tailRange`: one over a string
+        /// whose text before the range is spaces. A pass of a whole typeset keeps its
+        /// framesetter for the next width; a streamed edit's is used once.
+        private func tailFramesetter(for tailRange: NSRange, keepsFramesetter: Bool) -> CTFramesetter {
+            if let kept = passFramesetters[tailRange] {
+                return kept
+            }
+            let text = attributedString.string as NSString
+            // The anchor keeps the separator before it, so it starts a paragraph of its own.
+            let placeholder = String(repeating: " ", count: tailRange.location - 1)
+                + text.substring(with: NSRange(location: tailRange.location - 1, length: 1))
+            let tailString = NSMutableAttributedString(string: placeholder)
+            tailString.append(typesetString.attributedSubstring(from: tailRange))
+            if text.length > Self.longStringLength {
+                Self.padToLongString(tailString)
+            }
+            let framesetter = CTFramesetterCreateWithAttributedString(tailString)
+            if keepsFramesetter {
+                passFramesetters[tailRange] = framesetter
+            }
+            return framesetter
         }
 
         // MARK: - Typesetting in passes
@@ -1536,19 +1561,25 @@ extension TextLabel {
             }
             guard end < length else { return nil }
 
-            let head = NSMutableAttributedString(
-                attributedString: typesetString.attributedSubstring(from: NSRange(location: 0, length: end)),
-            )
-            Self.padToLongString(head)
+            let headRange = NSRange(location: 0, length: end)
+            let headFramesetter: CTFramesetter
+            if let kept = passFramesetters[headRange] {
+                headFramesetter = kept
+            } else {
+                let head = NSMutableAttributedString(attributedString: typesetString.attributedSubstring(from: headRange))
+                Self.padToLongString(head)
+                headFramesetter = CTFramesetterCreateWithAttributedString(head)
+                passFramesetters[headRange] = headFramesetter
+            }
             let frame = CTFramesetterCreateFrame(
-                CTFramesetterCreateWithAttributedString(head),
+                headFramesetter,
                 CFRange(location: 0, length: end),
                 CGPath(rect: CGRect(origin: .zero, size: pathSize), transform: nil),
                 nil,
             )
             var lines = (CTFrameGetLines(frame) as? [CTLine]) ?? []
-            let headRange = CTFrameGetVisibleStringRange(frame)
-            guard !lines.isEmpty, headRange.location + headRange.length >= end else { return nil }
+            let visibleRange = CTFrameGetVisibleStringRange(frame)
+            guard !lines.isEmpty, visibleRange.location + visibleRange.length >= end else { return nil }
             var origins = [CGPoint](repeating: .zero, count: lines.count)
             CTFrameGetLineOrigins(frame, CFRange(location: 0, length: 0), &origins)
             var metrics = [LineMetrics]()
@@ -1576,6 +1607,7 @@ extension TextLabel {
                     anchorLine: lines[kept],
                     anchorOrigin: origins[kept],
                     pathSize: pathSize,
+                    keepsFramesetter: true,
                 ),
                     tail.isComplete || nextEnd == length
                 else { return nil }
