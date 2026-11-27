@@ -191,6 +191,7 @@ import QuartzCore
             }
             updateAttachmentViews()
             flags.layoutIsDirty = false
+            flags.laidOutDisplayScale = displayScale
 
             // Presenting or dismissing the selection menu belongs to a selection
             // change, not to a layout pass: it presents UI and notifies sibling labels,

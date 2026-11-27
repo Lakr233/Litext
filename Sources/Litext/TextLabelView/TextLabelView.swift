@@ -453,11 +453,21 @@ import QuartzCore
         #endif
 
         #if canImport(UIKit)
-            /// Clears the selection the label holds and lays the text out again for the
-            /// new window. Overrides must call `super`.
+            /// Clears the selection the label holds, and lays the text out again when the
+            /// new window shows it at another display scale. Overrides must call `super`.
+            ///
+            /// A label that leaves its window, or comes back to one at the scale it was
+            /// laid out for, keeps its layout and the pixels already drawn. Appearance
+            /// changes reach the label as trait changes, which invalidate on their own.
+            ///
+            /// - Important: Performance-sensitive. A list that takes rows out of the
+            ///   hierarchy while they are off screen and puts the same views back moves
+            ///   every label in them through here; laying out again would repaint each
+            ///   label's whole backing store whenever a row scrolled back into view.
             override open func didMoveToWindow() {
                 super.didMoveToWindow()
                 clearSelectionHeldHere()
+                guard window != nil, flags.laidOutDisplayScale != displayScale else { return }
                 invalidateTextLayout()
             }
 
@@ -530,6 +540,9 @@ import QuartzCore
 
         struct Flags {
             var layoutIsDirty: Bool = false
+            /// The display scale of the last layout pass, zero before the first one.
+            /// The intrinsic size and attachment frames are rounded to its pixels.
+            var laidOutDisplayScale: CGFloat = 0
         }
     }
 
