@@ -295,6 +295,150 @@ struct LitextTypesettingReuseTests {
         Self.expectSameLayout(reused, fresh, width: 260, context: "other width")
     }
 
+    // MARK: - Typesetting in passes
+
+    /// A policy that typesets everything in one frame, as a string without attachments is.
+    private static let onePass = TextLabel.Layout.PassPolicy(workPerPass: .max / 4, minimumPassLength: 0, maximumPasses: 1)
+
+    private static func document(
+        _ generator: inout Generator,
+        paragraphs: Int,
+        attachments: [TextLabel.Attachment],
+    ) -> NSMutableAttributedString {
+        let document = NSMutableAttributedString()
+        for _ in 0 ..< paragraphs {
+            document.append(paragraph(&generator, attachments: attachments))
+        }
+        return document
+    }
+
+    @Test
+    func `text typeset in passes lays out like text typeset in one frame`() {
+        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 12).map(UInt64.init)
+        let iterations = Self.environmentInt("LITEXT_FUZZ_ITERATIONS") ?? 1
+        var mostPasses = 0
+        for seed in seeds {
+            for iteration in 0 ..< iterations {
+                var generator = Generator(state: seed &+ UInt64(iteration) &* 104_729)
+                let attachments = [
+                    TextLabel.Attachment(size: CGSize(width: 18, height: 18), view: nil),
+                    TextLabel.Attachment(size: CGSize(width: 240, height: 64), view: nil),
+                ]
+                // Long enough for CoreText to typeset it as a long string, most of the time.
+                let text = Self.document(&generator, paragraphs: 60 + generator.next(120), attachments: attachments)
+                if generator.next(3) == 0 {
+                    // No separator after the last paragraph.
+                    text.deleteCharacters(in: NSRange(location: text.length - 1, length: 1))
+                }
+                for width in [180, 375.5, 600] as [CGFloat] {
+                    for work in [8, 40, 400, 4000] {
+                        let passes = TextLabel.Layout(attributedString: text)
+                        passes.passPolicy = .init(
+                            workPerPass: work,
+                            minimumPassLength: generator.next(3) * 40,
+                            maximumPasses: [3, 12, 1000][generator.next(3)],
+                        )
+                        Self.layOut(passes, width: width)
+                        mostPasses = max(mostPasses, passes.typesettingPassCount)
+                        let whole = TextLabel.Layout(attributedString: text)
+                        whole.passPolicy = Self.onePass
+                        Self.layOut(whole, width: width)
+                        #expect(whole.typesettingPassCount == 1)
+                        let context = "seed \(seed) iteration \(iteration) width \(width) work \(work)"
+                        guard Self.expectSameLayout(passes, whole, width: width, context: context) else { return }
+                    }
+                }
+            }
+        }
+        // Without this the comparison could pass by never typesetting in passes.
+        #expect(mostPasses > 8)
+    }
+
+    @Test
+    func `text streamed in passes lays out like text typeset whole`() {
+        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 6).map(UInt64.init)
+        let iterations = Self.environmentInt("LITEXT_FUZZ_ITERATIONS") ?? 1
+        var reusedLines = 0
+        var foldedUpdates = 0
+        for seed in seeds {
+            for iteration in 0 ..< iterations {
+                var generator = Generator(state: seed &+ UInt64(iteration) &* 15_485_863)
+                let attachments = [
+                    TextLabel.Attachment(size: CGSize(width: 18, height: 18), view: nil),
+                    TextLabel.Attachment(size: CGSize(width: 240, height: 64), view: nil),
+                ]
+                let document = Self.document(&generator, paragraphs: 110, attachments: attachments)
+                let width = CGFloat([180, 320, 375.5, 600][generator.next(4)])
+                let policy = TextLabel.Layout.PassPolicy(
+                    workPerPass: [20, 200, 2000][generator.next(3)],
+                    minimumPassLength: generator.next(2) * 60,
+                    maximumPasses: [4, 12, 1000][generator.next(3)],
+                )
+                var previous: TextLabel.Layout?
+                var cut = 0
+                while cut < document.length {
+                    cut = min(document.length, cut + 1 + generator.next(90))
+                    let prefix = document.attributedSubstring(from: NSRange(location: 0, length: cut))
+                    let reused = TextLabel.Layout(attributedString: prefix)
+                    reused.passPolicy = policy
+                    if let previous {
+                        reused.reuseTypesetting(from: previous)
+                    }
+                    Self.layOut(reused, width: width)
+                    reusedLines += reused.reusedLineCount
+                    if let previous, reused.reusedLineCount > 0,
+                       reused.typesettingPassCount <= previous.typesettingPassCount
+                    {
+                        foldedUpdates += 1
+                    }
+                    let fresh = TextLabel.Layout(attributedString: prefix)
+                    fresh.passPolicy = Self.onePass
+                    Self.layOut(fresh, width: width)
+                    let context = "seed \(seed) iteration \(iteration) width \(width) length \(cut) work \(policy.workPerPass)"
+                    guard Self.expectSameLayout(reused, fresh, width: width, context: context) else { return }
+                    previous = reused
+                }
+            }
+        }
+        #expect(reusedLines > 0)
+        // An update that reused lines without adding a pass folded one into its own.
+        #expect(foldedUpdates > 0)
+    }
+
+    @Test
+    func `a stream typeset in passes never typesets the whole string again`() {
+        var generator = Generator(state: 42)
+        let attachments = [TextLabel.Attachment(size: CGSize(width: 18, height: 18), view: nil)]
+        let policy = TextLabel.Layout.PassPolicy(workPerPass: 2000, minimumPassLength: 200, maximumPasses: 12)
+        let document = NSMutableAttributedString()
+        var previous: TextLabel.Layout?
+        var updatesFromScratch = 0
+        for _ in 0 ..< 400 {
+            document.append(Self.paragraph(&generator, attachments: attachments))
+            let layout = TextLabel.Layout(attributedString: document)
+            layout.passPolicy = policy
+            if let previous {
+                layout.reuseTypesetting(from: previous)
+            }
+            Self.layOut(layout, width: 320)
+            // CoreText typesets a short string another way, and it is typeset whole.
+            if document.length > 12000, layout.reusedLineCount == 0 {
+                updatesFromScratch += 1
+            }
+            // What the lines keep alive stays within the allowance all the way.
+            #expect(layout.retainedTextLength <= (4 + 2 * policy.maximumPasses) * document.length)
+            previous = layout
+        }
+        #expect(updatesFromScratch == 0)
+
+        // Typeset whole, the same string takes no more passes than the policy allows.
+        let whole = TextLabel.Layout(attributedString: document)
+        whole.passPolicy = policy
+        Self.layOut(whole, width: 320)
+        #expect(whole.typesettingPassCount > 4)
+        #expect(whole.typesettingPassCount <= policy.maximumPasses)
+    }
+
     // MARK: - Memory
 
     @Test
