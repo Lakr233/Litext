@@ -68,9 +68,26 @@ The 62 MB are the tiles around the screen and every label this host does not til
 
 Scrolling now draws a tile for every 512 points scrolled, where before the whole reply was already a bitmap. Streaming draws the tiles around the screen instead of the whole reply.
 
-## Open
+## A capture that was not a frame
 
-One run of the frozen-time captures, on a machine loaded to several times its cores by other work, showed the tiled label without text at the moment a row above it was removed while the middle of the label was on screen: 14 captures of 56. Every commit the probe saw in that run had drawn tiles under what was visible, the captures at rest matched, and three runs at ordinary load showed text in all 56. The probe gives up waiting for a commit after a quarter of a second, so it may have captured before the frame was committed; that is a guess. Until it is settled, a row removed above a long reply is not verified.
+One run of the frozen-time captures, on a machine loaded to several times its cores by other work, showed the tiled label without text at the moment a row above it was removed while the middle of the label was on screen: 14 captures of 56. The probe then gave up waiting for a commit after a quarter of a second and captured anyway. Made to wait for the commit, and to count the frames it could not wait for, it has not shown the label without text again: four more runs of the 594 comparisons, at load averages from 3 to 40, each with every frame committed before its capture. One of them, run beside a simulator test, had the two lists a few points apart during one animation, with all the text in both. A capture taken between a change and its commit is not a frame the screen shows, so this is taken to have been the probe; it was never reproduced to prove it.
+
+## The released configuration
+
+With the host's call after its list lays out, on a quiet machine, in two builds of the chat app: one against local checkouts of the libraries, one against Litext 3.7.0 as tagged.
+
+| Check | Result |
+|---|---|
+| 594 pairs of captures, as above, in each build | First build: no pair differs beyond two levels of a channel; 76 differ within them. Second build: 56 pairs differ, each in the two edges of one inline code pill and nowhere else; 100 more within two levels. No seams of the one bitmap in either. |
+| 1,115 commits during each of those runs | Tiles drawn under every visible part of every tiled label. |
+| 1,658 checks over five runs of random sequences of jumps, scrolls, resizes, appearance changes, streams and row changes | The only pixels that differ are that pill. Tiles under everything visible in every commit, except the first two commits of one row animation, where the tiles were where the label was still shown and not yet where it would rest. |
+| 235 captures against the released version, below the list's top edge effect | With tiles: 198 identical, 34 within two levels, 3 with that pill. Without, in the second build: all identical. |
+
+The pill is not the tiles. MarkdownView draws the first inline code a process builds four points wider than every other, the host's list now builds rows ahead of a scroll in an order that depends on timing, and so the wider pill lands in one list in one run and in the other, or in neither capture, in the next. The capture comparisons without tiles show it too: three captures in the first build, none in the second.
+
+In the same build, with tiles and without: opening the conversation 148 ms against 375 ms, label bitmaps after opening 92 MB against 281 MB, and no frame over 16.7 ms in a first scroll through it against 19 of 1,312. The host mounts rows ahead of a scroll, which is why one bitmap costs it more than the table further down says.
+
+Not run: the app on a 2x display. The unit tests compare tiles with one bitmap at 2x and 3x; how Core Animation shows abutting tiles at 2x was only seen at 1x, with the lists placed at fractions of a point.
 
 ## Limits
 
