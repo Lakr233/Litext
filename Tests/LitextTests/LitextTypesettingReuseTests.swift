@@ -354,6 +354,43 @@ struct LitextTypesettingReuseTests {
         #expect(mostPasses > 8)
     }
 
+    /// A resize lays the same layout out at one width after another, and each pass
+    /// keeps its framesetter from the width before.
+    @Test
+    func `text typeset in passes at one width after another lays out like one frame at each`() {
+        let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 6).map(UInt64.init)
+        let iterations = Self.environmentInt("LITEXT_FUZZ_ITERATIONS") ?? 1
+        var mostPasses = 0
+        for seed in seeds {
+            for iteration in 0 ..< iterations {
+                var generator = Generator(state: seed &+ UInt64(iteration) &* 15_485_863)
+                let attachments = [
+                    TextLabel.Attachment(size: CGSize(width: 18, height: 18), view: nil),
+                    TextLabel.Attachment(size: CGSize(width: 240, height: 64), view: nil),
+                ]
+                let text = Self.document(&generator, paragraphs: 60 + generator.next(120), attachments: attachments)
+                let passes = TextLabel.Layout(attributedString: text)
+                passes.passPolicy = .init(workPerPass: [8, 40, 400][generator.next(3)], minimumPassLength: 40, maximumPasses: 12)
+                var widths: [CGFloat] = [600, 596, 180, 375.5, 600]
+                widths += (0 ..< 6).map { _ in CGFloat(160 + generator.next(500)) }
+                for (step, width) in widths.enumerated() {
+                    if step == 7 {
+                        // Asked to forget everything, the layout builds its passes anew.
+                        passes.invalidateLayout()
+                    }
+                    Self.layOut(passes, width: width)
+                    mostPasses = max(mostPasses, passes.typesettingPassCount)
+                    let whole = TextLabel.Layout(attributedString: text)
+                    whole.passPolicy = Self.onePass
+                    Self.layOut(whole, width: width)
+                    let context = "seed \(seed) iteration \(iteration) step \(step) width \(width)"
+                    guard Self.expectSameLayout(passes, whole, width: width, context: context) else { return }
+                }
+            }
+        }
+        #expect(mostPasses > 4)
+    }
+
     @Test
     func `text streamed in passes lays out like text typeset whole`() {
         let seeds = Self.environmentInt("LITEXT_FUZZ_SEED").map { [UInt64($0)] } ?? (1 ... 6).map(UInt64.init)
