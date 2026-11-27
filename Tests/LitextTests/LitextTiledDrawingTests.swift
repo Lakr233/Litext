@@ -457,6 +457,41 @@
             }
         }
 
+        /// A host that copies a row as an image, or exports a conversation, renders
+        /// the layer of a view far above the label.
+        @Test
+        func `rendering a view above a tiled label renders the label's whole text`() throws {
+            let text = Self.text(paragraphs: 60)
+            func holderBitmap(threshold: CGFloat?, inWindow: Bool) throws -> (Bitmap, TextLabelView) {
+                let (label, scrollView, _) = Self.makeLabel(text, threshold: threshold)
+                let holder = UIView(frame: label.frame.insetBy(dx: -10, dy: -20))
+                let inner = UIView(frame: holder.bounds)
+                holder.addSubview(inner)
+                label.frame.origin = CGPoint(x: 10, y: 20)
+                inner.addSubview(label)
+                if inWindow {
+                    scrollView.addSubview(holder)
+                }
+                holder.layoutIfNeeded()
+                label.contentScaleFactor = 2
+                label.setNeedsDisplay()
+                return try (Self.bitmap(size: holder.bounds.size, scale: 2) { holder.layer.render(in: $0) }, label)
+            }
+            let (reference, _) = try holderBitmap(threshold: nil, inWindow: true)
+            #expect(reference.data.contains { $0 != 0 })
+
+            // In a window only the tiles near the top exist, and out of one none do.
+            for inWindow in [true, false] {
+                let (rendered, label) = try holderBitmap(threshold: 300, inWindow: inWindow)
+                #expect(label.isDrawingInTiles)
+                #expect(Self.tiles(of: label).count < 4)
+                let differing = Self.differingBytes(rendered.data, reference.data)
+                #expect(differing == 0, "in a window: \(inWindow), \(differing) bytes differ")
+                #expect(label.isDrawingInTiles)
+                #expect(label.layer.contents == nil)
+            }
+        }
+
         // MARK: - Which tiles exist
 
         @Test
