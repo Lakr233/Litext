@@ -441,7 +441,9 @@
             guard !isCurrent else { return }
             tileScrollObservations = scrollViews.map { scrollView in
                 let observation = scrollView.observe(\.bounds) { [weak self] _, _ in
-                    // A view's bounds change on the main thread.
+                    // A view's bounds change on the main thread. Should a host change
+                    // them elsewhere, the end of the turn finds the label instead.
+                    guard Thread.isMainThread else { return }
                     MainActor.assumeIsolated {
                         self?.scrollAncestorDidScroll()
                     }
