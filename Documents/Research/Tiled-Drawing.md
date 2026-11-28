@@ -40,10 +40,12 @@ In the app, a second list beside the first showed the same conversation with til
 
 | Check | Result |
 |---|---|
-| 594 pairs of captures: six documents scrolled a screen at a time, both right after each scroll and at rest, rows removed and restored with time frozen at seven moments, a stream, and the lists placed off the pixel grid | 418 identical. 127 differ by one or two levels of a channel in a few pixels, 3,831 pixels in all. 49 differ along single rows, all in the captures with time frozen. |
+| 594 pairs of captures: six documents scrolled a screen at a time, both right after each scroll and at rest, rows removed and restored with time stopped and set to seven moments, a stream, and the lists placed off the pixel grid | 418 identical. 127 differ by one or two levels of a channel in a few pixels, 3,831 pixels in all. 49 differ along single rows, all in the captures with time stopped. |
 | 1,115 commits during that run | In every one, each visible part of each tiled label had a drawn tile under it. |
 | 235 captures of the app with tiles, against the same captures from the released version | 199 identical, 36 within two levels, none beyond. |
 | The same 235 with tiling off | All identical. |
+
+The captures with time stopped are not seven moments of an animation, which was found out later: [What a capture from inside the app holds](#what-a-capture-from-inside-the-app-holds) says what they are and how the moments were checked since.
 
 The 49 are not the tiles. The rows that differ lie 256 rows apart in the label, on a grid the 512 point tiles do not account for, and they stayed where they were when the tiles were made 500 points tall. Captures of the two tile heights are identical to each other in all of them. Core Animation shows a bitmap as tall as these in strips of 256 rows, and in some states draws the row where two strips meet a little off: with time frozen, and also at rest in dark mode at some widths, where random sequences of scrolls, resizes, streams and appearance changes turned up six more such rows in 713 comparisons, each at an odd multiple of 256 rows into the label, where no tile ends. Those sequences found no other difference beyond rounding.
 
@@ -83,6 +85,8 @@ With the host's call after its list lays out, on a quiet machine, in two builds 
 | 1,658 checks over five runs of random sequences of jumps, scrolls, resizes, appearance changes, streams and row changes | The only pixels that differ are that pill. Tiles under everything visible in every commit, except the first two commits of one row animation, where the tiles were where the label was still shown and not yet where it would rest. |
 | 235 captures against the released version, below the list's top edge effect | With tiles: 198 identical, 34 within two levels, 3 with that pill. Without, in the second build: all identical. |
 
+In these runs some of the second list's tall replies drew in tiles as well. The host builds rows ahead of a scroll between frames, where the probe's switch between the two ways of drawing did not reach: one reply in each run of the 594 captures, five to eight in each run of random sequences. A comparison with only such a reply on screen compared tiles with tiles. The probe now makes every reply on screen draw as its list calls for before each commit, and counts the ones it had to change; [On iPhone and iPad](#on-iphone-and-ipad) has the runs made that way, on the Mac as well.
+
 The pill is not the tiles. MarkdownView draws the first inline code a process builds four points wider than every other, the host's list now builds rows ahead of a scroll in an order that depends on timing, and so the wider pill lands in one list in one run and in the other, or in neither capture, in the next. The capture comparisons without tiles show it too: three captures in the first build, none in the second.
 
 In the second build, with tiles and without, the machine otherwise idle:
@@ -98,13 +102,47 @@ In the second build, with tiles and without, the machine otherwise idle:
 
 The host mounts rows ahead of a scroll, which is why one bitmap costs it more than the table further down says. Tiles save memory, and the drawing of a whole reply on every streamed update and every step of a resize; a scroll frame costs about 0.03 ms more with them. An earlier run of this comparison, made while another build was using the machine, showed 19 frames over 16.7 ms in a first scroll with one backing store and none with tiles. Idle, the slowest frame of a first scroll is 6 ms with one backing store and 9 ms with tiles, or 12 ms and 17 ms when a frame is timed through the run loop's own commit and not a flushed transaction.
 
-Not run: the app on a 2x display. The unit tests compare tiles with one bitmap at 2x and 3x; how Core Animation shows abutting tiles at 2x was only seen at 1x, with the lists placed at fractions of a point.
+The app at 2x and 3x was not run for this; [On iPhone and iPad](#on-iphone-and-ipad) has it, including the lists placed at fractions of a point.
+
+## What a capture from inside the app holds
+
+`drawHierarchy(in:afterScreenUpdates:)` draws a list as it will rest. With time stopped on the window's layer and set to 0.03, 0.08 and 0.16 seconds into a row animation, the label's presentation layer reports a different place at each, and the seven captures of each list are the same picture to the pixel: the one from after the animation, with either value of `afterScreenUpdates`, on Mac Catalyst and in the iOS simulator. So the 594 comparisons above never held a frame from the middle of an animation. They compared the lists at rest seven times, with time stopped, which is the one state in which a very tall bitmap showed rows a little off.
+
+The moments are now checked two other ways.
+
+- At each stopped moment the probe walks every tall tiled label's presentation layers up to its list, takes the part of the label they show, and requires drawn tiles under all of it.
+- In the iOS simulator `xcrun simctl io screenshot` takes what the screen holds, which does show the moment: seven different pictures of each animation. The two lists are both in it, and each is cut out and compared with the other.
+
+## On iPhone and iPad
+
+Measured on 2026-11-28 in the iOS 27.0 simulator, in the same chat app with tiling on for every platform: iPhone 17 Pro at 3x with the tiled list above the one without, iPad Pro 13-inch at 2x with the two side by side, and Mac Catalyst at 1x again with the probe as it now is.
+
+| Check | iPhone, 3x | iPad, 2x | Mac, 1x |
+|---|---|---|---|
+| Pairs of captures after scrolls, a stream, and off the pixel grid, and at rest after each animated change | 1,038, none beyond two levels of a channel | 556, none | 516, none |
+| Commits in those runs, each checked for drawn tiles under every visible part of every tall tiled label | 1,998, none without | 1,405 | 1,313 |
+| Stopped moments of row removals, restorations and animated width changes, by presentation layers | 110, tiles under everything shown | 126 | 103 |
+| Device screenshots at rest, the two lists cut out and compared | 41, none beyond two levels | | |
+| Device screenshots at those stopped moments | 126: 63 the same within two levels, 63 differ in at most 102 pixels | 126: 67 the same, 59 differ in at most 130 pixels | |
+| Captures of nine scenarios with tiles against the same without | 304, none beyond two levels | 235, none | 235, none |
+| Random sequences of jumps, scrolls, width changes, appearance changes, streams and row changes, the lists compared after each | 2,691 comparisons in ten runs, one pair differing | 867 in three runs, none | 1,191 in four runs, none |
+
+The screenshots that differ at stopped moments differ along single rows of pixels. Placed in the label of the list without tiles, 86 of 113 such rows on the iPhone and 86 of 118 on the iPad lie on the row where two 256-row strips of that label's bitmap meet or on the row above it. The rest lie up to 17 rows above such a row, except six on the iPad at 0.03 and 0.08 seconds into an animation, where the label's place is known only from its presentation layer. None lies within four points of a tile's edge. They are the same rows the one bitmap showed a little off with time stopped on the Mac, and no screenshot taken with time running has them.
+
+The one pair that differs in the random sequences is the same picture one pixel row apart: both lists were still scrolling to their end, a third of a point from each other, when they were captured.
+
+The random sequences found one more thing about checking. Twice in 14,709 commits of five runs on the iPhone a commit was reported with a label showing text that had no drawn tile under it. The check ran from a run loop observer after Core Animation's, as it does on the Mac, and on iOS UIKit commits from inside its own update: by the time the observer ran, the next step of an animated scroll had moved the list 1,872 points and made tiles for the new place, which the next commit would draw. The tile for the place that had been committed was drawn. Checked from a handler Core Animation calls inside the commit, between drawing and sending the layer tree, 15,073 commits of five more runs of the same sequences had tiles under everything, as did the 9,756 of the iPad's runs. What remains in every run that removes rows is the start of a row animation, four commits in all three devices' runs, where the tiles are where the label is still shown and not yet where it will rest.
+
+Two things about pictures of a tiled label, both asked of the app and both in its unit tests.
+
+- `CALayer.render(in:)` reaches a tiled label through any ancestor. A row rendered that way, and a whole conversation laid out beside the window where a tiled label keeps no tile at all, are the pictures an untiled label gives, pixel for pixel once both are read as eight-bit RGBA. Not byte for byte as stored: an image renderer keeps a picture with no color in it as gray, and it did so for the untiled row and not for the tiled one.
+- A snapshot through the render server is blank for any view of 8,192 pixel rows or more, tiled or not: 4,096 points at 2x and 2,731 at 3x. `snapshotView(afterScreenUpdates:)` of plain striped views showed stripes at 8,190 rows and nothing at 8,193 on the iPhone, at 8,180 and not at 8,192 on the iPad. With the default threshold of 4,096 points, every label tall enough to be tiled is in a view such a snapshot already could not hold on either kind of screen, so a context menu's preview of it was blank before tiles and is blank with them. A host with a lower threshold, or on a 1x screen, would see a preview that holds only the tiles near the screen where it used to hold the whole text.
 
 ## Limits
 
 - A move by anything other than a scroll, further than the reach, in one step, by code that commits it before the run loop comes around, shows a frame without text there. No case of it was found in the app.
 - `CALayer.render(in:)` on a tiled label draws the whole text into one backing store for as long as the rendering takes.
 - A label an animation carries further than eight tiles shows no text between where it started and where it rests.
-- A snapshot taken through the render server, such as `snapshotView(afterScreenUpdates:)`, holds the tiles that exist: what is near the screen, and nothing of the rest of a tall label.
+- A snapshot taken through the render server, such as `snapshotView(afterScreenUpdates:)`, holds the tiles that exist: what is near the screen, and nothing of the rest of a tall label. Such a snapshot holds nothing of any view of 8,192 pixel rows or more, so at the default threshold this takes nothing away at 2x or 3x.
 - A subclass that returns its own `layerClass` is never tiled.
 - Observing `bounds` makes the scroll views above a tiled label instances of a key-value observing subclass for as long as the label is in a window.
